@@ -1,0 +1,22 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node (for any tooling added at root level)
+node_modules/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Build / temp
+dist/
+build/
+*.log

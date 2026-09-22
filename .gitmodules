@@ -1,0 +1,3 @@
+[submodule "contracts"]
+	path = contracts
+	url = https://github.com/sekaiamber/an-erc-20-privacy-extension-protocol-contracts.git
