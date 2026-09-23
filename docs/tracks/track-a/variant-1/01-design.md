@@ -241,18 +241,48 @@ function supportsInterface(bytes4) external view returns (bool);         // ERC-
 
 **memo 被篡改的兜底**：memo 正确性由电路强制，理论上不会发生；若实现有 bug，接收方仍可对 `C_amt − s·D_recv = v·G` 做 48 位离散对数（2²⁴ 表）恢复。
 
-## 8. Gas 估算（L1，仅量级）
+## 8. Gas 估算
 
-| 操作 | 主要开销 | 估算 |
+### 8.1 单位价格假设
+
+| 链 | gas price | 币价 | 每 gas 美元 |
+| --- | --- | --- | --- |
+| ETH | 0.3 gwei | $2,500 | 7.5 × 10⁻⁷ |
+| BSC | 0.05 gwei | $750 | 3.75 × 10⁻⁸ |
+
+### 8.2 机密转账拆解
+
+| 组成 | 说明 | Gas |
 | --- | --- | --- |
-| `register` | 子群检查 + 2 SSTORE | ~60k |
-| `shield` | ERC-20 扣款 + 固定基 12 次点加 + pending 更新 | ~120k |
-| 机密 `transfer` | Groth16 验证（~15 个公开输入）~300k + 4 次点加 ~20k + 存储 ~40k + 事件 ~5k | **~400k** |
-| `applyPending` | 2 次点加 + 存储 | ~40k |
-| `unshield` | Groth16 验证 + 2 次点加 + 存储 + ERC-20 入账 | ~380k |
-| `prepare` + 无附加数据 `transfer` | 验证 + 存储 payload 摘要 / 执行时读取 | ~350k + ~80k |
+| 交易基础 | | 21k |
+| calldata | payload ~900 字节 × 16 | ~14k |
+| Groth16 验证：配对 | 4 组配对 | 181k |
+| Groth16 验证：公开输入 | 28 个域元素 × ~6.15k | ~172k |
+| Baby Jubjub 点加 | 4 次 × ~5k | ~20k |
+| 存储 | 发送方 available / nonce / decryptable + 接收方 pending | ~55k |
+| 事件 | `Transfer` + `ConfidentialTransfer` | ~7k |
+| **合计（典型）** | | **~470k** |
 
-Baby Jubjub 点加在 Solidity 中每次约 3~6k gas（仿射坐标 + `modexp` 求逆，或投影坐标延迟求逆）。
+- **公开输入哈希优化**：电路内对全部公开输入做 SHA-256，链上只传 1 个公开输入，验证降到 ~195k，合计 ~310k。**列入 v0.1 必做项。**
+- **冷启动**：接收方 `pending` 首次从零写入 +65k。
+
+### 8.3 各操作成本
+
+| 操作 | Gas | ETH（$） | BSC（$） |
+| --- | --- | --- | --- |
+| 公开 `transfer`（参照） | 50k | 0.0375 | 0.0019 |
+| `register` | 82k | 0.062 | 0.0031 |
+| `shield`（pending 已非零 / 冷启动） | 115k / 180k | 0.086 / 0.135 | 0.0043 / 0.0068 |
+| 机密 `transfer` 乐观 / 典型 / 悲观 | 310k / 470k / 540k | 0.23 / 0.35 / 0.41 | 0.012 / 0.018 / 0.020 |
+| `applyPending` | 60k | 0.045 | 0.0023 |
+| `unshield` | 360k | 0.27 | 0.0135 |
+| `prepare` + 裸 `transfer` | 480k + 100k | 0.44 | 0.022 |
+
+不含优先费。Baby Jubjub 点加在 Solidity 中每次约 3~6k gas。
+
+### 8.4 v0.1 Gas 目标
+
+**机密转账 ≤ 350k（含公开输入哈希优化）。**
 
 ## 9. v0.1.0 范围
 
