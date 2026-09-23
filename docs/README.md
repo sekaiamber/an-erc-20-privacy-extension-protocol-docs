@@ -12,6 +12,7 @@
 | 06 | [架构草案](06-architecture.md) | 协议整体架构与组件划分（草案） |
 | 07 | [规范草案](07-spec.md) | 接口与数据结构规范（草案） |
 | 08 | [路线图](08-roadmap.md) | 阶段计划与里程碑 |
+| — | [Tracks](tracks/README.md) | 协议家族的 Track / Variant 目录，主线 A.1 设计在此 |
 | 09 | [开发指南](09-development.md) | 仓库、submodule、合约环境的使用方法 |
 | — | [术语表](glossary.md) | 项目中使用的术语定义 |
 | — | [参考资料](references.md) | EIP、论文、代码库链接 |
