@@ -15,12 +15,14 @@
 - [ ] 测量主流方案的主网 Gas 成本
 - [ ] 输出对比表，更新方案全景
 
-## 阶段 2：设计
+## 阶段 2：设计（进行中，2026-09）
 
-- [ ] 确定状态模型（note / 加密账户）→ ADR
-- [ ] 确定证明系统 → ADR
-- [ ] 完成 [06 架构](06-architecture.md) 与 [07 规范](07-spec.md) 的 `Review` 版本
+- [x] 协议家族按 Track / Variant 组织 → ADR-0002
+- [x] 主线 A.1 细节设计 → `tracks/track-a/variant-1/01-design.md`
+- [x] A.1 核心决策 → ADR A1-0001 ~ A1-0005
+- [x] 01–05 改写为家族口径；06 / 07 改为 [家族架构](06-family-architecture.md) 与 [家族级约定](07-family-conventions.md)
 - [ ] 威胁模型评审
+- [ ] 家族级约定与 A.1 设计的 `Review` 版本
 
 ## 阶段 3：原型（进行中，2026-09）
 
