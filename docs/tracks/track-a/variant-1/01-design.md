@@ -1,7 +1,8 @@
 # A.1 细节设计
 
-版本：`0.2.0-draft`　状态：`Draft`　日期：2026-09-24
+版本：`0.2.1-draft`　状态：`Draft`　日期：2026-09-24
 
+> 0.2.1：按原型实测回写（公开输入打包替代 SHA-256、shield 代币托管在合约地址、Gas 实测）。
 > 0.2 相对 0.1 的主要变化：机密账户与以太坊地址解耦、公钥不上链、删除注册表与 shield / unshield 函数、payload 类型字节定义转账类型、证明即授权、删除 `applyPending`（改为花费时惰性折叠）。所有 Gas 数字为估算。
 
 ## 0. 设计原则
@@ -28,7 +29,7 @@
 | 多接收方 | 一份 `C`，多个句柄 `D_X = r·pk_X` | 同一金额加密给付款方、收款方、监管方 |
 | 证明系统 | Groth16（circom + snarkjs）原型；正式版评估 PLONK 类 | |
 | 哈希 / memo | Poseidon；memo 用 Poseidon 密钥流加密 | |
-| 公开输入压缩 | 全部公开输入在电路内 SHA-256 为一个域元素 | 验证 Gas 从 ~350k 降到 ~195k |
+| 公开输入打包 | 标量打包进 3 个字（`from|nonce`、`to|chainId`、`contract|regKeyId|signBits`），点只公开 x，y 为私有输入并由"在曲线上 + 奇偶位"绑定 | 公开输入 25 → 15，验证 gas 386k → 316k。SHA-256 压缩方案已否决：电路内需 ~40 万约束 |
 | 金额位宽 | 单笔 `v < 2⁴⁸` | |
 | 余额位宽 | `b < 2⁶⁴` | 由 `totalSupply` 上限保证 |
 | decimals | 6 | |
@@ -72,7 +73,7 @@ uint32 public activeRegulatorKeyId;
 
 | 编号 | 内容 |
 | --- | --- |
-| I1 | `totalSupply() == Σ 公开余额 + shieldedSupply` |
+| I1 | 屏蔽中的代币托管在合约自身地址：`balanceOf(address(this)) == shieldedSupply`，因此 `totalSupply() == Σ 公开余额`（含合约地址）对任何索引器天然成立 |
 | I2 | `totalSupply() ≤ 2⁶⁴ − 1`（最小单位）。保证任何机密余额 `< 2⁶⁴`，范围证明不会因累加溢出失效 |
 | I3 | 每个 `id`：`available + pending` 解密后等于真实机密余额 |
 | I4 | `nonce` 严格递增 |
@@ -178,7 +179,7 @@ byte 2..    sections（按 type 与 flags 决定，顺序固定）
 ### 4.1 `0x03` 公开 → 机密
 
 ```
-_balances[from] -= x                  // 标准 ERC-20 检查；from = msg.sender 或 allowance 授权
+_update(from, address(this), x)      // 标准 ERC-20 检查；托管到合约地址，发出 Transfer(from, this, x)
 shieldedSupply  += x
 C = x·G                               // 固定基窗口表：4 位 × 12 段，192 个预计算点入字节码，约 12 次点加
 _accounts[to].pending += (C, 0)       // r = 0 的退化密文：金额本来就是公开的
@@ -221,8 +222,7 @@ acc.available = acc.available + acc.pending − (C_amt, D_sender)
 acc.pending   = 0
 acc.nonce    += 1
 shieldedSupply -= x
-_balances[to]  += x
-emit Transfer(from, to, x)
+_update(address(this), to, x)        // 发出 Transfer(this, to, x)
 emit LedgerCrossing(from, to, 0x04, x)
 ```
 
@@ -256,13 +256,13 @@ emit LedgerCrossing(from, to, 0x04, x)
 | 9 | `D_sender == r·pk_sender`，`D_recv == r·pk_recv`，`D_reg == r·pk_reg` | 三方同值 |
 | 10 | `E == e·H` | |
 | 11 | `memo_recv == Enc(Poseidon(e·pk_recv); v ‖ r)`，`memo_reg == Enc(Poseidon(e·pk_reg); v ‖ r)` | 提示正确 |
-| 12 | `SHA256(公开输入) == 链上传入的单个公开输入` | 压缩 |
+| 12 | 打包：各标量范围检查后 `w0, w1, w2` 等式成立；每个点 `(xs[i], ys[i])` 在曲线上且 `ys[i] mod 2 == signBits[i]` | y 由 x 与奇偶位唯一确定 |
 
-约束量：约 8 次变基标量乘、3 次范围证明、若干 Poseidon、一次 SHA-256，**3~5 万约束量级**。
+约束量实测：**35,137 个非线性约束**（未打包版本 30,356）。Node 环境证明 2.3~2.5 s。
 
 ### 5.2 `0x04`
 
-去掉 3、9 的后两项、10、11；`v` 作为公开输入进入 SHA-256。
+去掉 3、9 的后两项、10、11；公开输入 7 个：`w0 = from | nonce<<160`，`w1 = contract | chainId<<160`，`w2 = amount | signBits<<48`，`xs[4]`。实测 16,622 个约束。
 
 ## 6. 事件
 
@@ -297,7 +297,9 @@ function supportsInterface(bytes4) external view returns (bool);         // 家�
 
 **memo 兜底**：由电路强制，理论上不会错；若实现有 bug，收款方仍可对 `C_amt − s·D_recv = v·G` 做 48 位离散对数（2²⁴ 表）。
 
-## 9. Gas 估算
+## 9. Gas（原型实测，2026-09-24）
+
+环境：Hardhat 3 / solc 0.8.34 viaIR / Groth16（snarkjs）/ 公开输入打包后。数字来自 `contracts/test/track-a/variant-1/`。
 
 ### 9.1 单位价格假设
 
@@ -306,35 +308,39 @@ function supportsInterface(bytes4) external view returns (bool);         // 家�
 | ETH | 0.3 gwei | $2,500 | 7.5 × 10⁻⁷ |
 | BSC | 0.05 gwei | $750 | 3.75 × 10⁻⁸ |
 
-### 9.2 `0x01` 拆解
+### 9.2 实测
+
+| 操作 | 实测 gas | 备注 | ETH（$） | BSC（$） |
+| --- | --- | --- | --- | --- |
+| 公开转账（参照） | ~50k | | 0.038 | 0.0019 |
+| `0x03` 公开 → 机密 | **198k** | 含收款方 pending 冷写（4 槽）；固定基窗口表 `amount·G` 最坏 77k | 0.15 | 0.0074 |
+| `0x01` 机密 → 机密 | **607k** | 端到端测试场景：付款方 available 与收款方 pending **均为冷写**（约 +135k）；稳态估计 ~470k | 0.46 | 0.023 |
+| `0x04` 机密 → 公开 | **459k** | 同上，含冷写 | 0.34 | 0.017 |
+| `prepare` 后裸 `transferFrom` | 272k | 不含 `prepare` 本身（≈ 一次验证 + 登记存储） | 0.20 | 0.010 |
+| Groth16 `verifyProof`（15 输入） | 316k | 含 21k 基础与 calldata；25 输入未打包时 386k | | |
+| 证明生成（Node，M 系列） | 2.3~2.5 s | 35,137 约束 | | |
+
+### 9.3 拆解（`0x01`，冷写场景）
 
 | 组成 | Gas |
 | --- | --- |
-| 交易基础 | 21k |
-| calldata ~900 字节 | ~14k |
-| Groth16 验证（1 个公开输入） | ~195k |
-| Baby Jubjub 点加：折叠 2 次 + 扣款 2 次 + 收款 2 次 | ~30k |
-| 存储：付款方 available 改写 4 槽、pending 清零 4 槽（退款）、nonce、decryptable；收款方 pending 改写 4 槽 | ~55k |
+| 基础 + calldata（payload ~710 字节） | ~35k |
+| Groth16 验证（15 个公开输入） | ~290k |
+| Baby Jubjub 点加 ×6（折叠 2、扣款 2、收款 2） | ~50k |
+| 存储：付款方 available 冷写 4 槽 + pending 清零 + nonce；收款方 pending 冷写 4 槽 | ~200k |
 | 事件 | ~7k |
-| **合计（典型）** | **~325k** |
 
-收款方 `pending` 冷启动 +65k → ~390k。
+### 9.4 已知优化空间
 
-### 9.3 各操作
+| 优化 | 预计节省 | 状态 |
+| --- | --- | --- |
+| 折叠后不清零 `pending`，改记录"已折叠值"，避免每次收款冷写 | 每次收款 ~70k | backlog |
+| 点加改投影坐标、批量求逆 | ~20k | backlog |
+| PLONK 类替换 Groth16 | **增加** ~100k，换取去掉每电路可信设置 | 待评估 |
 
-| 操作 | Gas | ETH（$） | BSC（$） |
-| --- | --- | --- | --- |
-| 公开转账（参照） | 50k | 0.038 | 0.0019 |
-| `0x03` 公开 → 机密（热 / 冷） | 115k / 180k | 0.086 / 0.135 | 0.0043 / 0.0068 |
-| `0x01` 机密 → 机密（典型 / 冷） | 325k / 390k | 0.24 / 0.29 | 0.012 / 0.015 |
-| `0x04` 机密 → 公开 | ~290k | 0.22 | 0.011 |
-| `prepare` + 兜底执行 | ~410k + ~100k | 0.38 | 0.019 |
+### 9.5 目标
 
-不含优先费。
-
-### 9.4 目标
-
-**`0x01` ≤ 350k（典型）。**
+**`0x01` 稳态 ≤ 500k。**（原目标 350k 建立在 SHA-256 压缩成立的前提上，已不适用。）
 
 ## 10. 范围（0.2）
 
@@ -349,6 +355,7 @@ function supportsInterface(bytes4) external view returns (bool);         // 家�
 | 密钥轮换 | 本人把 `available` 重加密到新 `pk`（即新 id），需专用电路 |
 | 合规策略钩子 | 可插拔 `Policy` 合约，对 `0x03` / `0x04` 做准入检查 |
 | 点压缩 | 降低 calldata |
+| 折叠后不清零 `pending` | 记录"已折叠值"而非清零，避免每次收款对 pending 冷写（~70k） |
 | ERC-2771 | 附加数据与 forwarder 尾部的共存 |
 | 多输出转账 | 一笔证明多个收款方 |
 

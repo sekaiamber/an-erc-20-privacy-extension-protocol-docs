@@ -22,12 +22,14 @@
 - [ ] 完成 [06 架构](06-architecture.md) 与 [07 规范](07-spec.md) 的 `Review` 版本
 - [ ] 威胁模型评审
 
-## 阶段 3：原型
+## 阶段 3：原型（进行中，2026-09）
 
-- [ ] 在 `contracts/` 中实现扩展合约与验证合约
-- [ ] 最小客户端（脚本级）完成 shield / transfer / unshield 全流程
-- [ ] 本地网络端到端测试
-- [ ] Gas 报告
+- [x] A.1：BabyJubjub 库、`0x01` / `0x04` 电路、`ConfidentialERC20A1`、Groth16 验证合约
+- [x] TS 客户端库（密钥、加密、memo、payload、证明输入）
+- [x] Hardhat 端到端：shield → 机密转账（中继者提交）→ unshield，含监管解密与负例
+- [x] Gas 实测与两轮优化（固定基窗口表、公开输入打包）→ 设计文档 §9
+- [ ] 稳态 Gas 优化（pending 不清零、投影坐标）
+- [ ] 浏览器内证明生成时间
 
 ## 阶段 4：评估与迭代
 
