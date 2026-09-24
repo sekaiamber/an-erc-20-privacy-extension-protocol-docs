@@ -1,7 +1,8 @@
 # A.1 细节设计
 
-版本：`0.2.1-draft`　状态：`Draft`　日期：2026-09-24
+版本：`0.2.2-draft`　状态：`Draft`　日期：2026-09-24
 
+> 0.2.2：`pending` 改为单调累加 + `folded` 记录，避免收款冷写；稳态 Gas 实测。
 > 0.2.1：按原型实测回写（公开输入打包替代 SHA-256、shield 代币托管在合约地址、Gas 实测）。
 > 0.2 相对 0.1 的主要变化：机密账户与以太坊地址解耦、公钥不上链、删除注册表与 shield / unshield 函数、payload 类型字节定义转账类型、证明即授权、删除 `applyPending`（改为花费时惰性折叠）。所有 Gas 数字为估算。
 
@@ -53,7 +54,8 @@ struct Ciphertext { Point C; Point D; }
 
 struct ConfidentialAccount {
     Ciphertext available;     // 可用余额，只被本人的证明修改
-    Ciphertext pending;       // 待入账，他人写入，本人花费时折叠
+    Ciphertext pending;       // 待入账累计，只增不清，他人写入
+    Ciphertext folded;        // 上次花费时 pending 的值；有效待入账 = pending − folded
     uint64     nonce;         // available 每次变动 +1
     bytes      decryptable;   // 本人自加密的余额明文副本，合约不解释，可选
 }
@@ -195,8 +197,8 @@ emit LedgerCrossing(from, to, 0x03, x)
 acc = _accounts[from]
 pre = flags.includePending ? acc.available + acc.pending : acc.available
 verify(proof, H(chainId, this, from, to, acc.nonce, pk_reg, pre, C_amt, D_sender, D_recv, D_reg, E, memo_recv, memo_reg))
-acc.available = acc.available + acc.pending − (C_amt, D_sender)     // 惰性折叠，见 §4.3
-acc.pending   = 0
+acc.available = acc.available + (acc.pending − acc.folded) − (C_amt, D_sender)   // 惰性折叠，见 §4.3
+acc.folded    = acc.pending
 acc.nonce    += 1
 if flags.bit1: acc.decryptable = payload.decryptable
 _accounts[to].pending += (C_amt, D_recv)
@@ -206,7 +208,7 @@ emit ConfidentialTransfer(from, to, handle, regKeyId, C_amt, D_recv, D_reg, E, m
 
 ### 4.3 惰性折叠与 `includePending`
 
-`pending` 存在的唯一目的是让他人的入账不打断本人在途的证明。折叠不再是独立操作，而是**每次花费后自动发生**：合约把 `pending` 加进 `available` 并清零。本人通过 memo 与 `LedgerCrossing` 事件已知每笔入账金额，能自行更新本地余额与 `decryptable`。
+`pending` 存在的唯一目的是让他人的入账不打断本人在途的证明。折叠不再是独立操作，而是**每次花费后自动发生**：合约把有效待入账 `pending − folded` 加进 `available`，然后令 `folded = pending`。`pending` 与 `folded` 都只增不清：清零会让之后每次收款都对存储槽从零写（4 槽 × 22.1k），改为记录已折叠值后收款是非零→非零写，每次收款省约 70k；代价是每个账户首次花费多一次 `folded` 的冷写（约 90k，一次性）。本人通过 memo 与 `LedgerCrossing` 事件已知每笔入账金额，能自行更新本地余额与 `decryptable`。
 
 证明默认只绑定 `available`（只有本人能改，绝不失效）。当本人需要动用尚在 `pending` 中的资金（典型：新账户，`available` 为零），置位 `includePending`，证明绑定 `available + pending`；此时若证明生成到上链之间有新入账到达，证明失效，需重新生成。这是用户的选择，协议不做额外处理。
 
@@ -218,8 +220,8 @@ emit ConfidentialTransfer(from, to, handle, regKeyId, C_amt, D_recv, D_reg, E, m
 acc = _accounts[from]
 pre = flags.includePending ? acc.available + acc.pending : acc.available
 verify(proof, H(chainId, this, from, acc.nonce, pre, C_amt, D_sender, x))
-acc.available = acc.available + acc.pending − (C_amt, D_sender)
-acc.pending   = 0
+acc.available = acc.available + (acc.pending − acc.folded) − (C_amt, D_sender)
+acc.folded    = acc.pending
 acc.nonce    += 1
 shieldedSupply -= x
 _update(address(this), to, x)        // 发出 Transfer(this, to, x)
@@ -313,34 +315,34 @@ function supportsInterface(bytes4) external view returns (bool);         // 家�
 | 操作 | 实测 gas | 备注 | ETH（$） | BSC（$） |
 | --- | --- | --- | --- | --- |
 | 公开转账（参照） | ~50k | | 0.038 | 0.0019 |
-| `0x03` 公开 → 机密 | **198k** | 含收款方 pending 冷写（4 槽）；固定基窗口表 `amount·G` 最坏 77k | 0.15 | 0.0074 |
-| `0x01` 机密 → 机密 | **607k** | 端到端测试场景：付款方 available 与收款方 pending **均为冷写**（约 +135k）；稳态估计 ~470k | 0.46 | 0.023 |
-| `0x04` 机密 → 公开 | **459k** | 同上，含冷写 | 0.34 | 0.017 |
-| `prepare` 后裸 `transferFrom` | 272k | 不含 `prepare` 本身（≈ 一次验证 + 登记存储） | 0.20 | 0.010 |
+| `0x03` 公开 → 机密（收款方首次） | **198k** | 含收款方 pending 冷写（4 槽）；固定基窗口表 `amount·G` 最坏 77k | 0.15 | 0.0074 |
+| `0x01` 机密 → 机密，**稳态**（双方存储已热） | **467k** | 目标 ≤ 500k 达成 | 0.35 | 0.018 |
+| `0x01` 机密 → 机密，账户首次花费 | 709k | 一次性：available、folded 冷写各 4 槽 | 0.53 | 0.027 |
+| `0x04` 机密 → 公开，账户首次花费 | 583k | 同上 | 0.44 | 0.022 |
+| `prepare` 后裸 `transferFrom`（首次） | 360k | 不含 `prepare` 本身 | 0.27 | 0.0135 |
 | Groth16 `verifyProof`（15 输入） | 316k | 含 21k 基础与 calldata；25 输入未打包时 386k | | |
 | 证明生成（Node，M 系列） | 2.3~2.5 s | 35,137 约束 | | |
 
-### 9.3 拆解（`0x01`，冷写场景）
+### 9.3 拆解（`0x01`，稳态）
 
 | 组成 | Gas |
 | --- | --- |
 | 基础 + calldata（payload ~710 字节） | ~35k |
 | Groth16 验证（15 个公开输入） | ~290k |
-| Baby Jubjub 点加 ×6（折叠 2、扣款 2、收款 2） | ~50k |
-| 存储：付款方 available 冷写 4 槽 + pending 清零 + nonce；收款方 pending 冷写 4 槽 | ~200k |
+| Baby Jubjub 点加 ×8（有效待入账 2、折叠 2、扣款 2、收款 2） | ~65k |
+| 存储：付款方 available、folded、nonce；收款方 pending，均为热写 | ~70k |
 | 事件 | ~7k |
 
 ### 9.4 已知优化空间
 
 | 优化 | 预计节省 | 状态 |
 | --- | --- | --- |
-| 折叠后不清零 `pending`，改记录"已折叠值"，避免每次收款冷写 | 每次收款 ~70k | backlog |
 | 点加改投影坐标、批量求逆 | ~20k | backlog |
 | PLONK 类替换 Groth16 | **增加** ~100k，换取去掉每电路可信设置 | 待评估 |
 
 ### 9.5 目标
 
-**`0x01` 稳态 ≤ 500k。**（原目标 350k 建立在 SHA-256 压缩成立的前提上，已不适用。）
+**`0x01` 稳态 ≤ 500k，已达成（467k）。**（原目标 350k 建立在 SHA-256 压缩成立的前提上，已不适用。）
 
 ## 10. 范围（0.2）
 
@@ -355,7 +357,6 @@ function supportsInterface(bytes4) external view returns (bool);         // 家�
 | 密钥轮换 | 本人把 `available` 重加密到新 `pk`（即新 id），需专用电路 |
 | 合规策略钩子 | 可插拔 `Policy` 合约，对 `0x03` / `0x04` 做准入检查 |
 | 点压缩 | 降低 calldata |
-| 折叠后不清零 `pending` | 记录"已折叠值"而非清零，避免每次收款对 pending 冷写（~70k） |
 | ERC-2771 | 附加数据与 forwarder 尾部的共存 |
 | 多输出转账 | 一笔证明多个收款方 |
 

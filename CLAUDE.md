@@ -13,6 +13,7 @@
 
 - 文档编号前缀（`01-`、`02-`…）表示推荐阅读顺序，新增文档沿用该规则。
 - 重要设计决策写入 `docs/adr/`，文件名 `NNNN-短标题.md`，模板见 `docs/adr/README.md`。
+- 协议家族按 Track / Variant 组织，见 `docs/06-family-architecture.md`；各 Track / Variant 的文档在 `docs/tracks/`，Variant 之间自包含。家族级约定在 `docs/07-family-conventions.md`，Variant 文档不得与之冲突。
 - 调研某个外部方案时，在 `docs/research/` 下新建单独文件，并在 `docs/03-landscape.md` 中加入索引。
 - 引用外部资料（EIP、论文、代码库）统一登记到 `docs/references.md`。
 - 不要在主仓库根目录放置合约代码；所有 Solidity 代码都在 `contracts/` 子仓库。
