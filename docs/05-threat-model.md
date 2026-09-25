@@ -60,3 +60,4 @@
 | `includePending` 的竞争 | 证明绑定含待入账的状态时，上链前若有新入账则证明失效 | 用户重做证明；默认只绑定 available 不受影响 |
 | 发错 payload 类型 | 公开转账发到机密 id 等 | 协议不兜底，由前端校验（ADR-0003） |
 | 监管私钥泄露 | 全网金额对泄露方透明 | 阈值化 + 轮换（ADR-0004） |
+| 拒绝服务 / 消耗类攻击 | 攻击者只能让他人多花 gas 或暂时办不成事，且必须持续付费 | 研究阶段仅记录；A.1 的清单见 [tracks/track-a/variant-1/02-security-review.md](tracks/track-a/variant-1/02-security-review.md) 附录 A |
