@@ -63,6 +63,20 @@ npx hardhat test mocha      # 只运行 TypeScript 测试
 npx hardhat ignition deploy ignition/modules/TestToken.ts   # 部署到本地模拟链
 ```
 
+## 验证前端（dapp）
+
+`dapp/` 使用 pnpm（Node.js ≥ 24）。
+
+```bash
+cd dapp
+cp .env.example .env      # BSC testnet 参数与 sqlite 路径
+pnpm install              # postinstall 会执行 prisma generate
+pnpm db:migrate           # 首次或 schema 变更后
+pnpm dev                  # http://localhost:3000
+```
+
+约定见 `dapp/AGENTS.md`：全局状态在 `stores/`，组件内部状态在组件同级 `*.store.ts`；服务端数据走 react-query；链配置只从 `lib/wagmi.ts` 读取。
+
 ## 文档编写
 
 - 文档使用 Markdown，中文撰写，技术术语保留英文。

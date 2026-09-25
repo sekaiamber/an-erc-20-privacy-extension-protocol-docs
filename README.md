@@ -14,8 +14,10 @@
 │   ├── README.md        文档索引（从这里开始阅读）
 │   ├── adr/             架构决策记录（ADR）
 │   └── research/        调研笔记
-└── contracts/           合约仓库（git submodule）
-                         https://github.com/sekaiamber/an-erc-20-privacy-extension-protocol-contracts
+├── contracts/           合约仓库（git submodule）
+│                        https://github.com/sekaiamber/an-erc-20-privacy-extension-protocol-contracts
+└── dapp/                验证前端（git submodule，Next.js + wagmi，BSC testnet）
+                         https://github.com/sekaiamber/an-erc-20-privacy-extension-protocol-dapp
 ```
 
 ## 快速开始
@@ -32,6 +34,11 @@ git submodule update --init --recursive
 cd contracts
 npm install
 npx hardhat test
+
+# 验证前端（Next.js，pnpm）
+cd ../dapp
+cp .env.example .env
+pnpm install && pnpm db:migrate && pnpm dev
 ```
 
 更多内容见 [`docs/README.md`](docs/README.md) 与 [`docs/09-development.md`](docs/09-development.md)。
@@ -43,8 +50,11 @@ npx hardhat test
 - [x] 主仓库与合约仓库骨架
 - [x] 基础研究文档框架
 - [x] Hardhat 3 合约开发环境与一个标准 ERC-20 代币（`Test`）
+- [x] 协议家族结构（Track / Variant）与家族级约定
+- [x] 主线 A.1 设计（0.2.3-draft）、ADR、第一轮安全自审
+- [x] A.1 原型：电路、合约、客户端库，本地端到端跑通
+- [x] 验证前端骨架（`dapp/`，BSC testnet）
 - [ ] 现有隐私方案深入调研
-- [ ] 协议设计与规范
-- [ ] 隐私扩展合约原型
+- [ ] A.1 测试网部署与前端功能
 
 详见 [`docs/08-roadmap.md`](docs/08-roadmap.md)。

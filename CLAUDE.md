@@ -8,6 +8,7 @@
 - `contracts/`：git submodule，指向独立的合约仓库（Hardhat 3 + TypeScript + Solidity）。
   - 修改合约需要进入 `contracts/` 目录，在该子仓库中提交并推送，然后回到主仓库更新 submodule 指针。
   - 合约仓库自带 `CLAUDE.md`，进入后请先阅读。
+- `dapp/`：git submodule，验证前端（Next.js 16 + Tailwind v4 + shadcn + Zustand + react-query + wagmi + Prisma sqlite，pnpm）。目标链 BSC testnet。工作流同 `contracts/`：在子仓库提交推送后回主仓库更新指针。仓库自带 `AGENTS.md`。
 
 ## 约定
 
