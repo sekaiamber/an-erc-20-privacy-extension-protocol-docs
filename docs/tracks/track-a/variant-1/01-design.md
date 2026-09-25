@@ -1,7 +1,8 @@
 # A.1 细节设计
 
-版本：`0.2.2-draft`　状态：`Draft`　日期：2026-09-24
+版本：`0.2.3-draft`　状态：`Draft`　日期：2026-09-25
 
+> 0.2.3：按第一轮安全自审（[02-security-review.md](02-security-review.md)）修订：`cancel` 仅登记者可撤、登记统一以句柄为 key、`ConfidentialTransferPrepared` 事件、显式金额上限、监管密钥必须为活动密钥、`decryptable` 上限。
 > 0.2.2：`pending` 改为单调累加 + `folded` 记录，避免收款冷写；稳态 Gas 实测。
 > 0.2.1：按原型实测回写（公开输入打包替代 SHA-256、shield 代币托管在合约地址、Gas 实测）。
 > 0.2 相对 0.1 的主要变化：机密账户与以太坊地址解耦、公钥不上链、删除注册表与 shield / unshield 函数、payload 类型字节定义转账类型、证明即授权、删除 `applyPending`（改为花费时惰性折叠）。所有 Gas 数字为估算。
@@ -97,7 +98,7 @@ function transfer(address to, uint256 x) external returns (bool);
 function transferFrom(address from, uint256 to, uint256 x) external returns (bool);
     // 付款方 = from。from 是公开账户：标准 allowance；from 是机密 id：证明授权（payload 0x01 / 0x04）
 function prepare(bytes calldata payload) external;          // 兜底：先验证并登记
-function cancel(uint256 handle) external;                    // 撤销未执行的登记
+function cancel(address from, uint256 handle) external;      // 撤销未执行的登记，仅登记者可调
 ```
 
 没有 `register`、`shield`、`unshield`、`applyPending`。
@@ -159,7 +160,7 @@ byte 2..    sections（按 type 与 flags 决定，顺序固定）
 | 2 | `handle == keccak256(payload) \| (1 << 255)` | `0x01` `0x02` |
 | 3 | `x` 最高位：`0x01` `0x02` 必须为 1；公开金额类型必须为 0 | 全部 |
 | 4 | `to != address(0)` | 全部 |
-| 5 | `regKeyId` 存在 | `0x01` |
+| 5 | `regKeyId == activeRegulatorKeyId` | `0x01` |
 | 6 | 证明验证通过，公开输入由合约按 §4 组装，不从 payload 直接信任任何本应由合约提供的值 | `0x01` `0x04` |
 | 7 | `from` 为公开账户时 allowance 充足（标准 ERC-20） | `transferFrom` 无 payload / `0x03` |
 | 8 | `_prepared[from][handle]` 存在且登记时的 `nonce` 与当前一致 | 兜底执行 |
@@ -170,9 +171,9 @@ byte 2..    sections（按 type 与 flags 决定，顺序固定）
 
 给无法拼 calldata 的调用方（钱包原生界面、不认识本协议的合约）使用：
 
-1. `prepare(payload)`：按 §3.3 与 §4 完整验证，存储 `{type, from, to, 增量密文, nonce}` 到 `_prepared[from][handle]`。
+1. `prepare(from, to, x, payload)`：按 §3.3 与 §4 完整验证，存储 `{type, to, preparedBy, nonce, 增量密文}` 到 `_prepared[from][handle]`。两种类型都以句柄为 key（`0x04` 的句柄在合约内由 payload 派生）。`0x01` 登记时发 `ConfidentialTransferPrepared`，收款方须等 `PreparedExecuted` 才算收到。
 2. 之后任何来源的 `transferFrom(from, to, handle)`（无附加数据）读取登记项，检查 `nonce` 未变，执行 §4 的状态更新并删除登记。
-3. `cancel(handle)`：删除登记。因为 `prepare` 不改余额，撤销无需证明；但为避免第三方恶意撤销，`cancel` 需要提交与 `prepare` 相同的 `payload` 原文（即证明持有者才能撤销）。
+3. `cancel(from, handle)`：仅 `preparedBy` 可调。payload 在 `prepare` 交易里已公开，不能作为授权。
 
 `nonce` 已变化时执行失败并 revert，不自动重试。
 
@@ -359,12 +360,12 @@ function supportsInterface(bytes4) external view returns (bool);         // 家�
 | 点压缩 | 降低 calldata |
 | ERC-2771 | 附加数据与 forwarder 尾部的共存 |
 | 多输出转账 | 一笔证明多个收款方 |
+| **`0x80 fold`（v0.3 必做）** | 只证明私钥知识的小电路，折叠不依赖 `pending` 值，根治新账户锁定（安全自审 F1） |
 
 ## 12. 待决
 
 - [ ] Groth16 可信设置：原型用公开 ptau + 自建 phase 2；正式版是否切 PLONK / UltraHonk。
 - [ ] `decryptable` 放链上还是纯链下（靠 memo 与事件重放重建）。
-- [ ] `cancel` 的授权方式：提交 payload 原文 vs. 单独的小证明。
 - [ ] 监管密钥阈值化（DKG）推荐方案。
 - [ ] 部署目标：先 L2 还是先 L1。
 - [ ] `Transfer` 事件是否对 `0x01` 也发（当前：发，句柄最高位区分），还是只发 `ConfidentialTransfer`。

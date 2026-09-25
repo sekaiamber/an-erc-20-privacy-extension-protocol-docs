@@ -21,6 +21,8 @@
 - [x] 主线 A.1 细节设计 → `tracks/track-a/variant-1/01-design.md`
 - [x] A.1 核心决策 → ADR A1-0001 ~ A1-0005
 - [x] 01–05 改写为家族口径；06 / 07 改为 [家族架构](06-family-architecture.md) 与 [家族级约定](07-family-conventions.md)
+- [x] A.1 第一轮安全自审 → `tracks/track-a/variant-1/02-security-review.md`
+- [ ] A.1 `0x80 fold`（自审 F1）
 - [ ] 威胁模型评审
 - [ ] 家族级约定与 A.1 设计的 `Review` 版本
 
