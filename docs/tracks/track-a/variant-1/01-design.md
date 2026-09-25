@@ -1,7 +1,8 @@
 # A.1 细节设计
 
-版本：`0.2.3-draft`　状态：`Draft`　日期：2026-09-25
+版本：`0.2.4-draft`　状态：`Draft`　日期：2026-09-25
 
+> 0.2.4：实现家族描述符 `pep()` = `A:1:0.2.4`（07 §10），ERC-165 只保留 `IPEP` id。
 > 0.2.3：按第一轮安全自审（[02-security-review.md](02-security-review.md)）修订：`cancel` 仅登记者可撤、登记统一以句柄为 key、`ConfidentialTransferPrepared` 事件、显式金额上限、监管密钥必须为活动密钥、`decryptable` 上限。
 > 0.2.2：`pending` 改为单调累加 + `folded` 记录，避免收款冷写；稳态 Gas 实测。
 > 0.2.1：按原型实测回写（公开输入打包替代 SHA-256、shield 代币托管在合约地址、Gas 实测）。

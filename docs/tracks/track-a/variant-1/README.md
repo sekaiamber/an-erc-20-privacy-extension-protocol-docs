@@ -1,6 +1,6 @@
 # A.1：ElGamal 加密账户 + SNARK
 
-版本：`0.2.3-draft`　状态：`Draft`
+版本：`0.2.4-draft`　状态：`Draft`
 
 | 文档 | 内容 |
 | --- | --- |

@@ -1,6 +1,19 @@
 # A.1 部署记录
 
-## BSC testnet（chain id 97）
+## BSC testnet（chain id 97）— 0.2.4（当前）
+
+部署日期：2026-09-25　deployment id：`a1-v0_2_4-bsc-testnet`　带 `pep()` 描述符 `A:1:0.2.4`　合约源码 contracts `41b9df8`
+
+| 合约 | 地址 |
+| --- | --- |
+| **`ConfidentialERC20A1`** | [`0xEb12e2963A983A1A9E98c0eCf89f1D704F19BB7b`](https://testnet.bscscan.com/address/0xEb12e2963A983A1A9E98c0eCf89f1D704F19BB7b) |
+| `TransferVerifier` | `0x491cE73B121215F5764E527FDA006a3F488b5096` |
+| `UnshieldVerifier` | `0x9Be4b1dB9C5B1bCF490f61e32e29f621426b5C47` |
+| `G8Table` | `0xE962438d2CcC4010F3Fcfa56C1Fd62F018C0bcf8` |
+
+参数与 0.2.3 相同（Test / TEST，1,000,000 初始铸造给部署账户，监管公钥 id 0 同一把）。地址同时导出在 `contracts/exports/deployments.json`。
+
+## BSC testnet — 0.2.3（已废弃，无 `pep()`）
 
 部署日期：2026-09-25　Ignition deployment id：`a1-bsc-testnet`　记录：`contracts/ignition/deployments/a1-bsc-testnet/`
 
@@ -20,4 +33,4 @@
 | 合约源码 | contracts `8f3498a` |
 | BscScan 验证 | 未做（未配置 API key） |
 
-dapp 的 `NEXT_PUBLIC_TOKEN_ADDRESS` 已指向该地址（dapp `d125b1a`）。
+dapp 的 `NEXT_PUBLIC_TOKEN_ADDRESS` 指向 0.2.4 地址。

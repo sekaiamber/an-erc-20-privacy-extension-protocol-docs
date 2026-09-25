@@ -85,9 +85,19 @@ event RegulatorKeyRotated(uint32 indexed keyId, ...);
 
 每笔需要监管可读的操作记录所用 `keyId`。监管方仅凭链上数据与自身私钥即可重建任意账户任意时刻余额，不需要任何人配合；没有冻结、没收、强制转账接口。
 
-## 10. ERC-165
+## 10. 家族描述符与 ERC-165
 
-合约暴露三个 id：家族、Track、Variant。集成方先查家族 id 判断"这是本家族代币"，再查 Track id 决定适配方式。具体 id 值在家族规范 1.0 定稿时固定，此前为占位。
+```solidity
+interface IPEP {
+    /// ASCII "<track>:<variant>:<version>"，如 "A:1:0.2.4"，右补零字节
+    function pep() external pure returns (bytes32);
+}
+```
+
+- 合约通过 ERC-165 声明 `type(IPEP).interfaceId`；这是家族级唯一的接口 id。
+- 前端对任意地址先 `supportsInterface`，再读 `pep()` 解析 track / variant / version 并路由到对应页面。
+- 描述符是**自我声明**：家族是宽松的，链上没有注册表，也不校验合约行为是否与声明一致（与 ERC-20 一样）。填错描述符的后果由发布者承担。
+- `version` 跟随该 Variant 的设计文档版本；改电路或接口即升版本。
 
 ## 11. 数值约束
 
