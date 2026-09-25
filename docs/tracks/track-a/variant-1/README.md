@@ -6,6 +6,7 @@
 | --- | --- |
 | [01-design.md](01-design.md) | 细节设计：账户模型、payload 类型、执行流程、电路、Gas、范围与待决 |
 | [02-security-review.md](02-security-review.md) | 第一轮安全自审：发现、修复、信任假设 |
+| [03-deployments.md](03-deployments.md) | 部署记录（BSC testnet） |
 
 ## 一句话
 

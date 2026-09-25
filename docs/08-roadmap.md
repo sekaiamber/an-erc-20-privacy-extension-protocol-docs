@@ -39,4 +39,4 @@
 
 - [ ] 对照设计目标逐条评估达成情况
 - [ ] 安全自审
-- [ ] 测试网部署
+- [x] 测试网部署：BSC testnet，2026-09-25 → `tracks/track-a/variant-1/03-deployments.md`
