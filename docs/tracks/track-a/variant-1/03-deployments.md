@@ -23,6 +23,17 @@
 
 证明生成（Node，M 系列）：transfer 2.27 s，unshield 1.17 s。收款方从事件 memo 解出 12.5 并与密文对账一致；钱包公开余额变化 −95，`shieldedSupply` 95。与本地估算一致。
 
+### 公共 RPC 的日志历史限制（2026-09-26 实测）
+
+收款方重建 pending 余额依赖 `eth_getLogs` 读取自己名下的 `ConfidentialTransfer` / `LedgerCrossing` 事件。公共 RPC 对此有硬限制：
+
+| RPC | `eth_getLogs` 表现 |
+| --- | --- |
+| `bsc-testnet-rpc.publicnode.com`（dapp 默认） | 只保留最近约 90,000 个区块的日志，更早返回 `-32701 History has been pruned` |
+| `bsc-testnet-dataseed.bnbchain.org` / `data-seed-prebsc-1-s1.bnbchain.org` | 即使 1,000 区块的范围也返回 `-32005 limit exceeded` |
+
+dapp 的对策：默认窗口 80,000 区块，从新到旧分块扫描，遇到拒绝即截断并在页面标注「只扫到区块 N」；available 不受影响（来自链上 `decryptable` 副本），只有窗口外的 pending 收款无法对账。要看更早的收款需换保留完整历史的节点。这也是 A.1「收款方靠事件 memo 而非链上状态得知 pending 明细」这一设计的固有代价，见 01-design §4.3。
+
 ## BSC testnet — 0.2.3（已废弃，无 `pep()`）
 
 部署日期：2026-09-25　Ignition deployment id：`a1-bsc-testnet`　记录：`contracts/ignition/deployments/a1-bsc-testnet/`
