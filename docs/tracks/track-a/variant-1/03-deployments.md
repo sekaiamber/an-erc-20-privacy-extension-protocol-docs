@@ -88,7 +88,7 @@
 | `bsc-testnet-rpc.publicnode.com`（dapp 默认） | 只保留最近约 90,000 个区块的日志，更早返回 `-32701 History has been pruned` |
 | `bsc-testnet-dataseed.bnbchain.org` / `data-seed-prebsc-1-s1.bnbchain.org` | 即使 1,000 区块的范围也返回 `-32005 limit exceeded` |
 
-dapp 的对策：默认窗口 80,000 区块，从新到旧分块扫描，遇到拒绝即截断并在页面标注「只扫到区块 N」；available 不受影响（来自链上 `decryptable` 副本），只有窗口外的 pending 收款无法对账。要看更早的收款需换保留完整历史的节点。
+dapp 的对策（0.3.0 dapp）：窗口为 `[foldedAtBlock, lastReceivedAtBlock]`，页面内存里保存一个扫描游标——每次刷新只向前扫新收款，只有 pending 尚未对齐时才从新到旧向后扩展，每轮最多 `NEXT_PUBLIC_LOG_MAX_CHUNKS` 次请求；已知跨度超过一轮预算时不自动扫，由用户点「继续扫描一轮」逐轮推进或改用本地解密；RPC 拒绝即截断并标注；available 不受影响（来自链上 `decryptable` 副本），只有窗口外的 pending 收款无法对账。要看更早的收款需换保留完整历史的节点。
 
 0.2.5 起窗口精确为 `[foldedAtBlock, latest]`，dapp 增加边界：窗口跨度超过 `NEXT_PUBLIC_LOG_CHUNK_BLOCKS × NEXT_PUBLIC_LOG_MAX_CHUNKS`（默认 5,000 × 10）时不扫描，改为提示本人**本地解密 pending 总额**（先用自己的密钥解出 `pending·G`，再用并行 kangaroo 在 `[0, 2^bits)` 内求离散对数；纯 BigInt JS 约 5 µs/步，2^40 区间约 20–30 s，只得总数无逐笔明细）或强制扫描。这一步只有持账户私钥的人能做，不构成攻击面（安全边界仍是 251 位的 `r`）。这也是 A.1「收款方靠事件 memo 而非链上状态得知 pending 明细」这一设计的固有代价，见 01-design §4.3。
 
