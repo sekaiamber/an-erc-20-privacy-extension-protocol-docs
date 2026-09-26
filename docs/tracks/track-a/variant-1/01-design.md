@@ -1,7 +1,8 @@
 # A.1 细节设计
 
-版本：`0.2.4-draft`　状态：`Draft`　日期：2026-09-25
+版本：`0.2.5-draft`　状态：`Draft`　日期：2026-09-26
 
+> 0.2.5：账户增加 `foldedAtBlock`（本人上次花费的区块号，与 `nonce` 同槽打包，零额外 gas），客户端重建 pending 的事件窗口由此精确可知（§4.3）。`pep()` = `A:1:0.2.5`。
 > 0.2.4：实现家族描述符 `pep()` = `A:1:0.2.4`（07 §10），ERC-165 只保留 `IPEP` id。
 > 0.2.3：按第一轮安全自审（[02-security-review.md](02-security-review.md)）修订：`cancel` 仅登记者可撤、登记统一以句柄为 key、`ConfidentialTransferPrepared` 事件、显式金额上限、监管密钥必须为活动密钥、`decryptable` 上限。
 > 0.2.2：`pending` 改为单调累加 + `folded` 记录，避免收款冷写；稳态 Gas 实测。
@@ -59,6 +60,7 @@ struct ConfidentialAccount {
     Ciphertext pending;       // 待入账累计，只增不清，他人写入
     Ciphertext folded;        // 上次花费时 pending 的值；有效待入账 = pending − folded
     uint64     nonce;         // available 每次变动 +1
+    uint64     foldedAtBlock; // 本人上次花费（= 上次折叠）的区块号；与 nonce 同槽
     bytes      decryptable;   // 本人自加密的余额明文副本，合约不解释，可选
 }
 
@@ -212,6 +214,8 @@ emit ConfidentialTransfer(from, to, handle, regKeyId, C_amt, D_recv, D_reg, E, m
 
 `pending` 存在的唯一目的是让他人的入账不打断本人在途的证明。折叠不再是独立操作，而是**每次花费后自动发生**：合约把有效待入账 `pending − folded` 加进 `available`，然后令 `folded = pending`。`pending` 与 `folded` 都只增不清：清零会让之后每次收款都对存储槽从零写（4 槽 × 22.1k），改为记录已折叠值后收款是非零→非零写，每次收款省约 70k；代价是每个账户首次花费多一次 `folded` 的冷写（约 90k，一次性）。本人通过 memo 与 `LedgerCrossing` 事件已知每笔入账金额，能自行更新本地余额与 `decryptable`。
 
+**重建 pending 明文的窗口是有界的**：折叠之前的入账已并入 `available`（其明文可从 `decryptable` 直接读出），所以只需本人上次花费之后、以自己 `id` 为 `to` 的 `ConfidentialTransfer` / `LedgerCrossing` 事件。合约在每次花费时记录 `foldedAtBlock = block.number`（与 `nonce` 同一存储槽，该槽本来就要写，零额外 gas），客户端一次 `eth_call` 即得精确窗口 `[foldedAtBlock, latest]`，并且从新到旧逐笔解 memo 做后缀求和、与 `pending − folded` 对上即可提前停止；`pending − folded` 为单位元时一笔都不用扫。窗口之内的历史深度取决于账户多久没有花费，公共 RPC 的日志保留限制见 03-deployments。
+
 证明默认只绑定 `available`（只有本人能改，绝不失效）。当本人需要动用尚在 `pending` 中的资金（典型：新账户，`available` 为零），置位 `includePending`，证明绑定 `available + pending`；此时若证明生成到上链之间有新入账到达，证明失效，需重新生成。这是用户的选择，协议不做额外处理。
 
 两种情况下合约的状态更新公式相同，区别只在公开输入中的 `pre`。
@@ -285,7 +289,7 @@ emit LedgerCrossing(from, to, 0x04, x)
 ```solidity
 function balanceOf(address) external view returns (uint256);            // 公开账本
 function confidentialAccountOf(address id) external view
-    returns (Ciphertext available, Ciphertext pending, uint64 nonce, bytes memory decryptable);
+    returns (Ciphertext available, Ciphertext pending, uint64 nonce, uint64 foldedAtBlock, bytes memory decryptable);
 function shieldedSupply() external view returns (uint256);
 function regulatorKey(uint32 id) external view returns (Point memory);
 function supportsInterface(bytes4) external view returns (bool);         // 家族 / Track A / A.1
@@ -293,7 +297,7 @@ function supportsInterface(bytes4) external view returns (bool);         // 家�
 
 ## 8. 客户端流程
 
-**付款方**：链下持有 `pk_recv` → 读自己 `available`（按需 `pending`）、`nonce`、`decryptable` → 解出 `b` → 选 `v, r, e` → 密文与 memo → 证明 → 拼 payload → 自己或经中继者提交 `transferFrom`。
+**付款方**：链下持有 `pk_recv` → 读自己 `available`（按需 `pending`）、`nonce`、`foldedAtBlock`、`decryptable` → 解出 `b` → 选 `v, r, e` → 密文与 memo → 证明 → 拼 payload → 自己或经中继者提交 `transferFrom`。
 
 **收款方**：监听 `ConfidentialTransfer(to = id)` → `k = s⁻¹·E` → 解 memo 得 `(v, r)` → 校验 `C_amt == v·G + r·H` → 本地余额 += v。监听 `LedgerCrossing(to = id, 0x03)` → 本地余额 += amount。不需要任何链上动作。
 
