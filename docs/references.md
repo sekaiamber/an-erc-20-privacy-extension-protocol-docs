@@ -20,6 +20,7 @@
 | Zcash Protocol Specification (Sapling) | note 承诺 + nullifier 模型的权威描述 |
 | Blockchain Privacy and Regulatory Compliance: Towards a Practical Equilibrium (2023) | Privacy Pools 的理论基础 |
 | Bulletproofs: Short Proofs for Confidential Transactions and More | 范围证明 |
+| Zether: Towards Privacy in a Smart Contract World（Bünz, Agrawal, Zamani, Boneh, 2019） | 账户模型 + ElGamal 密文 + ZK 的机密转账；提出 front-running 问题与 epoch 解法，A.1 pending 设计的直接对照 |
 
 ## 项目 / 代码库
 
@@ -30,6 +31,8 @@
 | Privacy Pools (0xbow) | 带关联集合证明的隐私池 |
 | Zama fhEVM | 基于 FHE 的机密合约执行环境 |
 | Aztec | 隐私 zk-rollup |
+| Solana Token-2022 Confidential Transfer | 账户模型机密转账扩展，pending / available 两桶 + `ApplyPendingBalance` |
+| Secret Network SNIP-20 / Oasis Sapphire | TEE 内明文计算的机密代币，无 pending 的对照 |
 | Umbra | 隐匿地址实现 |
 | Semaphore | 匿名信号 / 群成员证明 |
 | OpenZeppelin Contracts | 本项目合约使用的基础库 |
