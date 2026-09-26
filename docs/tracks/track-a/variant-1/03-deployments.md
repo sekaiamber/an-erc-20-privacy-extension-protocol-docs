@@ -1,6 +1,37 @@
 # A.1 部署记录
 
-## BSC testnet（chain id 97）— 0.2.5（当前）
+## BSC testnet（chain id 97）— 0.3.0（当前）
+
+部署日期：2026-09-26　deployment id：`a1-v0_3_0-bsc-testnet`　`pep()` = `A:1:0.3.0`　合约源码 contracts `fb3505f`
+
+| 合约 | 地址 |
+| --- | --- |
+| **`ConfidentialERC20A1`** | [`0x7748d19a13B8C0b49a6815D5c8B43Aa9cA473eAa`](https://testnet.bscscan.com/address/0x7748d19a13B8C0b49a6815D5c8B43Aa9cA473eAa) |
+| `TransferVerifier` | `0xe08B4669B544c2101BC2C97bb01D5Fa352EEeA07` |
+| `UnshieldVerifier` | `0x2e621C4177075623A15Bfa4078416DA4366b6AAA` |
+| `FoldVerifier` | `0x88e065fFa3f570bA36ff437853028236E15AC3a9` |
+| `G8Table` | `0x5f4eEb3B3288012287555962C27178eA6Ce7568f` |
+
+相对 0.2.5：新增 `0x80` 纯折叠（FoldVerifier）与 `lastReceivedAtBlock`，`confidentialAccountOf` 返回 6 个值，构造函数多一个验证器地址。参数不变。
+
+### 链上实测（dapp 客户端库，2026-09-26）
+
+| 操作 | gas | 交易 |
+| --- | --- | --- |
+| `0x03` shield 100 TEST（收款方首次） | 214,534 | [0x2edc…0ed0](https://testnet.bscscan.com/tx/0x2edc639da406a5847ee1302451d6e9532a469d3ac4ad59d3594ee20844ab0ed0) |
+| `0x01` 机密转账 12.5 TEST（付款方首次花费，`includePending`；收款方首次） | 715,531 | [0xa708…e261](https://testnet.bscscan.com/tx/0xa7089714eb525f0e6ad215dc184547aeefaf2943ca738b139f310d860f9de261) |
+| `0x80` 纯折叠（收款方首次操作，中继提交，无 decryptable） | 463,906 | [0xf1e9…eb35](https://testnet.bscscan.com/tx/0xf1e96810789abde251d0b44fa6364b2dfae3986d191b986c3cdd0423fbeb5d35) |
+| `0x04` unshield 5 TEST（折叠后默认模式，中继提交） | 373,539 | [0x2ad2…2aab](https://testnet.bscscan.com/tx/0x2ad20640838a1b3040fc6b74794aefbb1ab3acd7e7ca3d78d85c5fdcbf532aab) |
+
+证明生成（Node）：transfer 2.08 s，fold 0.26 s，unshield 0.98 s。
+
+读数说明：
+- 首次 shield 比 0.2.5 多约 22k：`lastReceivedAtBlock` 与 `nonce` / `foldedAtBlock` 同槽，收款方首次收款把这个槽从零写起（22.1k）；之后每次收款只是热写 2.9k。而该账户首次花费 / 折叠因此少付一次冷写，`0x01` 总体只多 5k。
+- 首次折叠 464k 的大头是 `available`（4 槽）与 `folded`（4 槽）的冷写约 177k，Groth16 验证约 200k；稳态折叠约 250k。
+- 折叠之后的 unshield 走默认模式（只绑定 `available`），比 0.2.5 的 566k 少 192k。
+- 链上 `foldedAtBlock` 与 `lastReceivedAtBlock` 均等于对应交易的区块号，pending 归零、available 解密等于 memo 金额。
+
+## BSC testnet（chain id 97）— 0.2.5（已废弃）
 
 部署日期：2026-09-26　deployment id：`a1-v0_2_5-bsc-testnet`　`pep()` = `A:1:0.2.5`　合约源码 contracts `f70c32b`
 
@@ -81,4 +112,4 @@ dapp 的对策：默认窗口 80,000 区块，从新到旧分块扫描，遇到�
 | 合约源码 | contracts `8f3498a` |
 | BscScan 验证 | 未做（未配置 API key） |
 
-dapp 的 `NEXT_PUBLIC_TOKEN_ADDRESS` 指向 0.2.5 地址。0.2.4 实例仍在链上，但 dapp 读取其账户会因 ABI 不同（`confidentialAccountOf` 返回值数量）失败。
+dapp 的 `NEXT_PUBLIC_TOKEN_ADDRESS` 指向 0.3.0 地址。0.2.4 实例仍在链上，但 dapp 读取其账户会因 ABI 不同（`confidentialAccountOf` 返回值数量）失败。

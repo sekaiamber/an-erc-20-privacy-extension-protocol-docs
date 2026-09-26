@@ -23,6 +23,7 @@
 | [A1-0003](a1-0003-proof-as-authorization.md) | 证明即授权，`transferFrom` 为机密付款入口 | Accepted |
 | [A1-0004](a1-0004-pending-lazy-fold.md) | available / pending 拆分与惰性折叠 | Accepted |
 | [A1-0005](a1-0005-numeric-parameters.md) | 数值参数：位宽、decimals、供应上限 | Accepted |
+| [A1-0006](a1-0006-fold-and-received-block.md) | 纯折叠 `0x80` 与 `lastReceivedAtBlock`（仅 A.1） | Accepted |
 
 ## 模板
 

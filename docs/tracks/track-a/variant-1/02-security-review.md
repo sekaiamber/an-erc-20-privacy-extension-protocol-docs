@@ -15,7 +15,7 @@
 
 | # | 严重度 | 位置 | 问题 | 处理 |
 | --- | --- | --- | --- | --- |
-| F1 | **中** | 合约 §4.3 | **新账户锁定（griefing）**：`available` 为零的账户第一次花费必须用 `includePending` 绑定 `pending`；攻击者每个区块向该 id shield 1 个最小单位，就能让受害者的证明永远在上链前失效。 | **未修复。** 根治方案：新增 A.1 私有类型 `0x80 fold`——一个只证明"知道 `from` 私钥 + nonce"的小电路（约 3k 约束，验证约 200k gas），执行 `available += pending − folded; folded = pending`。折叠不依赖 `pending` 的具体值，不会被入账打断；折叠后按默认模式（只绑定 `available`）花费。列入 v0.3 必做。 |
+| F1 | **中** | 合约 §4.3 | **新账户锁定（griefing）**：`available` 为零的账户第一次花费必须用 `includePending` 绑定 `pending`；攻击者每个区块向该 id shield 1 个最小单位，就能让受害者的证明永远在上链前失效。 | **已修复（0.3.0）**：A.1 私有类型 `0x80` 纯折叠——只证明"知道 `from` 私钥"的电路（实测 4,027 约束，2 个公开输入），执行 `available += pending − folded; folded = pending`。折叠不依赖 `pending` 的值，入账不会打断它；折叠后按默认模式（只绑定 `available`）花费。回归测试：证明生成后攻击者先打款 1 单位，折叠仍成功。 |
 | F2 | 低 | `cancel` | 原实现凭"持有原 payload"授权撤销，但 payload 在 `prepare` 交易里公开，任何人都能撤销任何登记。 | **已修复**：记录 `preparedBy`，仅该地址可撤销。`cancel(from, handle)` 不再接收 payload。 |
 | F3 | 低 | `prepare` | `0x04` 登记以公开金额为 key，两笔同额的待执行 unshield 互相冲突。 | **已修复**：两种类型都以句柄为 key，裸执行统一为 `transferFrom(from, to, handle)`；重复登记 revert `AlreadyPrepared`。 |
 | F4 | 低 | 事件 | `prepare` 时发出 `ConfidentialTransfer`，若之后被撤销，收款方扫描会误以为收到。 | **已修复**：登记发 `ConfidentialTransferPrepared`，执行发 `PreparedExecuted`；`ConfidentialTransfer` 只在真正执行时发出。 |

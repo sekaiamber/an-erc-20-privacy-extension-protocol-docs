@@ -1,7 +1,8 @@
 # A.1 细节设计
 
-版本：`0.2.5-draft`　状态：`Draft`　日期：2026-09-26
+版本：`0.3.0-draft`　状态：`Draft`　日期：2026-09-26
 
+> 0.3.0：新增 A.1 私有类型 `0x80` 纯折叠（只证明私钥知识，不涉及金额，§4.6 / §5.3），根治安全自审 F1；账户增加 `lastReceivedAtBlock`（与 `nonce` 同槽），客户端事件窗口收紧为 `[foldedAtBlock, lastReceivedAtBlock]`。`pep()` = `A:1:0.3.0`。
 > 0.2.5：账户增加 `foldedAtBlock`（本人上次花费的区块号，与 `nonce` 同槽打包，零额外 gas），客户端重建 pending 的事件窗口由此精确可知（§4.3）。`pep()` = `A:1:0.2.5`。
 > 0.2.4：实现家族描述符 `pep()` = `A:1:0.2.4`（07 §10），ERC-165 只保留 `IPEP` id。
 > 0.2.3：按第一轮安全自审（[02-security-review.md](02-security-review.md)）修订：`cancel` 仅登记者可撤、登记统一以句柄为 key、`ConfidentialTransferPrepared` 事件、显式金额上限、监管密钥必须为活动密钥、`decryptable` 上限。
@@ -60,7 +61,8 @@ struct ConfidentialAccount {
     Ciphertext pending;       // 待入账累计，只增不清，他人写入
     Ciphertext folded;        // 上次花费时 pending 的值；有效待入账 = pending − folded
     uint64     nonce;         // available 每次变动 +1
-    uint64     foldedAtBlock; // 本人上次花费（= 上次折叠）的区块号；与 nonce 同槽
+    uint64     foldedAtBlock; // 本人上次花费 / 折叠的区块号；与 nonce 同槽
+    uint64     lastReceivedAtBlock; // 最近一次收款的区块号，他人写入；同槽。仅 A.1，隐藏收款人的变体不得保留（A1-0006）
     bytes      decryptable;   // 本人自加密的余额明文副本，合约不解释，可选
 }
 
@@ -125,6 +127,7 @@ byte 2..    sections（按 type 与 flags 决定，顺序固定）
 | `0x02` | stealth 机密转账 | 机密 id | 一次性 id | 句柄 | 是 | — |
 | `0x03` | 公开 → 机密 | 公开账户 | 机密 id | 明文金额 | 否 | `+x` |
 | `0x04` | 机密 → 公开 | 机密 id | 公开账户 | 明文金额 | 是 | `−x` |
+| `0x80` | 纯折叠（A.1 私有） | 机密 id | 同一 id | 句柄 | 是（仅私钥知识） | 0 |
 
 `0x02` 在 0.2 中仅保留编号，见 §11。
 
@@ -214,7 +217,7 @@ emit ConfidentialTransfer(from, to, handle, regKeyId, C_amt, D_recv, D_reg, E, m
 
 `pending` 存在的唯一目的是让他人的入账不打断本人在途的证明。折叠不再是独立操作，而是**每次花费后自动发生**：合约把有效待入账 `pending − folded` 加进 `available`，然后令 `folded = pending`。`pending` 与 `folded` 都只增不清：清零会让之后每次收款都对存储槽从零写（4 槽 × 22.1k），改为记录已折叠值后收款是非零→非零写，每次收款省约 70k；代价是每个账户首次花费多一次 `folded` 的冷写（约 90k，一次性）。本人通过 memo 与 `LedgerCrossing` 事件已知每笔入账金额，能自行更新本地余额与 `decryptable`。
 
-**重建 pending 明文的窗口是有界的**：折叠之前的入账已并入 `available`（其明文可从 `decryptable` 直接读出），所以只需本人上次花费之后、以自己 `id` 为 `to` 的 `ConfidentialTransfer` / `LedgerCrossing` 事件。合约在每次花费时记录 `foldedAtBlock = block.number`（与 `nonce` 同一存储槽，该槽本来就要写，零额外 gas），客户端一次 `eth_call` 即得精确窗口 `[foldedAtBlock, latest]`，并且从新到旧逐笔解 memo 做后缀求和、与 `pending − folded` 对上即可提前停止；`pending − folded` 为单位元时一笔都不用扫。窗口之内的历史深度取决于账户多久没有花费，公共 RPC 的日志保留限制见 03-deployments。
+**重建 pending 明文的窗口是有界的**：折叠之前的入账已并入 `available`（其明文可从 `decryptable` 直接读出），所以只需本人上次花费之后、以自己 `id` 为 `to` 的 `ConfidentialTransfer` / `LedgerCrossing` 事件。合约在每次花费时记录 `foldedAtBlock = block.number`（与 `nonce` 同一存储槽，该槽本来就要写，零额外 gas），客户端一次 `eth_call` 即得精确窗口 `[foldedAtBlock, lastReceivedAtBlock]`（0.3.0 起合约在每次收款时记录 `lastReceivedAtBlock`，与 `nonce` 同槽；上界之后不可能再有收款），并且从新到旧逐笔解 memo 做后缀求和、与 `pending − folded` 对上即可提前停止；`pending − folded` 为单位元时一笔都不用扫。窗口之内的历史深度取决于账户多久没有花费，公共 RPC 的日志保留限制见 03-deployments。
 
 证明默认只绑定 `available`（只有本人能改，绝不失效）。当本人需要动用尚在 `pending` 中的资金（典型：新账户，`available` 为零），置位 `includePending`，证明绑定 `available + pending`；此时若证明生成到上链之间有新入账到达，证明失效，需重新生成。这是用户的选择，协议不做额外处理。
 
@@ -242,6 +245,28 @@ emit LedgerCrossing(from, to, 0x04, x)
 | 公开 → 机密 | 同上 + `0x03` | 2 字节 | 否 | 是 |
 | 机密 → 机密 | `transferFrom(id, id, handle)` + `0x01` | ~900 字节 | 是 | 否 |
 | 机密 → 公开 | `transferFrom(id, addr, x)` + `0x04` | ~450 字节 | 是 | 是 |
+| 折叠（不转账） | `transferFrom(id, id, handle)` + `0x80` | ~260 字节 | 是 | — |
+
+### 4.6 `0x80` 纯折叠
+
+折叠原本只搭在花费上发生（§4.3）。`0x80` 让本人在不转账的情况下执行同一状态更新：
+
+```
+verify(proof, H(chainId, this, from, acc.nonce))          // 只证明持有 from 的私钥
+acc.available += acc.pending − acc.folded ; acc.folded = acc.pending
+acc.nonce += 1 ; acc.foldedAtBlock = block.number
+if flags.decryptable: acc.decryptable = payload.decryptable
+emit Folded(from, handle, acc.nonce)
+```
+
+调用形式 `transferFrom(id, id, handle)` + payload（`to` 必须等于 `from`，`handle = keccak(payload) | 2²⁵⁵`）。payload 只有 `[type, flags, proof, decryptable?]`，`includePending` 位在此保留（折叠天然包含 pending）。不支持 `prepare`。
+
+用途：
+
+1. **把知识存进链上。** 本人趁收款事件仍在 RPC 保留期内逐笔解出 memo，折叠时把 `available + pending` 的明文加密写入 `decryptable`；之后无论多久不操作，读取都只依赖 `[foldedAtBlock, lastReceivedAtBlock]` 这段窗口。对「收款频繁、花费很少」的账户，这是让窗口不无限增长的唯一手段。
+2. **根治新账户锁定（安全自审 F1）。** 证明不绑定任何金额或 `pending` 的值，攻击者在证明生成到上链之间打款不会使其失效；折叠后按默认模式（只绑定 `available`）花费。
+
+代价：一笔约 250k gas 的交易（首次折叠因 `available` / `folded` 冷写约 450k）。
 
 ## 5. 电路
 
@@ -272,6 +297,10 @@ emit LedgerCrossing(from, to, 0x04, x)
 
 去掉 3、9 的后两项、10、11；公开输入 7 个：`w0 = from | nonce<<160`，`w1 = contract | chainId<<160`，`w2 = amount | signBits<<48`，`xs[4]`。实测 16,622 个约束。
 
+### 5.3 `0x80`
+
+公开输入 2 个：`w0 = from | nonce<<160`，`w1 = contract | chainId<<160`。私有：`from, nonce, chainId, contractAddr, s, pk`。约束：拆包 + 范围检查、`s·pk = H`、`low160(Poseidon(pk)) = from`。实测 **4,027 个约束**，证明约 0.3 s。
+
 ## 6. 事件
 
 | 事件 | 字段 | 用途 |
@@ -279,6 +308,7 @@ emit LedgerCrossing(from, to, 0x04, x)
 | `Transfer` | `(from, to, x)` | 标准；`x` 最高位区分句柄与金额 |
 | `ConfidentialTransfer` | `(from, to, handle, regKeyId, C_amt, D_recv, D_reg, E, memo_recv, memo_reg)` | 收款方扫描、监管解密 |
 | `LedgerCrossing` | `(from, to, type, amount)` | `0x03` / `0x04`，索引器维护 `shieldedSupply` |
+| `Folded` | `(id, handle, nonce)` | `0x80`，`nonce` 为折叠后的新值 |
 | `Prepared` / `Cancelled` | `(from, handle)` | 兜底 |
 | `RegulatorKeyRotated` | `(keyId, pk)` | |
 
@@ -289,7 +319,7 @@ emit LedgerCrossing(from, to, 0x04, x)
 ```solidity
 function balanceOf(address) external view returns (uint256);            // 公开账本
 function confidentialAccountOf(address id) external view
-    returns (Ciphertext available, Ciphertext pending, uint64 nonce, uint64 foldedAtBlock, bytes memory decryptable);
+    returns (Ciphertext available, Ciphertext pending, uint64 nonce, uint64 foldedAtBlock, uint64 lastReceivedAtBlock, bytes memory decryptable);
 function shieldedSupply() external view returns (uint256);
 function regulatorKey(uint32 id) external view returns (Point memory);
 function supportsInterface(bytes4) external view returns (bool);         // 家族 / Track A / A.1
@@ -365,7 +395,6 @@ function supportsInterface(bytes4) external view returns (bool);         // 家�
 | 点压缩 | 降低 calldata |
 | ERC-2771 | 附加数据与 forwarder 尾部的共存 |
 | 多输出转账 | 一笔证明多个收款方 |
-| **`0x80 fold`（v0.3 必做）** | 只证明私钥知识的小电路，折叠不依赖 `pending` 值，根治新账户锁定（安全自审 F1） |
 
 ## 12. 待决
 
