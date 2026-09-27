@@ -1,28 +1,30 @@
-# 0001 合约开发环境采用 Hardhat 3
+English | [中文](0001-use-hardhat3-for-contracts.zh-cn.md)
 
-- 状态：Accepted
-- 日期：2026-09-22
+# 0001 Use Hardhat 3 as the contract development environment
 
-## 背景
+- Status: Accepted
+- Date: 2026-09-22
 
-合约仓库需要一个通用、易上手的 EVM 开发环境，支持编译、测试、本地模拟链与部署。团队环境中已有 Node.js，尚未安装 Foundry。
+## Context
 
-## 决策
+The contract repository needs a general-purpose, easy-to-pick-up EVM development environment that supports compilation, testing, a local simulated chain, and deployment. Node.js is already present in the team environment; Foundry is not yet installed.
 
-采用 **Hardhat 3** 官方 `mocha-ethers` 模板作为合约仓库的基础：
+## Decision
 
-- TypeScript 集成测试（mocha + ethers v6 + chai）
-- Foundry 兼容的 Solidity 单元测试（forge-std）
-- Hardhat Ignition 做部署
-- OpenZeppelin Contracts v5 作为基础库
+Adopt the official **Hardhat 3** `mocha-ethers` template as the foundation of the contract repository:
 
-## 备选方案
+- TypeScript integration tests (mocha + ethers v6 + chai)
+- Foundry-compatible Solidity unit tests (forge-std)
+- Hardhat Ignition for deployment
+- OpenZeppelin Contracts v5 as the base library
 
-- **Foundry**：编译与测试速度更快，纯 Solidity 测试；但需要额外安装工具链，且后续客户端 / 证明生成脚本大概率使用 TypeScript，Hardhat 更便于统一。Hardhat 3 已支持 forge-std 风格的 Solidity 测试，两者的差距缩小。
-- **Hardhat 2**：生态成熟，但已进入维护期，新项目不再推荐。
+## Alternatives
 
-## 后果
+- **Foundry**: faster compilation and testing, pure Solidity tests; but it requires installing an additional toolchain, and the later client / proof-generation scripts will most likely be written in TypeScript, so Hardhat makes it easier to keep everything unified. Hardhat 3 already supports forge-std style Solidity tests, narrowing the gap between the two.
+- **Hardhat 2**: mature ecosystem, but it has entered maintenance mode and is no longer recommended for new projects.
 
-- 正面：一套仓库同时支持 Solidity 与 TypeScript 测试；部署与网络配置统一。
-- 负面：Hardhat 3 相对较新，部分第三方插件可能尚未适配；ESM-only 对某些工具链有兼容要求。
-- 若后续证明系统工具链强依赖 Foundry，可在子仓库中并行引入 Foundry，不与本决策冲突。
+## Consequences
+
+- Positive: a single repository supports both Solidity and TypeScript tests; deployment and network configuration are unified.
+- Negative: Hardhat 3 is relatively new, and some third-party plugins may not yet be adapted; ESM-only imposes compatibility requirements on certain toolchains.
+- If the proof-system toolchain later depends heavily on Foundry, Foundry can be introduced in parallel within the submodule without conflicting with this decision.

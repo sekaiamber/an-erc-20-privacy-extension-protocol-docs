@@ -1,100 +1,102 @@
-# A.1 安全自审（第一轮）
+English | [中文](02-security-review.zh-cn.md)
 
-日期：2026-09-25　对象：`contracts` 仓库 `21ebe6b`（电路、合约、客户端库）　方法：逐条对照设计文档 §3.3 一致性检查与 §5 电路约束，人工审查 + 针对性回归测试。
+# A.1 Security Self-Review (Round One)
 
-> 这是作者自审，不是独立审计。目的是把原型推进到 `Review` 状态前，先把作者自己能看见的问题清掉并留档。
+Date: 2026-09-25. Subject: `contracts` repository at `21ebe6b` (circuits, contracts, client library). Method: item-by-item check against the consistency checks in design document §3.3 and the circuit constraints in §5, manual review plus targeted regression tests.
 
-## 结论
+> This is an author self-review, not an independent audit. The purpose is to clear and record the problems the author can see before advancing the prototype to `Review` status.
 
-- **未发现可伪造证明、双花或凭空铸造的路径。** 电路的公开输入解包唯一（每个字段都有范围检查），所有链上使用的点都由等式约束到电路内计算值。
-- **发现 1 个中等严重度的可用性攻击（新账户锁定）**，需要新增一个操作才能根治，尚未实现。
-- **6 个低严重度问题已修复**并附回归测试。
-- 若干信任假设与已接受风险记录在案。
+## Conclusions
 
-## 发现
+- **No path to forge proofs, double-spend, or mint out of thin air was found.** The circuit's public-input unpacking is unique (every field has a range check), and every point used on-chain is bound by equality constraints to the values computed inside the circuit.
+- **One medium-severity availability attack (new-account lockout) was found**; a root fix requires adding a new operation, which is not yet implemented.
+- **6 low-severity issues are fixed** with regression tests attached.
+- Several trust assumptions and accepted risks are recorded.
 
-| # | 严重度 | 位置 | 问题 | 处理 |
+## Findings
+
+| # | Severity | Location | Issue | Handling |
 | --- | --- | --- | --- | --- |
-| F1 | **中** | 合约 §4.3 | **新账户锁定（griefing）**：`available` 为零的账户第一次花费必须用 `includePending` 绑定 `pending`；攻击者每个区块向该 id shield 1 个最小单位，就能让受害者的证明永远在上链前失效。 | **已修复（0.3.0）**：A.1 私有类型 `0x80` 纯折叠——只证明"知道 `from` 私钥"的电路（实测 4,027 约束，2 个公开输入），执行 `available += pending − folded; folded = pending`。折叠不依赖 `pending` 的值，入账不会打断它；折叠后按默认模式（只绑定 `available`）花费。回归测试：证明生成后攻击者先打款 1 单位，折叠仍成功。 |
-| F2 | 低 | `cancel` | 原实现凭"持有原 payload"授权撤销，但 payload 在 `prepare` 交易里公开，任何人都能撤销任何登记。 | **已修复**：记录 `preparedBy`，仅该地址可撤销。`cancel(from, handle)` 不再接收 payload。 |
-| F3 | 低 | `prepare` | `0x04` 登记以公开金额为 key，两笔同额的待执行 unshield 互相冲突。 | **已修复**：两种类型都以句柄为 key，裸执行统一为 `transferFrom(from, to, handle)`；重复登记 revert `AlreadyPrepared`。 |
-| F4 | 低 | 事件 | `prepare` 时发出 `ConfidentialTransfer`，若之后被撤销，收款方扫描会误以为收到。 | **已修复**：登记发 `ConfidentialTransferPrepared`，执行发 `PreparedExecuted`；`ConfidentialTransfer` 只在真正执行时发出。 |
-| F5 | 低 | `0x03` / `0x04` | 金额 ≥ 2⁴⁸ 时依赖窗口表 `require` 或证明失败间接拒绝，错误信息不明确；`0x04` 打包 `amount \| signBits<<48` 在金额越界时位域重叠。 | **已修复**：显式 `AmountTooLarge`。注意：**单笔上限 2⁴⁸ 同样适用于 shield**，大额需拆分。 |
-| F6 | 低 | `regKeyId` | 允许使用任意历史监管公钥；若某把密钥因泄露而轮换，付款方仍可把监管副本加密给它。 | **已修复**：必须等于 `activeRegulatorKeyId`。代价：轮换瞬间在途的证明作废，需重做。`prepare` 过的登记在轮换后仍可执行（登记时已验证）。 |
-| F7 | 低 | payload | `decryptable` 段长度上限 65535 字节，可被用来制造超大存储写入（费用由发送方承担，但会污染状态）。 | **已修复**：上限 1024 字节。 |
-| F8 | 低 | 客户端 | 随机标量用 32 字节 `mod L`，模偏差约 2⁻⁵。 | **已修复**：64 字节。 |
-| F9 | 信息 | 合约 | 中继者交易可被 mempool 观察者抢先提交同一 payload：效果相同，仅原中继者损失 gas。 | 接受。 |
-| F10 | 信息 | 合约 | 直接执行与 `prepare` 登记并存时，先执行者胜，另一方的登记因 nonce 过期永久失效（可 `cancel` 回收存储）。 | 接受，文档已说明。 |
-| F11 | 信息 | 电路 | `s` 的范围检查是 251 位而非 `< L`，存在 `s` 与 `s + L` 的别名。 | 无安全影响（两者对应同一公钥、同一解密），接受。 |
-| F12 | 信息 | 电路 | id 取 Poseidon 低 160 位：攻击者可用 2⁸⁰ 工作量造出自己两把碰撞的密钥；对他人 id 的第二原像仍是 2¹⁶⁰。 | 无影响，接受。 |
-| F13 | 信息 | 客户端 | memo 密钥流是一次性填充：同一 `e` 对同一收款方重用会泄露 `v`、`r`。 | 客户端每笔生成新 `e`；规范中标注"`e` 不得重用"。 |
+| F1 | **Medium** | Contract §4.3 | **New-account lockout (griefing)**: the first spend from an account whose `available` is zero must bind `pending` via `includePending`; an attacker who shields 1 minimum unit to that id every block can make the victim's proof expire before it lands on-chain, forever. | **Fixed (0.3.0)**: A.1 private type `0x80` pure fold, a circuit that only proves "knowledge of the `from` private key" (measured 4,027 constraints, 2 public inputs), executing `available += pending − folded; folded = pending`. The fold does not depend on the value of `pending`, so incoming payments cannot interrupt it; after folding, spend in default mode (binding only `available`). Regression test: after proof generation the attacker first sends 1 unit, and the fold still succeeds. |
+| F2 | Low | `cancel` | The original implementation authorized cancellation by "holding the original payload", but the payload is public in the `prepare` transaction, so anyone could cancel any registration. | **Fixed**: record `preparedBy`; only that address may cancel. `cancel(from, handle)` no longer takes the payload. |
+| F3 | Low | `prepare` | `0x04` registrations were keyed by the public amount, so two pending unshields of the same amount conflicted with each other. | **Fixed**: both types are keyed by handle, and bare execution is unified as `transferFrom(from, to, handle)`; duplicate registration reverts with `AlreadyPrepared`. |
+| F4 | Low | Events | `ConfidentialTransfer` was emitted at `prepare` time; if the registration was later cancelled, the recipient's scan would wrongly believe it had received funds. | **Fixed**: registration emits `ConfidentialTransferPrepared`, execution emits `PreparedExecuted`; `ConfidentialTransfer` is emitted only on actual execution. |
+| F5 | Low | `0x03` / `0x04` | For amounts ≥ 2⁴⁸, rejection relied indirectly on the window table `require` or proof failure, with unclear error messages; the `0x04` packing `amount \| signBits<<48` had overlapping bit fields when the amount was out of range. | **Fixed**: explicit `AmountTooLarge`. Note: **the per-transaction cap of 2⁴⁸ also applies to shield**; large amounts must be split. |
+| F6 | Low | `regKeyId` | Any historical regulator public key was allowed; if a key was rotated because of a leak, a payer could still encrypt the regulator copy to it. | **Fixed**: must equal `activeRegulatorKeyId`. Cost: proofs in flight at the moment of rotation are invalidated and must be redone. Registrations that have been `prepare`d remain executable after rotation (verified at registration time). |
+| F7 | Low | payload | The `decryptable` segment had a length cap of 65535 bytes, which could be used to create oversized storage writes (the sender pays the fee, but it pollutes state). | **Fixed**: cap of 1024 bytes. |
+| F8 | Low | Client | Random scalars used 32 bytes `mod L`, with modular bias of about 2⁻⁵. | **Fixed**: 64 bytes. |
+| F9 | Info | Contract | A relayer's transaction can be front-run by a mempool observer submitting the same payload: the effect is identical, only the original relayer loses gas. | Accepted. |
+| F10 | Info | Contract | When direct execution and a `prepare` registration coexist, whichever executes first wins; the other party's registration becomes permanently invalid because the nonce has expired (`cancel` can reclaim the storage). | Accepted, documented. |
+| F11 | Info | Circuit | The range check on `s` is 251 bits rather than `< L`, so `s` and `s + L` alias. | No security impact (both correspond to the same public key and the same decryption), accepted. |
+| F12 | Info | Circuit | The id takes the low 160 bits of Poseidon: an attacker can produce two colliding keys of their own with 2⁸⁰ work; a second preimage of someone else's id is still 2¹⁶⁰. | No impact, accepted. |
+| F13 | Info | Client | The memo key stream is a one-time pad: reusing the same `e` for the same recipient leaks `v` and `r`. | The client generates a fresh `e` for every transfer; the spec states "`e` must not be reused". |
 
-## 逐项核对记录
+## Item-by-Item Check Record
 
-### 电路
+### Circuit
 
-| 检查 | 结果 |
+| Check | Result |
 | --- | --- |
-| 打包解包唯一性：`w0 = from + nonce·2¹⁶⁰`、`w1 = to + chainId·2¹⁶⁰`、`w2 = contract + regKeyId·2¹⁶⁰ + Σ sign·2¹⁹²⁺ⁱ`，各字段分别 160 / 64 / 64 / 160 / 32 / 1 位范围检查，位域不重叠 | ✅ |
-| 点绑定：公开 x + 私有 y，`BabyCheck` 在曲线上 + `Num2Bits_strict(y)[0] == sign`；同一 x 的两个 y 奇偶必不同（p 为奇数；y = 0 时 −y = 0 同点） | ✅ |
-| 余额充足：`b < 2⁶⁴`（`MulG(64)` 内 `Num2Bits`）、`v < 2⁴⁸`、`Num2Bits(64)(b − v)`；`v > b` 时 `b − v ≡ p − (v − b) > 2⁶⁴` 必失败 | ✅ |
-| 三方同值：`Camt = v·G + r·H`，`D_X = r·pk_X` 均为等式约束，无自由变量 | ✅ |
-| memo 正确性：`kR = e·pk_recv`、`kG = e·pk_reg` 在电路内计算并与公开 memo 相等 | ✅ |
-| `pk_recv` 绑定：`Poseidon(pk_recv) → to`；`to` 由合约传入 | ✅ |
-| 单位元处理：`EscalarMulAny` 对 x = 0 的点输出单位元；`BabyAdd` 是完备加法 | ✅ |
-| 子群：链上只检查在曲线上；但所有入库点都由等式约束到 `v·G + r·H` / `r·pk` 形式，只要用户密钥在子群内，入库点就在子群内。用户自己派生出子群外的密钥只损害自己 | ✅（记录） |
+| Pack/unpack uniqueness: `w0 = from + nonce·2¹⁶⁰`, `w1 = to + chainId·2¹⁶⁰`, `w2 = contract + regKeyId·2¹⁶⁰ + Σ sign·2¹⁹²⁺ⁱ`, with fields range-checked at 160 / 64 / 64 / 160 / 32 / 1 bits respectively, no overlapping bit fields | ✅ |
+| Point binding: public x + private y, `BabyCheck` on-curve + `Num2Bits_strict(y)[0] == sign`; the two y values for the same x necessarily have different parity (p is odd; when y = 0, −y = 0 is the same point) | ✅ |
+| Sufficient balance: `b < 2⁶⁴` (`Num2Bits` inside `MulG(64)`), `v < 2⁴⁸`, `Num2Bits(64)(b − v)`; when `v > b`, `b − v ≡ p − (v − b) > 2⁶⁴` necessarily fails | ✅ |
+| Three-party equality: `Camt = v·G + r·H`, `D_X = r·pk_X` are all equality constraints, no free variables | ✅ |
+| memo correctness: `kR = e·pk_recv`, `kG = e·pk_reg` computed inside the circuit and equated to the public memo | ✅ |
+| `pk_recv` binding: `Poseidon(pk_recv) → to`; `to` is passed in by the contract | ✅ |
+| Identity handling: `EscalarMulAny` outputs the identity for the point with x = 0; `BabyAdd` is complete addition | ✅ |
+| Subgroup: on-chain only checks on-curve; but every stored point is bound by equality constraints to the form `v·G + r·H` / `r·pk`, so as long as the user's key is in the subgroup, stored points are in the subgroup. A user who derives a key outside the subgroup harms only themselves | ✅ (recorded) |
 
-### 合约
+### Contract
 
-| 检查 | 结果 |
+| Check | Result |
 | --- | --- |
-| 重入：无对不可信合约的外部调用；验证合约为 `view` 且 immutable；OZ v5 ERC20 无转账钩子 | ✅ |
-| 不变量 I1：屏蔽代币托管在合约地址，`balanceOf(this) == shieldedSupply`，测试覆盖 | ✅ |
-| I2 供应上限：`_update` 铸造后检查 `totalSupply ≤ 2⁶⁴ − 1` | ✅ |
-| nonce：每次 `available` 变动 +1；证明与登记均绑定 | ✅ |
-| `from == to`：扣款进 `available`，入账进 `pending`，下次折叠，语义一致 | ✅ |
-| `_preState` 归一化：存储零点映射为 (0,1) 后再传给验证合约 | ✅ |
-| 类型分发：`transfer` 只接受无 payload / `0x03`；`transferFrom` 接受无 payload / `0x03` / `0x01` / `0x04`；其余 revert | ✅ |
-| 一致性检查 §3.3 全部 8 条 | ✅（第 5 条改为"必须是活动密钥"） |
-| 升级：无代理、无升级；验证合约、窗口表地址 immutable | ✅（记录为设计选择） |
+| Reentrancy: no external calls to untrusted contracts; verifier contracts are `view` and immutable; OZ v5 ERC20 has no transfer hooks | ✅ |
+| Invariant I1: shielded tokens are held in custody at the contract address, `balanceOf(this) == shieldedSupply`, covered by tests | ✅ |
+| I2 supply cap: `_update` checks `totalSupply ≤ 2⁶⁴ − 1` after minting | ✅ |
+| nonce: +1 on every change to `available`; bound by both proofs and registrations | ✅ |
+| `from == to`: debit goes to `available`, credit goes to `pending`, folded next time; semantics consistent | ✅ |
+| `_preState` normalization: a stored zero point is mapped to (0,1) before being passed to the verifier contract | ✅ |
+| Type dispatch: `transfer` accepts only no payload / `0x03`; `transferFrom` accepts no payload / `0x03` / `0x01` / `0x04`; everything else reverts | ✅ |
+| All 8 consistency checks in §3.3 | ✅ (item 5 changed to "must be the active key") |
+| Upgrades: no proxy, no upgrades; verifier and window-table addresses immutable | ✅ (recorded as a design choice) |
 
-### 信任假设（记录）
+### Trust Assumptions (Recorded)
 
-| 假设 | 说明 |
+| Assumption | Description |
 | --- | --- |
-| Groth16 可信设置 | 当前为本地开发用假仪式，**不得用于任何有价值的部署**；正式版接公开 ptau + 自办 phase 2，或改 PLONK 类 |
-| `REGULATOR_ADMIN` | 可把监管公钥轮换到自己控制的密钥，从而读到之后所有金额。这是"监管方 = 管理员"的设计前提，部署时应为独立多签 |
-| `MINTER_ROLE` | 可在上限内增发；与普通 ERC-20 相同 |
-| 生成元 `H` | 由 `hash-to-curve("PEP/A.1/H/v1")` 派生并清 cofactor，与 `G` 的离散对数关系未知；派生脚本在仓库中可复现 |
+| Groth16 trusted setup | Currently a fake ceremony for local development, **must not be used for any deployment of value**; the production version will use a public ptau + self-run phase 2, or switch to a PLONK-style scheme |
+| `REGULATOR_ADMIN` | Can rotate the regulator public key to a key under its own control and thereby read all subsequent amounts. This is the design premise "regulator = admin"; at deployment it should be an independent multisig |
+| `MINTER_ROLE` | Can mint additional supply within the cap; same as an ordinary ERC-20 |
+| Generator `H` | Derived via `hash-to-curve("PEP/A.1/H/v1")` with cofactor cleared; its discrete-log relation to `G` is unknown; the derivation script is reproducible in the repository |
 
-## 下一步
+## Next Steps
 
-1. F1 / D1 在研究阶段仅记录（2026-09-25 决定）；面向上线的版本再实现 `0x80 fold`。
-2. 第二轮：针对 `prepare` / 直接执行 / `cancel` 的交错做模糊测试；对 `A1Payload` 做畸形输入模糊测试。
-3. 以上完成后，A.1 设计文档进入 `Review`。
+1. F1 / D1 are only recorded during the research phase (decided 2026-09-25); `0x80 fold` will be implemented in the version aimed at launch.
+2. Round two: fuzz the interleaving of `prepare` / direct execution / `cancel`; fuzz `A1Payload` with malformed inputs.
+3. Once the above is done, the A.1 design document enters `Review`.
 
-## 附录 A：拒绝服务 / 消耗类风险清单（记录，研究阶段不缓解）
+## Appendix A: Denial-of-Service / Resource-Exhaustion Risk List (Recorded, Not Mitigated in the Research Phase)
 
-这类风险的共同特点：**攻击者拿不到钱、拿不到明文，只能让别人多花 gas 或暂时办不成事**，而且攻击必须持续付费。研究阶段只记录；任何面向上线的版本应逐项重新评估。价格假设：ETH 0.3 gwei / $2,500，BSC 0.05 gwei / $750。
+What these risks have in common: **the attacker gets neither money nor plaintext, and can only make others spend more gas or temporarily fail to get things done**, and the attack must be paid for continuously. During the research phase they are only recorded; any version aimed at launch should re-evaluate each one. Price assumptions: ETH 0.3 gwei / $2,500, BSC 0.05 gwei / $750.
 
-| # | 风险 | 攻击者做什么 | 攻击者成本 | 受害者影响 | 现状 / 根治方向 |
+| # | Risk | What the attacker does | Attacker cost | Victim impact | Status / root-fix direction |
 | --- | --- | --- | --- | --- | --- |
-| D1 | **新账户锁定**（= 自审 F1） | 每个区块向目标 id shield 1 个最小单位，使其 `includePending` 证明在上链前失效 | 每块 ~200k gas（ETH $0.15，BSC $0.0075）；一笔交易可同时骚扰多个 id | 每次失败尝试烧 ~300k gas；攻击持续期间花不出第一笔 | 记录。根治：`0x80 fold`（只证私钥知识，不绑定 pending） |
-| D2 | `includePending` 通用竞争 | 同 D1，但目标是任何选择绑定 pending 的账户 | 同上 | 同上；默认模式（只绑定 available）不受影响 | 记录。用户可改用默认模式 |
-| D3 | 登记作废 | 在受害者的 `prepare` 登记执行前，把同一账户的另一笔（直接执行）先上链，nonce 变化使登记永久失效 | 需要持有该账户的某个有效 payload（通常只有本人或其中继者有） | 浪费一次 `prepare` 的 gas（~400k） | 记录。本质是本人 / 自己的中继者之间的协调问题 |
-| D4 | 中继者抢跑 | 从 mempool 复制中继者的 payload 先行提交 | 一次完整交易的 gas | 原中继者交易失败、损失 gas；链上效果相同 | 记录。中继者可用私有交易通道 |
-| D5 | 监管密钥频繁轮换 | `REGULATOR_ADMIN` 反复轮换，使所有在途 `0x01` 证明作废（F6 的副作用） | 每次 ~50k gas | 全网机密转账在轮换瞬间失败一次 | 记录。属于管理员信任假设；可加最小轮换间隔 |
-| D6 | 遗留登记 | 中继者 `prepare` 后消失，登记只能由它撤销 | 中继者自己付 gas | 账户本人无法清理该存储项（无费用影响，只是垃圾） | 记录。可加"本人凭证明清理"路径 |
-| D7 | 冷写转嫁 | 收款方总是给出全新 id，让付款方承担首次 pending 冷写 | 无 | 付款方每笔多 ~65k gas | 记录。属于费用分摊设计，非漏洞 |
-| D8 | 事件噪声 | 向目标 id 发大量 dust shield，制造 `LedgerCrossing` 事件 | 每笔 ~200k gas | 客户端扫描多处理一些事件；链上状态不膨胀（同态累加） | 记录 |
-| D9 | 机密 dust | 持有目标 `pk` 的人发大量小额 `0x01` | 每笔 ~470k gas + 证明 | 同 D8；memo 由电路强制正确，无法投毒 | 记录 |
-| D10 | 发错类型 | —（用户自身错误） | — | 公开转账发到机密 id：代币落在无人控制的公开余额 | ADR-0003：协议不兜底，前端校验 |
+| D1 | **New-account lockout** (= self-review F1) | Shields 1 minimum unit to the target id every block so that its `includePending` proof expires before landing on-chain | ~200k gas per block (ETH $0.15, BSC $0.0075); one transaction can harass multiple ids at once | Each failed attempt burns ~300k gas; the first spend cannot go through for the duration of the attack | Recorded. Root fix: `0x80 fold` (proves only key knowledge, does not bind pending) |
+| D2 | General `includePending` race | Same as D1, but targeting any account that chooses to bind pending | Same as above | Same as above; default mode (binding only available) is unaffected | Recorded. Users can switch to default mode |
+| D3 | Registration invalidation | Before the victim's `prepare` registration executes, lands another transfer (direct execution) from the same account first; the nonce change permanently invalidates the registration | Requires holding some valid payload for that account (usually only the owner or their relayer has one) | Wastes the gas of one `prepare` (~400k) | Recorded. Essentially a coordination problem between the owner and their own relayer |
+| D4 | Relayer front-running | Copies the relayer's payload from the mempool and submits it first | The gas of one full transaction | The original relayer's transaction fails and loses gas; on-chain effect is identical | Recorded. Relayers can use private transaction channels |
+| D5 | Frequent regulator key rotation | `REGULATOR_ADMIN` rotates repeatedly, invalidating all in-flight `0x01` proofs (side effect of F6) | ~50k gas per rotation | All confidential transfers network-wide fail once at the moment of rotation | Recorded. Falls under the admin trust assumption; a minimum rotation interval could be added |
+| D6 | Orphaned registration | A relayer disappears after `prepare`; the registration can only be cancelled by it | The relayer pays its own gas | The account owner cannot clean up that storage entry (no fee impact, just garbage) | Recorded. An "owner cleans up with a proof" path could be added |
+| D7 | Cold-write shifting | The recipient always provides a brand-new id, making the payer bear the first-time pending cold write | None | Payer pays ~65k more gas per transfer | Recorded. A fee-allocation design matter, not a vulnerability |
+| D8 | Event noise | Sends a large number of dust shields to the target id, generating `LedgerCrossing` events | ~200k gas each | The client scan processes a few more events; on-chain state does not bloat (homomorphic accumulation) | Recorded |
+| D9 | Confidential dust | Someone holding the target `pk` sends a large number of small `0x01` transfers | ~470k gas each + proof | Same as D8; the memo is forced to be correct by the circuit and cannot be poisoned | Recorded |
+| D10 | Wrong type sent | — (user's own mistake) | — | A public transfer sent to a confidential id: the tokens land in a public balance nobody controls | ADR-0003: the protocol provides no fallback; the frontend validates |
 
-### 与隐私相关但非 DoS 的记录项
+### Privacy-Related but Non-DoS Items Recorded
 
-| # | 风险 | 说明 |
+| # | Risk | Description |
 | --- | --- | --- |
-| P-a | `includePending` 标志公开 | 泄露"此账户正在动用新入账"这一元信息 |
-| P-b | `decryptable` 段的有无与大小公开 | 泄露账户是否由活跃客户端管理 |
-| P-c | 中继者知道提交者 IP 与 id 的对应 | 网络层，家族级非目标 |
-| P-d | 划转可关联、id 为化名 | 家族级已接受风险（05 威胁模型） |
+| P-a | The `includePending` flag is public | Leaks the metadata "this account is spending newly received funds" |
+| P-b | The presence and size of the `decryptable` segment are public | Leaks whether the account is managed by an active client |
+| P-c | The relayer knows the mapping between submitter IP and id | Network layer, a family-level non-goal |
+| P-d | Transfers are linkable, id is a pseudonym | Family-level accepted risk (05 threat model) |

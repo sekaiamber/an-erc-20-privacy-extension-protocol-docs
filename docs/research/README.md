@@ -1,28 +1,30 @@
-# 调研笔记
+English | [中文](README.zh-cn.md)
 
-对单个外部方案的详细调研。每个方案一个文件，建议结构：
+# Research notes
+
+Detailed research on individual external schemes. One file per scheme; suggested structure:
 
 ```markdown
-# 方案名
+# Scheme name
 
-- 官网 / 代码库：
-- 调研日期：
-- 状态：进行中 / 完成
+- Website / repository:
+- Research date:
+- Status: in progress / done
 
-## 概述
-## 状态模型
-## 核心流程（存入 / 转账 / 取出）
-## 密码学组件
-## 信任假设
-## 与 ERC-20 的关系
-## Gas 成本
-## 合规能力
-## 对本项目的启发
-## 参考
+## Overview
+## State model
+## Core flows (deposit / transfer / withdraw)
+## Cryptographic components
+## Trust assumptions
+## Relationship to ERC-20
+## Gas costs
+## Compliance capabilities
+## Lessons for this project
+## References
 ```
 
-完成后在 [03 方案全景](../03-landscape.md) 对应位置添加链接。
+When done, add a link at the corresponding place in [03 Landscape](../03-landscape.md).
 
-## 索引
+## Index
 
-（暂无）
+(none yet)

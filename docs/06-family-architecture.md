@@ -1,58 +1,60 @@
-# 06 家族架构
+English | [中文](06-family-architecture.zh-cn.md)
 
-状态：`Draft`
+# 06 Family architecture
 
-## 分层
+Status: `Draft`
 
-协议家族分三层，每层回答一个不同受众的问题：
+## Layers
 
-| 层 | 受众 | 回答的问题 | 载体 |
+The protocol family has three layers; each answers a question for a different audience:
+
+| Layer | Audience | Question answered | Carrier |
 | --- | --- | --- | --- |
-| **家族级约定** | 所有集成方与实现者 | 一个"隐私扩展 ERC-20"在链上长什么样，怎么调用 | [07 家族级约定](07-family-conventions.md) |
-| **Track** | 钱包、DEX、浏览器等集成方 | 有没有公开账本，`balanceOf` / `transfer` 语义是什么 | `docs/tracks/track-x/README.md` |
-| **Variant** | 最终用户与监管方 | 隐藏了什么、信任什么、密钥与证明由谁负责 | `docs/tracks/track-x/variant-n/` |
+| **Family conventions** | All integrators and implementers | What a "privacy-extended ERC-20" looks like on-chain and how to call it | [07 Family conventions](07-family-conventions.md) |
+| **Track** | Integrators such as wallets, DEXes, explorers | Whether there is a public ledger, and what the `balanceOf` / `transfer` semantics are | `docs/tracks/track-x/README.md` |
+| **Variant** | End users and regulators | What is hidden, what is trusted, who is responsible for keys and proofs | `docs/tracks/track-x/variant-n/` |
 
-Track 之间在集成方看来是不同的接口契约；同一 Track 下的 Variant 对集成方表现一致，只在隐私保证与密码学内核上不同。Variant 之间自包含、互不依赖（ADR-0002）。
+From an integrator's point of view, different Tracks are different interface contracts; Variants under the same Track behave identically to integrators and differ only in their privacy guarantees and cryptographic core. Variants are self-contained and independent of one another (ADR-0002).
 
-## 当前家族
-
-```
-Track A  双账本：公开账本（标准 ERC-20）+ 机密账本
-  └─ A.1  twisted ElGamal 加密账户 + Groth16，账户 = 公钥          ← 主线，原型已跑通
-Track B  纯机密：无公开账本
-  └─ （占位）
-```
-
-## 一个 Variant 的典型结构（以 A.1 为例）
+## Current family
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  代币合约（一个地址）                                            │
-│                                                              │
-│  ┌──────────────────┐   0x03 shield    ┌────────────────────┐ │
-│  │  公开账本          │ ───────────────► │  机密账本           │ │
-│  │  OpenZeppelin ERC20│ ◄─────────────── │  id → {available,  │ │
-│  │  balanceOf/transfer│   0x04 unshield  │   pending, folded, │ │
-│  │  屏蔽代币托管于本合约│                  │   nonce}           │ │
-│  └──────────────────┘                  └─────────┬──────────┘ │
-│                                                  │ 0x01       │
-│  ┌──────────────────┐   ┌──────────────┐   ┌──────▼─────────┐ │
-│  │ A1Payload 解析    │   │ BabyJubjub   │   │ Groth16 验证合约 │ │
-│  │ type/flags/段     │   │ 点加 / 窗口表 │   │ transfer/unshield│ │
-│  └──────────────────┘   └──────────────┘   └────────────────┘ │
-└──────────────────────────────────────────────────────────────┘
-                     ▲ 标准 transfer / transferFrom 选择器 + 尾部 payload
-        ┌────────────┴────────────┐              ┌──────────────┐
-        │ 客户端 / 中继者           │              │ 监管方        │
-        │ 密钥派生、加密、memo、证明 │              │ 解 memo、重建余额│
-        └─────────────────────────┘              └──────────────┘
+Track A  Dual ledger: public ledger (standard ERC-20) + confidential ledger
+  └─ A.1  twisted ElGamal encrypted accounts + Groth16, account = public key   ← mainline, prototype running
+Track B  Purely confidential: no public ledger
+  └─ (placeholder)
 ```
 
-家族级约定规定的是最上面那条边（选择器 + payload）以及事件、密钥派生、监管接口；框内的一切属于 Variant。
+## Typical structure of a Variant (A.1 as the example)
 
-## 演进规则
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│  Token contract (one address)                                           │
+│                                                                         │
+│  ┌──────────────────────┐      0x03 shield       ┌────────────────────┐ │
+│  │ Public ledger        │ ─────────────────────► │ Confidential ledger│ │
+│  │ OpenZeppelin ERC20   │ ◄───────────────────── │ id → {available,   │ │
+│  │ balanceOf/transfer   │      0x04 unshield     │  pending, folded,  │ │
+│  │ holds shielded tokens│                        │  nonce}            │ │
+│  └──────────────────────┘                        └─────────┬──────────┘ │
+│                                                            │ 0x01       │
+│  ┌──────────────────────┐   ┌────────────────┐   ┌─────────▼──────────┐ │
+│  │ A1Payload parser     │   │ BabyJubjub     │   │ Groth16 verifiers  │ │
+│  │ type/flags/segments  │   │ add / windows  │   │ transfer/unshield  │ │
+│  └──────────────────────┘   └────────────────┘   └────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────┘
+                     ▲ standard transfer / transferFrom selector + trailing payload
+        ┌────────────┴─────────────────┐      ┌──────────────────────────────┐
+        │ Client / relayer             │      │ Regulator                    │
+        │ keys, encryption, memo, proof│      │ memo decrypt, balance rebuild│
+        └──────────────────────────────┘      └──────────────────────────────┘
+```
 
-- 新增 Track：新的集成方契约，需要家族级 ADR。
-- 新增 Variant：在既有 Track 下新建目录，自带设计、规范、评估表；不需要家族级 ADR。
-- 家族级约定的变更影响所有 Track，必须走 ADR 并给出迁移说明。
-- 只有主线 Variant 有实现（ADR-0002 第 5 条）。
+The family conventions govern the topmost edge (selector + payload) plus events, key derivation and the regulator interface; everything inside the box belongs to the Variant.
+
+## Evolution rules
+
+- Adding a Track: a new integrator contract, requires a family-level ADR.
+- Adding a Variant: create a new directory under an existing Track with its own design, specification and evaluation table; no family-level ADR needed.
+- Changes to the family conventions affect every Track and must go through an ADR with a migration note.
+- Only the mainline Variant has an implementation (ADR-0002, item 5).

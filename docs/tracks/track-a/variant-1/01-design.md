@@ -1,210 +1,212 @@
-# A.1 细节设计
+English | [中文](01-design.zh-cn.md)
 
-版本：`0.3.0-draft`　状态：`Draft`　日期：2026-09-26
+# A.1 Detailed Design
 
-> 0.3.0：新增 A.1 私有类型 `0x80` 纯折叠（只证明私钥知识，不涉及金额，§4.6 / §5.3），根治安全自审 F1；账户增加 `lastReceivedAtBlock`（与 `nonce` 同槽），客户端事件窗口收紧为 `[foldedAtBlock, lastReceivedAtBlock]`。`pep()` = `A:1:0.3.0`。
-> 0.2.5：账户增加 `foldedAtBlock`（本人上次花费的区块号，与 `nonce` 同槽打包，零额外 gas），客户端重建 pending 的事件窗口由此精确可知（§4.3）。`pep()` = `A:1:0.2.5`。
-> 0.2.4：实现家族描述符 `pep()` = `A:1:0.2.4`（07 §10），ERC-165 只保留 `IPEP` id。
-> 0.2.3：按第一轮安全自审（[02-security-review.md](02-security-review.md)）修订：`cancel` 仅登记者可撤、登记统一以句柄为 key、`ConfidentialTransferPrepared` 事件、显式金额上限、监管密钥必须为活动密钥、`decryptable` 上限。
-> 0.2.2：`pending` 改为单调累加 + `folded` 记录，避免收款冷写；稳态 Gas 实测。
-> 0.2.1：按原型实测回写（公开输入打包替代 SHA-256、shield 代币托管在合约地址、Gas 实测）。
-> 0.2 相对 0.1 的主要变化：机密账户与以太坊地址解耦、公钥不上链、删除注册表与 shield / unshield 函数、payload 类型字节定义转账类型、证明即授权、删除 `applyPending`（改为花费时惰性折叠）。所有 Gas 数字为估算。
+Version: `0.3.0-draft` Status: `Draft` Date: 2026-09-26
 
-## 0. 设计原则
+> 0.3.0: Added the A.1-private type `0x80` pure fold (proves only knowledge of the private key, no amounts involved, §4.6 / §5.3), which fully resolves finding F1 of the security self-review; accounts gain `lastReceivedAtBlock` (same slot as `nonce`), and the client event window tightens to `[foldedAtBlock, lastReceivedAtBlock]`. `pep()` = `A:1:0.3.0`.
+> 0.2.5: Accounts gain `foldedAtBlock` (block number of the owner's last spend, packed into the same slot as `nonce`, zero extra gas), which gives the client an exact event window for rebuilding pending (§4.3). `pep()` = `A:1:0.2.5`.
+> 0.2.4: Implemented the family descriptor `pep()` = `A:1:0.2.4` (07 §10); ERC-165 keeps only the `IPEP` id.
+> 0.2.3: Revised per the first-round security self-review ([02-security-review.md](02-security-review.md)): `cancel` callable only by the registrant, registrations keyed uniformly by handle, `ConfidentialTransferPrepared` event, explicit amount upper bound, regulator key must be the active key, `decryptable` upper bound.
+> 0.2.2: `pending` changed to monotonic accumulation + `folded` record, avoiding cold writes on receipt; steady-state gas measured.
+> 0.2.1: Written back from prototype measurements (public-input packing replaces SHA-256, shielded tokens escrowed at the contract address, gas measured).
+> Main changes in 0.2 relative to 0.1: confidential accounts decoupled from Ethereum addresses, public keys not on chain, registry and shield / unshield functions removed, payload type byte defines the transfer type, proof-as-authorization, `applyPending` removed (replaced by lazy fold on spend). All gas figures are estimates.
 
-1. **公开账本零改动**：就是 OpenZeppelin ERC20，机密逻辑的任何故障都不影响它。
-2. **链上不接触明文，也不接触公钥**：合约只验证证明、做密文加法。机密账户的公钥永远不出现在链上。
-3. **每份密文只有一个写者**：`available` 只被账户本人的证明修改，`pending` 只被他人写入、随本人的下一次花费折叠。证明绑定写者视角的状态，并发不会使证明失效。
-4. **证明即授权**：花费机密余额的授权是"知道私钥"的零知识证明，不是 `msg.sender`。任何人都可以代为提交交易。
-5. **监管靠密码学强制**：监管密文缺失或与金额不一致，证明不通过。
-6. **接收方不解离散对数**：每笔转账附带加密给接收方和监管方的明文提示（memo），电路内证明 memo 正确。
-7. **协议只保证链上状态永远正确，不保证用户意图永远被满足**：`to` 的解释完全由 payload 类型决定，发错类型、发错地址由发送方承担，协议不做兜底。
+## 0. Design Principles
 
-## 1. 密码学参数
+1. **Zero changes to the public ledger**: it is exactly OpenZeppelin ERC20; no failure in the confidential logic can affect it.
+2. **The chain touches neither plaintext nor public keys**: the contract only verifies proofs and performs ciphertext addition. A confidential account's public key never appears on chain.
+3. **Each ciphertext has exactly one writer**: `available` is modified only by the owner's own proof; `pending` is written only by others and is folded on the owner's next spend. Proofs bind the state as seen by the writer, so concurrency cannot invalidate a proof.
+4. **Proof-as-authorization**: the authorization to spend a confidential balance is a zero-knowledge proof of "knowing the private key", not `msg.sender`. Anyone may submit the transaction on the owner's behalf.
+5. **Regulation is enforced cryptographically**: if the regulator ciphertext is missing or inconsistent with the amount, the proof fails.
+6. **The recipient does not solve discrete logarithms**: every transfer carries plaintext hints (memos) encrypted to the recipient and the regulator, and the circuit proves the memos are correct.
+7. **The protocol only guarantees that on-chain state is always correct, not that user intent is always satisfied**: the interpretation of `to` is determined entirely by the payload type; sending with the wrong type or to the wrong address is the sender's responsibility, and the protocol provides no fallback.
 
-| 项 | 取值 | 说明 |
+## 1. Cryptographic Parameters
+
+| Item | Value | Notes |
 | --- | --- | --- |
-| 曲线 | Baby Jubjub | BN254 标量域上的嵌入曲线，电路内原生 |
-| 生成元 | `G`（金额）、`H`（随机数 / 公钥） | 离散对数关系未知 |
-| 私钥 | `s ∈ Z_l` | 由钱包 EIP-712 签名哈希派生，见 §2.1 |
-| 公钥 | `pk = s⁻¹·H` | 电路内验证私钥只需一次标量乘 `s·pk == H` |
-| 账户 id | `id = address(uint160(Poseidon(pk.x, pk.y)))` | 20 字节，可填入 `to` / `from`；只在电路内计算 |
-| 密文 | `Enc_pk(v; r) = (C, D)`，`C = v·G + r·H`，`D = r·pk` | 解密 `C − s·D = v·G` |
-| 同态 | `(C₁,D₁) + (C₂,D₂)` ↔ 明文相加 | 同一 `pk` 下 |
-| 多接收方 | 一份 `C`，多个句柄 `D_X = r·pk_X` | 同一金额加密给付款方、收款方、监管方 |
-| 证明系统 | Groth16（circom + snarkjs）原型；正式版评估 PLONK 类 | |
-| 哈希 / memo | Poseidon；memo 用 Poseidon 密钥流加密 | |
-| 公开输入打包 | 标量打包进 3 个字（`from|nonce`、`to|chainId`、`contract|regKeyId|signBits`），点只公开 x，y 为私有输入并由"在曲线上 + 奇偶位"绑定 | 公开输入 25 → 15，验证 gas 386k → 316k。SHA-256 压缩方案已否决：电路内需 ~40 万约束 |
-| 金额位宽 | 单笔 `v < 2⁴⁸` | |
-| 余额位宽 | `b < 2⁶⁴` | 由 `totalSupply` 上限保证 |
+| Curve | Baby Jubjub | Embedded curve over the BN254 scalar field, native inside the circuit |
+| Generators | `G` (amount), `H` (randomness / public key) | Discrete-log relation unknown |
+| Private key | `s ∈ Z_l` | Derived from a wallet EIP-712 signature hash, see §2.1 |
+| Public key | `pk = s⁻¹·H` | Verifying the private key inside the circuit takes a single scalar multiplication `s·pk == H` |
+| Account id | `id = address(uint160(Poseidon(pk.x, pk.y)))` | 20 bytes, fits into `to` / `from`; computed only inside the circuit |
+| Ciphertext | `Enc_pk(v; r) = (C, D)`, `C = v·G + r·H`, `D = r·pk` | Decryption `C − s·D = v·G` |
+| Homomorphism | `(C₁,D₁) + (C₂,D₂)` ↔ plaintext addition | Under the same `pk` |
+| Multi-recipient | One `C`, multiple handles `D_X = r·pk_X` | The same amount encrypted to the payer, the payee and the regulator |
+| Proof system | Groth16 (circom + snarkjs) for the prototype; PLONK-family to be evaluated for production | |
+| Hash / memo | Poseidon; memos encrypted with a Poseidon keystream | |
+| Public-input packing | Scalars packed into 3 words (`from|nonce`, `to|chainId`, `contract|regKeyId|signBits`); points expose only x, with y as a private input bound by "on curve + parity bit" | Public inputs 25 → 15, verification gas 386k → 316k. The SHA-256 compression scheme was rejected: ~400k constraints in circuit |
+| Amount width | Per transfer `v < 2⁴⁸` | |
+| Balance width | `b < 2⁶⁴` | Guaranteed by the `totalSupply` cap |
 | decimals | 6 | |
 
-## 2. 账户与状态
+## 2. Accounts and State
 
-### 2.1 机密账户 = 公钥
+### 2.1 Confidential Account = Public Key
 
-机密账户没有以太坊地址，也没有注册动作。一个账户就是一把 Baby Jubjub 密钥，链上用 `id = Poseidon(pk)` 的低 160 位指代。
+A confidential account has no Ethereum address and no registration step. An account is simply a Baby Jubjub key, referred to on chain by the low 160 bits of `id = Poseidon(pk)`.
 
-- **派生**：`s = keccak256(sign_EIP712({name:"PEP", chainId, contract}, {purpose:"A.1 key", index}))  mod l`。同一钱包可用不同 `index` 派生多个账户。
-- **发布**：账户持有人把 `pk`（64 字节）链下交给付款方；`id` 可由 `pk` 算出。链上没有任何地方可以查到 `pk`。
-- **创建**：第一笔发往 `id` 的转账创建存储槽。没有"开户"。
-- **与钱包的关联**：仅在公开账本与机密账本之间划转时（`0x03` / `0x04`）出现，形式为 `钱包 → id` 或 `id → 钱包` 的公开边。
+- **Derivation**: `s = keccak256(sign_EIP712({name:"PEP", chainId, contract}, {purpose:"A.1 key", index}))  mod l`. The same wallet can derive multiple accounts using different values of `index`.
+- **Publication**: the account holder hands `pk` (64 bytes) to the payer off chain; `id` can be computed from `pk`. There is nowhere on chain where `pk` can be looked up.
+- **Creation**: the first transfer sent to `id` creates the storage slot. There is no "account opening".
+- **Association with a wallet**: appears only when moving between the public ledger and the confidential ledger (`0x03` / `0x04`), as a public edge `wallet → id` or `id → wallet`.
 
-### 2.2 存储
+### 2.2 Storage
 
 ```solidity
-struct Point { uint256 x; uint256 y; }          // 仿射坐标；零值结构体视为单位元 (0, 1)
+struct Point { uint256 x; uint256 y; }          // affine coordinates; the zero-valued struct is treated as the identity (0, 1)
 struct Ciphertext { Point C; Point D; }
 
 struct ConfidentialAccount {
-    Ciphertext available;     // 可用余额，只被本人的证明修改
-    Ciphertext pending;       // 待入账累计，只增不清，他人写入
-    Ciphertext folded;        // 上次花费时 pending 的值；有效待入账 = pending − folded
-    uint64     nonce;         // available 每次变动 +1
-    uint64     foldedAtBlock; // 本人上次花费 / 折叠的区块号；与 nonce 同槽
-    uint64     lastReceivedAtBlock; // 最近一次收款的区块号，他人写入；同槽。仅 A.1，隐藏收款人的变体不得保留（A1-0006）
-    bytes      decryptable;   // 本人自加密的余额明文副本，合约不解释，可选
+    Ciphertext available;     // available balance, modified only by the owner's proof
+    Ciphertext pending;       // accumulated pending, only increases, never cleared, written by others
+    Ciphertext folded;        // value of pending at the last spend; effective pending = pending − folded
+    uint64     nonce;         // +1 on every change of available
+    uint64     foldedAtBlock; // block number of the owner's last spend / fold; same slot as nonce
+    uint64     lastReceivedAtBlock; // block number of the most recent receipt, written by others; same slot. A.1 only; variants that hide the recipient must not keep it (A1-0006)
+    bytes      decryptable;   // owner's self-encrypted copy of the balance plaintext, not interpreted by the contract, optional
 }
 
 mapping(address => ConfidentialAccount) internal _accounts;   // key = id
-mapping(address => mapping(uint256 => Prepared)) internal _prepared;   // 兜底，见 §3.4
+mapping(address => mapping(uint256 => Prepared)) internal _prepared;   // fallback, see §3.4
 uint256 public shieldedSupply;
 
 struct RegulatorKey { Point pk; uint64 activatedAt; }
-RegulatorKey[] public regulatorKeys;      // 只追加；index = keyId
+RegulatorKey[] public regulatorKeys;      // append-only; index = keyId
 uint32 public activeRegulatorKeyId;
 ```
 
-公开账本：OpenZeppelin `ERC20` 原样，key 为以太坊地址。两个账本 key 空间相同（20 字节）但含义不同，协议不区分，见原则 7。
+Public ledger: OpenZeppelin `ERC20` as is, keyed by Ethereum address. The two ledgers share the same key space (20 bytes) but with different meanings; the protocol does not distinguish them, see principle 7.
 
-### 2.3 全局不变量
+### 2.3 Global Invariants
 
-| 编号 | 内容 |
+| No. | Statement |
 | --- | --- |
-| I1 | 屏蔽中的代币托管在合约自身地址：`balanceOf(address(this)) == shieldedSupply`，因此 `totalSupply() == Σ 公开余额`（含合约地址）对任何索引器天然成立 |
-| I2 | `totalSupply() ≤ 2⁶⁴ − 1`（最小单位）。保证任何机密余额 `< 2⁶⁴`，范围证明不会因累加溢出失效 |
-| I3 | 每个 `id`：`available + pending` 解密后等于真实机密余额 |
-| I4 | `nonce` 严格递增 |
-| I5 | `pending` 只增加，且只加入范围证明过的非负金额或公开金额 |
+| I1 | Shielded tokens are escrowed at the contract's own address: `balanceOf(address(this)) == shieldedSupply`, hence `totalSupply() == Σ public balances` (including the contract address) holds naturally for any indexer |
+| I2 | `totalSupply() ≤ 2⁶⁴ − 1` (in the smallest unit). Guarantees every confidential balance is `< 2⁶⁴`, so range proofs cannot be broken by accumulation overflow |
+| I3 | For every `id`: `available + pending` decrypts to the true confidential balance |
+| I4 | `nonce` is strictly increasing |
+| I5 | `pending` only increases, and only by range-proven non-negative amounts or public amounts |
 
-### 2.4 监管密钥
+### 2.4 Regulator Key
 
-- `REGULATOR_ADMIN` 角色轮换，旧密钥永久保留（历史密文需要）。
-- 阈值化（t-of-n DKG）是部署选择，协议只见一个公钥。
-- 监管能力**只读**：无冻结、没收、强制转账接口。
+- Rotated by the `REGULATOR_ADMIN` role; old keys are retained permanently (needed for historical ciphertexts).
+- Thresholdization (t-of-n DKG) is a deployment choice; the protocol sees only a single public key.
+- Regulatory capability is **read-only**: no freeze, seizure or forced-transfer interface.
 
-## 3. ERC-20 表面
+## 3. ERC-20 Surface
 
-### 3.1 函数
+### 3.1 Functions
 
 ```solidity
 function transfer(address to, uint256 x) external returns (bool);
-    // 付款方 = msg.sender 的公开账户。无 payload：公开转账；payload 0x03：进 to 的机密账本
+    // payer = msg.sender's public account. No payload: public transfer; payload 0x03: into to's confidential ledger
 function transferFrom(address from, uint256 to, uint256 x) external returns (bool);
-    // 付款方 = from。from 是公开账户：标准 allowance；from 是机密 id：证明授权（payload 0x01 / 0x04）
-function prepare(bytes calldata payload) external;          // 兜底：先验证并登记
-function cancel(address from, uint256 handle) external;      // 撤销未执行的登记，仅登记者可调
+    // payer = from. from is a public account: standard allowance; from is a confidential id: proof authorization (payload 0x01 / 0x04)
+function prepare(bytes calldata payload) external;          // fallback: verify and register first
+function cancel(address from, uint256 handle) external;      // revoke an unexecuted registration, callable only by the registrant
 ```
 
-没有 `register`、`shield`、`unshield`、`applyPending`。
+There is no `register`, `shield`, `unshield` or `applyPending`.
 
 ### 3.2 payload
 
-附加数据紧跟在 ABI 编码的参数之后：`transfer` 从 `msg.data[68:]` 读，`transferFrom` 从 `msg.data[100:]` 读。Solidity 的 ABI 解码器忽略多余字节，这是 ERC-2771 依赖的同一特性。
+The extra data follows immediately after the ABI-encoded arguments: `transfer` reads from `msg.data[68:]`, `transferFrom` reads from `msg.data[100:]`. Solidity's ABI decoder ignores trailing bytes; this is the same property ERC-2771 relies on.
 
 ```
 byte 0      type
 byte 1      flags
-byte 2..    sections（按 type 与 flags 决定，顺序固定）
+byte 2..    sections (determined by type and flags, fixed order)
 ```
 
 **type**
 
-| type | 名称 | `from` | `to` | `x` | 证明 | shieldedSupply |
+| type | Name | `from` | `to` | `x` | Proof | shieldedSupply |
 | --- | --- | --- | --- | --- | --- | --- |
-| （无 payload） | 公开转账 | 公开账户 | 公开账户 | 明文金额 | 否 | — |
-| `0x01` | 机密转账 | 机密 id | 机密 id | 句柄 | 是 | — |
-| `0x02` | stealth 机密转账 | 机密 id | 一次性 id | 句柄 | 是 | — |
-| `0x03` | 公开 → 机密 | 公开账户 | 机密 id | 明文金额 | 否 | `+x` |
-| `0x04` | 机密 → 公开 | 机密 id | 公开账户 | 明文金额 | 是 | `−x` |
-| `0x80` | 纯折叠（A.1 私有） | 机密 id | 同一 id | 句柄 | 是（仅私钥知识） | 0 |
+| (no payload) | Public transfer | Public account | Public account | Plaintext amount | No | — |
+| `0x01` | Confidential transfer | Confidential id | Confidential id | Handle | Yes | — |
+| `0x02` | Stealth confidential transfer | Confidential id | One-time id | Handle | Yes | — |
+| `0x03` | Public → confidential | Public account | Confidential id | Plaintext amount | No | `+x` |
+| `0x04` | Confidential → public | Confidential id | Public account | Plaintext amount | Yes | `−x` |
+| `0x80` | Pure fold (A.1-private) | Confidential id | Same id | Handle | Yes (private-key knowledge only) | 0 |
 
-`0x02` 在 0.2 中仅保留编号，见 §11。
+`0x02` only reserves its number in 0.2, see §11.
 
 **flags**
 
-| bit | 含义 |
+| bit | Meaning |
 | --- | --- |
-| 0 | `includePending`：证明绑定 `available + pending` 而非仅 `available`，见 §4.3 |
-| 1 | 携带 `decryptable` 段 |
-| 2–7 | 保留，必须为 0 |
+| 0 | `includePending`: the proof binds `available + pending` instead of only `available`, see §4.3 |
+| 1 | Carries a `decryptable` section |
+| 2–7 | Reserved, must be 0 |
 
-**sections（`0x01`）**
+**sections (`0x01`)**
 
-| 段 | 大小 | 说明 |
+| Section | Size | Notes |
 | --- | --- | --- |
 | `C_amt` | 64 | `v·G + r·H` |
 | `D_sender` | 64 | `r·pk_sender` |
 | `D_recv` | 64 | `r·pk_recv` |
 | `D_reg` | 64 | `r·pk_reg` |
-| `E` | 64 | 临时公钥 `e·H` |
+| `E` | 64 | Ephemeral public key `e·H` |
 | `memo_recv` | 64 | `Enc(Poseidon(e·pk_recv); v ‖ r)` |
 | `memo_reg` | 64 | `Enc(Poseidon(e·pk_reg); v ‖ r)` |
-| `regKeyId` | 4 | 使用的监管公钥编号 |
+| `regKeyId` | 4 | Index of the regulator public key used |
 | `proof` | 256 | Groth16 |
-| `decryptable` | 2 + n | 长度前缀 + 密文，flags.bit1 置位时存在 |
+| `decryptable` | 2 + n | Length prefix + ciphertext, present when flags.bit1 is set |
 
-约 900 字节。`0x04` 去掉 `D_recv`、`D_reg`、`E`、两个 memo；`0x03` 只有 type 与 flags。
+About 900 bytes. `0x04` drops `D_recv`, `D_reg`, `E` and the two memos; `0x03` has only type and flags.
 
-**句柄**：`handle = keccak256(payload) | (1 << 255)`。最高位为 1 用于让索引器区分句柄与公开金额；公开金额受 I2 约束远小于 `2²⁵⁵`。
+**Handle**: `handle = keccak256(payload) | (1 << 255)`. The top bit set to 1 lets indexers distinguish handles from public amounts; public amounts are bounded by I2 and far smaller than `2²⁵⁵`.
 
-### 3.3 一致性检查（任何一条失败即 revert）
+### 3.3 Consistency Checks (any failure reverts)
 
-| # | 检查 | 适用 |
+| # | Check | Applies to |
 | --- | --- | --- |
-| 1 | `type` 合法，`flags` 保留位为 0，sections 长度与 type / flags 一致 | 全部 |
+| 1 | `type` is valid, reserved bits of `flags` are 0, section lengths are consistent with type / flags | All |
 | 2 | `handle == keccak256(payload) \| (1 << 255)` | `0x01` `0x02` |
-| 3 | `x` 最高位：`0x01` `0x02` 必须为 1；公开金额类型必须为 0 | 全部 |
-| 4 | `to != address(0)` | 全部 |
+| 3 | Top bit of `x`: must be 1 for `0x01` `0x02`; must be 0 for public-amount types | All |
+| 4 | `to != address(0)` | All |
 | 5 | `regKeyId == activeRegulatorKeyId` | `0x01` |
-| 6 | 证明验证通过，公开输入由合约按 §4 组装，不从 payload 直接信任任何本应由合约提供的值 | `0x01` `0x04` |
-| 7 | `from` 为公开账户时 allowance 充足（标准 ERC-20） | `transferFrom` 无 payload / `0x03` |
-| 8 | `_prepared[from][handle]` 存在且登记时的 `nonce` 与当前一致 | 兜底执行 |
+| 6 | Proof verifies; public inputs are assembled by the contract per §4, never trusting from the payload any value the contract is supposed to supply | `0x01` `0x04` |
+| 7 | When `from` is a public account, allowance is sufficient (standard ERC-20) | `transferFrom` without payload / `0x03` |
+| 8 | `_prepared[from][handle]` exists and the `nonce` recorded at registration matches the current one | Fallback execution |
 
-`from == to` 允许。`msg.sender` 在 `0x01` / `0x04` 中不做检查。
+`from == to` is allowed. `msg.sender` is not checked for `0x01` / `0x04`.
 
-### 3.4 兜底：`prepare` / `cancel`
+### 3.4 Fallback: `prepare` / `cancel`
 
-给无法拼 calldata 的调用方（钱包原生界面、不认识本协议的合约）使用：
+For callers that cannot assemble calldata (native wallet UIs, contracts unaware of this protocol):
 
-1. `prepare(from, to, x, payload)`：按 §3.3 与 §4 完整验证，存储 `{type, to, preparedBy, nonce, 增量密文}` 到 `_prepared[from][handle]`。两种类型都以句柄为 key（`0x04` 的句柄在合约内由 payload 派生）。`0x01` 登记时发 `ConfidentialTransferPrepared`，收款方须等 `PreparedExecuted` 才算收到。
-2. 之后任何来源的 `transferFrom(from, to, handle)`（无附加数据）读取登记项，检查 `nonce` 未变，执行 §4 的状态更新并删除登记。
-3. `cancel(from, handle)`：仅 `preparedBy` 可调。payload 在 `prepare` 交易里已公开，不能作为授权。
+1. `prepare(from, to, x, payload)`: fully validates per §3.3 and §4, then stores `{type, to, preparedBy, nonce, delta ciphertext}` into `_prepared[from][handle]`. Both types are keyed by handle (for `0x04` the handle is derived from the payload inside the contract). A `0x01` registration emits `ConfidentialTransferPrepared`; the payee must wait for `PreparedExecuted` before treating the funds as received.
+2. Afterwards, a `transferFrom(from, to, handle)` from any source (without extra data) reads the registration, checks that `nonce` has not changed, performs the state update of §4 and deletes the registration.
+3. `cancel(from, handle)`: callable only by `preparedBy`. The payload is already public in the `prepare` transaction and cannot serve as authorization.
 
-`nonce` 已变化时执行失败并 revert，不自动重试。
+If `nonce` has changed, execution fails and reverts; there is no automatic retry.
 
-## 4. 执行流程
+## 4. Execution Flows
 
-### 4.1 `0x03` 公开 → 机密
+### 4.1 `0x03` Public → Confidential
 
 ```
-_update(from, address(this), x)      // 标准 ERC-20 检查；托管到合约地址，发出 Transfer(from, this, x)
+_update(from, address(this), x)      // standard ERC-20 checks; escrow at the contract address, emits Transfer(from, this, x)
 shieldedSupply  += x
-C = x·G                               // 固定基窗口表：4 位 × 12 段，192 个预计算点入字节码，约 12 次点加
-_accounts[to].pending += (C, 0)       // r = 0 的退化密文：金额本来就是公开的
+C = x·G                               // fixed-base window table: 4 bits × 12 segments, 192 precomputed points in bytecode, about 12 point additions
+_accounts[to].pending += (C, 0)       // degenerate ciphertext with r = 0: the amount is public anyway
 emit Transfer(from, to, x)
 emit LedgerCrossing(from, to, 0x03, x)
 ```
 
-不需要 `pk`，`to` 可以是任何尚未有过活动的 id。
+No `pk` is needed; `to` may be any id that has never had any activity.
 
-### 4.2 `0x01` 机密 → 机密
+### 4.2 `0x01` Confidential → Confidential
 
 ```
 acc = _accounts[from]
 pre = flags.includePending ? acc.available + acc.pending : acc.available
 verify(proof, H(chainId, this, from, to, acc.nonce, pk_reg, pre, C_amt, D_sender, D_recv, D_reg, E, memo_recv, memo_reg))
-acc.available = acc.available + (acc.pending − acc.folded) − (C_amt, D_sender)   // 惰性折叠，见 §4.3
+acc.available = acc.available + (acc.pending − acc.folded) − (C_amt, D_sender)   // lazy fold, see §4.3
 acc.folded    = acc.pending
 acc.nonce    += 1
 if flags.bit1: acc.decryptable = payload.decryptable
@@ -213,17 +215,17 @@ emit Transfer(from, to, handle)
 emit ConfidentialTransfer(from, to, handle, regKeyId, C_amt, D_recv, D_reg, E, memo_recv, memo_reg)
 ```
 
-### 4.3 惰性折叠与 `includePending`
+### 4.3 Lazy Fold and `includePending`
 
-`pending` 存在的唯一目的是让他人的入账不打断本人在途的证明。折叠不再是独立操作，而是**每次花费后自动发生**：合约把有效待入账 `pending − folded` 加进 `available`，然后令 `folded = pending`。`pending` 与 `folded` 都只增不清：清零会让之后每次收款都对存储槽从零写（4 槽 × 22.1k），改为记录已折叠值后收款是非零→非零写，每次收款省约 70k；代价是每个账户首次花费多一次 `folded` 的冷写（约 90k，一次性）。本人通过 memo 与 `LedgerCrossing` 事件已知每笔入账金额，能自行更新本地余额与 `decryptable`。
+The sole purpose of `pending` is to let incoming payments from others not interrupt the owner's in-flight proof. Folding is no longer a separate operation; it **happens automatically after every spend**: the contract adds the effective pending `pending − folded` into `available` and then sets `folded = pending`. Both `pending` and `folded` only increase and are never cleared: clearing would make every subsequent receipt write the storage slots from zero (4 slots × 22.1k); by recording the folded value instead, receipts become non-zero → non-zero writes, saving about 70k per receipt. The cost is one extra cold write of `folded` on each account's first spend (about 90k, one-time). The owner already knows every incoming amount via memos and `LedgerCrossing` events, and can update the local balance and `decryptable` on their own.
 
-**重建 pending 明文的窗口是有界的**：折叠之前的入账已并入 `available`（其明文可从 `decryptable` 直接读出），所以只需本人上次花费之后、以自己 `id` 为 `to` 的 `ConfidentialTransfer` / `LedgerCrossing` 事件。合约在每次花费时记录 `foldedAtBlock = block.number`（与 `nonce` 同一存储槽，该槽本来就要写，零额外 gas），客户端一次 `eth_call` 即得精确窗口 `[foldedAtBlock, lastReceivedAtBlock]`（0.3.0 起合约在每次收款时记录 `lastReceivedAtBlock`，与 `nonce` 同槽；上界之后不可能再有收款），并且从新到旧逐笔解 memo 做后缀求和、与 `pending − folded` 对上即可提前停止；`pending − folded` 为单位元时一笔都不用扫。窗口之内的历史深度取决于账户多久没有花费，公共 RPC 的日志保留限制见 03-deployments。
+**The window for rebuilding the pending plaintext is bounded**: receipts before the fold have already been merged into `available` (whose plaintext can be read directly from `decryptable`), so only the `ConfidentialTransfer` / `LedgerCrossing` events with the owner's own `id` as `to` since the owner's last spend are needed. On every spend the contract records `foldedAtBlock = block.number` (in the same storage slot as `nonce`, which must be written anyway, so zero extra gas), and the client obtains the exact window `[foldedAtBlock, lastReceivedAtBlock]` with a single `eth_call` (from 0.3.0 the contract records `lastReceivedAtBlock` on every receipt, same slot as `nonce`; no receipt can exist past the upper bound). The client decrypts memos one by one from newest to oldest, computing a suffix sum, and can stop early once it matches `pending − folded`; when `pending − folded` is the identity, nothing needs to be scanned. The historical depth within the window depends on how long the account has gone without spending; see 03-deployments for public RPC log-retention limits.
 
-证明默认只绑定 `available`（只有本人能改，绝不失效）。当本人需要动用尚在 `pending` 中的资金（典型：新账户，`available` 为零），置位 `includePending`，证明绑定 `available + pending`；此时若证明生成到上链之间有新入账到达，证明失效，需重新生成。这是用户的选择，协议不做额外处理。
+By default the proof binds only `available` (which only the owner can modify, so it never becomes invalid). When the owner needs to use funds still in `pending` (typically: a new account with `available` at zero), they set `includePending` and the proof binds `available + pending`; in that case, if a new receipt arrives between proof generation and inclusion on chain, the proof becomes invalid and must be regenerated. This is the user's choice; the protocol does no extra handling.
 
-两种情况下合约的状态更新公式相同，区别只在公开输入中的 `pre`。
+In both cases the contract's state-update formula is identical; the only difference is `pre` in the public inputs.
 
-### 4.4 `0x04` 机密 → 公开
+### 4.4 `0x04` Confidential → Public
 
 ```
 acc = _accounts[from]
@@ -233,173 +235,173 @@ acc.available = acc.available + (acc.pending − acc.folded) − (C_amt, D_sende
 acc.folded    = acc.pending
 acc.nonce    += 1
 shieldedSupply -= x
-_update(address(this), to, x)        // 发出 Transfer(this, to, x)
+_update(address(this), to, x)        // emits Transfer(this, to, x)
 emit LedgerCrossing(from, to, 0x04, x)
 ```
 
-### 4.5 四种组合一览
+### 4.5 The Four Combinations at a Glance
 
-| 付款 → 收款 | 调用 | payload | 证明 | 金额公开 |
+| Payer → Payee | Call | payload | Proof | Amount public |
 | --- | --- | --- | --- | --- |
-| 公开 → 公开 | `transfer(to, x)` / `transferFrom(from, to, x)` | 无 | 否 | 是 |
-| 公开 → 机密 | 同上 + `0x03` | 2 字节 | 否 | 是 |
-| 机密 → 机密 | `transferFrom(id, id, handle)` + `0x01` | ~900 字节 | 是 | 否 |
-| 机密 → 公开 | `transferFrom(id, addr, x)` + `0x04` | ~450 字节 | 是 | 是 |
-| 折叠（不转账） | `transferFrom(id, id, handle)` + `0x80` | ~260 字节 | 是 | — |
+| Public → public | `transfer(to, x)` / `transferFrom(from, to, x)` | None | No | Yes |
+| Public → confidential | Same as above + `0x03` | 2 bytes | No | Yes |
+| Confidential → confidential | `transferFrom(id, id, handle)` + `0x01` | ~900 bytes | Yes | No |
+| Confidential → public | `transferFrom(id, addr, x)` + `0x04` | ~450 bytes | Yes | Yes |
+| Fold (no transfer) | `transferFrom(id, id, handle)` + `0x80` | ~260 bytes | Yes | — |
 
-### 4.6 `0x80` 纯折叠
+### 4.6 `0x80` Pure Fold
 
-折叠原本只搭在花费上发生（§4.3）。`0x80` 让本人在不转账的情况下执行同一状态更新：
+Originally, folding happened only as part of a spend (§4.3). `0x80` lets the owner perform the same state update without transferring:
 
 ```
-verify(proof, H(chainId, this, from, acc.nonce))          // 只证明持有 from 的私钥
+verify(proof, H(chainId, this, from, acc.nonce))          // proves only possession of from's private key
 acc.available += acc.pending − acc.folded ; acc.folded = acc.pending
 acc.nonce += 1 ; acc.foldedAtBlock = block.number
 if flags.decryptable: acc.decryptable = payload.decryptable
 emit Folded(from, handle, acc.nonce)
 ```
 
-调用形式 `transferFrom(id, id, handle)` + payload（`to` 必须等于 `from`，`handle = keccak(payload) | 2²⁵⁵`）。payload 只有 `[type, flags, proof, decryptable?]`，`includePending` 位在此保留（折叠天然包含 pending）。不支持 `prepare`。
+Call form: `transferFrom(id, id, handle)` + payload (`to` must equal `from`, `handle = keccak(payload) | 2²⁵⁵`). The payload contains only `[type, flags, proof, decryptable?]`; the `includePending` bit is reserved here (a fold inherently includes pending). `prepare` is not supported.
 
-用途：
+Uses:
 
-1. **把知识存进链上。** 本人趁收款事件仍在 RPC 保留期内逐笔解出 memo，折叠时把 `available + pending` 的明文加密写入 `decryptable`；之后无论多久不操作，读取都只依赖 `[foldedAtBlock, lastReceivedAtBlock]` 这段窗口。对「收款频繁、花费很少」的账户，这是让窗口不无限增长的唯一手段。
-2. **根治新账户锁定（安全自审 F1）。** 证明不绑定任何金额或 `pending` 的值，攻击者在证明生成到上链之间打款不会使其失效；折叠后按默认模式（只绑定 `available`）花费。
+1. **Persisting knowledge on chain.** While the receipt events are still within the RPC retention period, the owner decrypts the memos one by one and, at fold time, writes the encrypted plaintext of `available + pending` into `decryptable`; thereafter, no matter how long the account stays idle, reading depends only on the window `[foldedAtBlock, lastReceivedAtBlock]`. For accounts that "receive often, spend rarely", this is the only way to keep the window from growing without bound.
+2. **Fully resolving new-account lockout (security self-review F1).** The proof binds no amount and no value of `pending`, so an attacker sending funds between proof generation and inclusion on chain cannot invalidate it; after folding, the owner spends in the default mode (binding only `available`).
 
-代价：一笔约 250k gas 的交易（首次折叠因 `available` / `folded` 冷写约 450k）。
+Cost: one transaction of about 250k gas (the first fold costs about 450k due to cold writes of `available` / `folded`).
 
-## 5. 电路
+## 5. Circuits
 
 ### 5.1 `0x01`
 
-**公开输入**（电路内 SHA-256 为一个域元素后上链）：`chainId, contract, from, to, nonce, pk_reg, pre.C, pre.D, C_amt, D_sender, D_recv, D_reg, E, memo_recv, memo_reg`。
+**Public inputs** (packed into 15 words per §1 before going on chain; the logical list follows): `chainId, contract, from, to, nonce, pk_reg, pre.C, pre.D, C_amt, D_sender, D_recv, D_reg, E, memo_recv, memo_reg`.
 
-**私有输入**：`s, pk_sender, pk_recv, b, v, r, e`。
+**Private inputs**: `s, pk_sender, pk_recv, b, v, r, e`.
 
-| # | 语句 | 说明 |
+| # | Statement | Notes |
 | --- | --- | --- |
-| 1 | `s·pk_sender == H` | 知道付款账户私钥 |
-| 2 | `Poseidon(pk_sender) → from` | 付款账户 id 正确，`pk_sender` 不上链 |
-| 3 | `Poseidon(pk_recv) → to` | 收款账户 id 正确，`pk_recv` 不上链 |
-| 4 | `pre.C − s·pre.D == b·G` | 余额密文加密的是 `b` |
+| 1 | `s·pk_sender == H` | Knows the payer account's private key |
+| 2 | `Poseidon(pk_sender) → from` | Payer account id is correct, `pk_sender` stays off chain |
+| 3 | `Poseidon(pk_recv) → to` | Payee account id is correct, `pk_recv` stays off chain |
+| 4 | `pre.C − s·pre.D == b·G` | The balance ciphertext encrypts `b` |
 | 5 | `0 ≤ b < 2⁶⁴` | |
 | 6 | `0 ≤ v < 2⁴⁸` | |
-| 7 | `0 ≤ b − v < 2⁶⁴` | 余额充足 |
+| 7 | `0 ≤ b − v < 2⁶⁴` | Sufficient balance |
 | 8 | `C_amt == v·G + r·H` | |
-| 9 | `D_sender == r·pk_sender`，`D_recv == r·pk_recv`，`D_reg == r·pk_reg` | 三方同值 |
+| 9 | `D_sender == r·pk_sender`, `D_recv == r·pk_recv`, `D_reg == r·pk_reg` | Same value for all three parties |
 | 10 | `E == e·H` | |
-| 11 | `memo_recv == Enc(Poseidon(e·pk_recv); v ‖ r)`，`memo_reg == Enc(Poseidon(e·pk_reg); v ‖ r)` | 提示正确 |
-| 12 | 打包：各标量范围检查后 `w0, w1, w2` 等式成立；每个点 `(xs[i], ys[i])` 在曲线上且 `ys[i] mod 2 == signBits[i]` | y 由 x 与奇偶位唯一确定 |
+| 11 | `memo_recv == Enc(Poseidon(e·pk_recv); v ‖ r)`, `memo_reg == Enc(Poseidon(e·pk_reg); v ‖ r)` | Hints are correct |
+| 12 | Packing: after range-checking each scalar, the `w0, w1, w2` equations hold; every point `(xs[i], ys[i])` is on the curve and `ys[i] mod 2 == signBits[i]` | y is uniquely determined by x and the parity bit |
 
-约束量实测：**35,137 个非线性约束**（未打包版本 30,356）。Node 环境证明 2.3~2.5 s。
+Measured constraint count: **35,137 non-linear constraints** (30,356 for the unpacked version). Proving takes 2.3~2.5 s in a Node environment.
 
 ### 5.2 `0x04`
 
-去掉 3、9 的后两项、10、11；公开输入 7 个：`w0 = from | nonce<<160`，`w1 = contract | chainId<<160`，`w2 = amount | signBits<<48`，`xs[4]`。实测 16,622 个约束。
+Drops 3, the last two items of 9, 10 and 11; 7 public inputs: `w0 = from | nonce<<160`, `w1 = contract | chainId<<160`, `w2 = amount | signBits<<48`, `xs[4]`. Measured 16,622 constraints.
 
 ### 5.3 `0x80`
 
-公开输入 2 个：`w0 = from | nonce<<160`，`w1 = contract | chainId<<160`。私有：`from, nonce, chainId, contractAddr, s, pk`。约束：拆包 + 范围检查、`s·pk = H`、`low160(Poseidon(pk)) = from`。实测 **4,027 个约束**，证明约 0.3 s。
+2 public inputs: `w0 = from | nonce<<160`, `w1 = contract | chainId<<160`. Private: `from, nonce, chainId, contractAddr, s, pk`. Constraints: unpacking + range checks, `s·pk = H`, `low160(Poseidon(pk)) = from`. Measured **4,027 constraints**, proving about 0.3 s.
 
-## 6. 事件
+## 6. Events
 
-| 事件 | 字段 | 用途 |
+| Event | Fields | Purpose |
 | --- | --- | --- |
-| `Transfer` | `(from, to, x)` | 标准；`x` 最高位区分句柄与金额 |
-| `ConfidentialTransfer` | `(from, to, handle, regKeyId, C_amt, D_recv, D_reg, E, memo_recv, memo_reg)` | 收款方扫描、监管解密 |
-| `LedgerCrossing` | `(from, to, type, amount)` | `0x03` / `0x04`，索引器维护 `shieldedSupply` |
-| `Folded` | `(id, handle, nonce)` | `0x80`，`nonce` 为折叠后的新值 |
-| `Prepared` / `Cancelled` | `(from, handle)` | 兜底 |
+| `Transfer` | `(from, to, x)` | Standard; the top bit of `x` distinguishes handles from amounts |
+| `ConfidentialTransfer` | `(from, to, handle, regKeyId, C_amt, D_recv, D_reg, E, memo_recv, memo_reg)` | Payee scanning, regulator decryption |
+| `LedgerCrossing` | `(from, to, type, amount)` | `0x03` / `0x04`; indexers maintain `shieldedSupply` |
+| `Folded` | `(id, handle, nonce)` | `0x80`; `nonce` is the new value after the fold |
+| `Prepared` / `Cancelled` | `(from, handle)` | Fallback |
 | `RegulatorKeyRotated` | `(keyId, pk)` | |
 
-收款方按 `to == 自己的 id` 过滤 `ConfidentialTransfer` 与 `LedgerCrossing`。
+The payee filters `ConfidentialTransfer` and `LedgerCrossing` by `to == own id`.
 
-## 7. 视图
+## 7. Views
 
 ```solidity
-function balanceOf(address) external view returns (uint256);            // 公开账本
+function balanceOf(address) external view returns (uint256);            // public ledger
 function confidentialAccountOf(address id) external view
     returns (Ciphertext available, Ciphertext pending, uint64 nonce, uint64 foldedAtBlock, uint64 lastReceivedAtBlock, bytes memory decryptable);
 function shieldedSupply() external view returns (uint256);
 function regulatorKey(uint32 id) external view returns (Point memory);
-function supportsInterface(bytes4) external view returns (bool);         // 家族 / Track A / A.1
+function supportsInterface(bytes4) external view returns (bool);         // family / Track A / A.1
 ```
 
-## 8. 客户端流程
+## 8. Client Flows
 
-**付款方**：链下持有 `pk_recv` → 读自己 `available`（按需 `pending`）、`nonce`、`foldedAtBlock`、`decryptable` → 解出 `b` → 选 `v, r, e` → 密文与 memo → 证明 → 拼 payload → 自己或经中继者提交 `transferFrom`。
+**Payer**: holds `pk_recv` off chain → reads own `available` (and `pending` if needed), `nonce`, `foldedAtBlock`, `decryptable` → recovers `b` → chooses `v, r, e` → ciphertexts and memos → proof → assembles the payload → submits `transferFrom` directly or through a relayer.
 
-**收款方**：监听 `ConfidentialTransfer(to = id)` → `k = s⁻¹·E` → 解 memo 得 `(v, r)` → 校验 `C_amt == v·G + r·H` → 本地余额 += v。监听 `LedgerCrossing(to = id, 0x03)` → 本地余额 += amount。不需要任何链上动作。
+**Payee**: listens for `ConfidentialTransfer(to = id)` → `k = s⁻¹·E` → decrypts the memo to get `(v, r)` → checks `C_amt == v·G + r·H` → local balance += v. Listens for `LedgerCrossing(to = id, 0x03)` → local balance += amount. No on-chain action is required.
 
-**监管方**：遍历 `ConfidentialTransfer`，按 `regKeyId` 解 `memo_reg`，校验承诺；结合 `LedgerCrossing` 重建任意 id 任意时刻的余额。不解离散对数，不需要任何人配合，只读。id 与钱包的对应关系仅能从 `0x03` / `0x04` 的边推断。
+**Regulator**: iterates over `ConfidentialTransfer`, decrypts `memo_reg` by `regKeyId`, verifies the commitment; combined with `LedgerCrossing`, reconstructs the balance of any id at any point in time. No discrete logarithms, no cooperation from anyone, read-only. The mapping between ids and wallets can only be inferred from the `0x03` / `0x04` edges.
 
-**memo 兜底**：由电路强制，理论上不会错；若实现有 bug，收款方仍可对 `C_amt − s·D_recv = v·G` 做 48 位离散对数（2²⁴ 表）。
+**Memo fallback**: enforced by the circuit, so in theory it cannot be wrong; if the implementation has a bug, the payee can still solve a 48-bit discrete logarithm on `C_amt − s·D_recv = v·G` (a 2²⁴ table).
 
-## 9. Gas（原型实测，2026-09-24）
+## 9. Gas (prototype measurements, 2026-09-24)
 
-环境：Hardhat 3 / solc 0.8.34 viaIR / Groth16（snarkjs）/ 公开输入打包后。数字来自 `contracts/test/track-a/variant-1/`。
+Environment: Hardhat 3 / solc 0.8.34 viaIR / Groth16 (snarkjs) / after public-input packing. Figures come from `contracts/test/track-a/variant-1/`.
 
-### 9.1 单位价格假设
+### 9.1 Unit Price Assumptions
 
-| 链 | gas price | 币价 | 每 gas 美元 |
+| Chain | gas price | Token price | USD per gas |
 | --- | --- | --- | --- |
 | ETH | 0.3 gwei | $2,500 | 7.5 × 10⁻⁷ |
 | BSC | 0.05 gwei | $750 | 3.75 × 10⁻⁸ |
 
-### 9.2 实测
+### 9.2 Measurements
 
-| 操作 | 实测 gas | 备注 | ETH（$） | BSC（$） |
+| Operation | Measured gas | Notes | ETH ($) | BSC ($) |
 | --- | --- | --- | --- | --- |
-| 公开转账（参照） | ~50k | | 0.038 | 0.0019 |
-| `0x03` 公开 → 机密（收款方首次） | **198k** | 含收款方 pending 冷写（4 槽）；固定基窗口表 `amount·G` 最坏 77k | 0.15 | 0.0074 |
-| `0x01` 机密 → 机密，**稳态**（双方存储已热） | **467k** | 目标 ≤ 500k 达成 | 0.35 | 0.018 |
-| `0x01` 机密 → 机密，账户首次花费 | 709k | 一次性：available、folded 冷写各 4 槽 | 0.53 | 0.027 |
-| `0x04` 机密 → 公开，账户首次花费 | 583k | 同上 | 0.44 | 0.022 |
-| `prepare` 后裸 `transferFrom`（首次） | 360k | 不含 `prepare` 本身 | 0.27 | 0.0135 |
-| Groth16 `verifyProof`（15 输入） | 316k | 含 21k 基础与 calldata；25 输入未打包时 386k | | |
-| 证明生成（Node，M 系列） | 2.3~2.5 s | 35,137 约束 | | |
+| Public transfer (reference) | ~50k | | 0.038 | 0.0019 |
+| `0x03` public → confidential (payee's first receipt) | **198k** | Includes the payee's pending cold write (4 slots); fixed-base window table `amount·G` worst case 77k | 0.15 | 0.0074 |
+| `0x01` confidential → confidential, **steady state** (both sides' storage warm) | **467k** | Target ≤ 500k achieved | 0.35 | 0.018 |
+| `0x01` confidential → confidential, account's first spend | 709k | One-time: cold writes of available and folded, 4 slots each | 0.53 | 0.027 |
+| `0x04` confidential → public, account's first spend | 583k | Same as above | 0.44 | 0.022 |
+| Bare `transferFrom` after `prepare` (first time) | 360k | Excludes `prepare` itself | 0.27 | 0.0135 |
+| Groth16 `verifyProof` (15 inputs) | 316k | Includes 21k base and calldata; 386k with 25 inputs unpacked | | |
+| Proof generation (Node, M-series) | 2.3~2.5 s | 35,137 constraints | | |
 
-### 9.3 拆解（`0x01`，稳态）
+### 9.3 Breakdown (`0x01`, steady state)
 
-| 组成 | Gas |
+| Component | Gas |
 | --- | --- |
-| 基础 + calldata（payload ~710 字节） | ~35k |
-| Groth16 验证（15 个公开输入） | ~290k |
-| Baby Jubjub 点加 ×8（有效待入账 2、折叠 2、扣款 2、收款 2） | ~65k |
-| 存储：付款方 available、folded、nonce；收款方 pending，均为热写 | ~70k |
-| 事件 | ~7k |
+| Base + calldata (payload ~710 bytes) | ~35k |
+| Groth16 verification (15 public inputs) | ~290k |
+| Baby Jubjub point additions ×8 (effective pending 2, fold 2, debit 2, credit 2) | ~65k |
+| Storage: payer's available, folded, nonce; payee's pending, all warm writes | ~70k |
+| Events | ~7k |
 
-### 9.4 已知优化空间
+### 9.4 Known Optimization Opportunities
 
-| 优化 | 预计节省 | 状态 |
+| Optimization | Estimated saving | Status |
 | --- | --- | --- |
-| 点加改投影坐标、批量求逆 | ~20k | backlog |
-| PLONK 类替换 Groth16 | **增加** ~100k，换取去掉每电路可信设置 | 待评估 |
+| Point addition in projective coordinates, batched inversion | ~20k | backlog |
+| Replace Groth16 with a PLONK-family system | **Adds** ~100k, in exchange for eliminating the per-circuit trusted setup | to be evaluated |
 
-### 9.5 目标
+### 9.5 Target
 
-**`0x01` 稳态 ≤ 500k，已达成（467k）。**（原目标 350k 建立在 SHA-256 压缩成立的前提上，已不适用。）
+**`0x01` steady state ≤ 500k, achieved (467k).** (The original target of 350k was based on the assumption that SHA-256 compression would work out, and no longer applies.)
 
-## 10. 范围（0.2）
+## 10. Scope (0.2)
 
-**包含**：公开账本、`transfer` / `transferFrom` 四种类型（`0x02` 除外）、`prepare` / `cancel`、监管密钥登记与轮换、事件与视图、ERC-165、公开输入 SHA-256 压缩。
+**Included**: public ledger, the four `transfer` / `transferFrom` types (excluding `0x02`), `prepare` / `cancel`, regulator key registration and rotation, events and views, ERC-165, public-input packing.
 
 ## 11. Backlog
 
-| 项 | 说明 |
+| Item | Notes |
 | --- | --- |
-| `0x02` stealth | 付款方由收款方元地址派生一次性 `pk` 与 `id`；账户已与地址解耦，无需链上配套 |
-| 托管式机密 allowance | 第三方**无需持有私钥**代为花费机密余额；证明即授权只覆盖持有私钥的情形 |
-| 密钥轮换 | 本人把 `available` 重加密到新 `pk`（即新 id），需专用电路 |
-| 合规策略钩子 | 可插拔 `Policy` 合约，对 `0x03` / `0x04` 做准入检查 |
-| 点压缩 | 降低 calldata |
-| ERC-2771 | 附加数据与 forwarder 尾部的共存 |
-| 多输出转账 | 一笔证明多个收款方 |
+| `0x02` stealth | The payer derives a one-time `pk` and `id` from the payee's meta-address; since accounts are already decoupled from addresses, no on-chain support is needed |
+| Custodial confidential allowance | A third party spends a confidential balance on the owner's behalf **without holding the private key**; proof-as-authorization covers only the case of holding the private key |
+| Key rotation | The owner re-encrypts `available` to a new `pk` (i.e. a new id); requires a dedicated circuit |
+| Compliance policy hook | Pluggable `Policy` contract performing admission checks on `0x03` / `0x04` |
+| Point compression | Reduce calldata |
+| ERC-2771 | Coexistence of the extra data with the forwarder suffix |
+| Multi-output transfer | One proof for multiple payees |
 
-## 12. 待决
+## 12. Open Questions
 
-- [ ] Groth16 可信设置：原型用公开 ptau + 自建 phase 2；正式版是否切 PLONK / UltraHonk。
-- [ ] `decryptable` 放链上还是纯链下（靠 memo 与事件重放重建）。
-- [ ] 监管密钥阈值化（DKG）推荐方案。
-- [ ] 部署目标：先 L2 还是先 L1。
-- [ ] `Transfer` 事件是否对 `0x01` 也发（当前：发，句柄最高位区分），还是只发 `ConfidentialTransfer`。
+- [ ] Groth16 trusted setup: the prototype uses a public ptau + self-built phase 2; whether production switches to PLONK / UltraHonk.
+- [ ] Whether `decryptable` lives on chain or purely off chain (rebuilt by replaying memos and events).
+- [ ] Recommended scheme for regulator key thresholdization (DKG).
+- [ ] Deployment target: L2 first or L1 first.
+- [ ] Whether the `Transfer` event is also emitted for `0x01` (currently: yes, distinguished by the handle's top bit), or only `ConfidentialTransfer`.

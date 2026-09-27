@@ -1,30 +1,32 @@
-# 0004 监管接入原则
+English | [中文](0004-regulatory-access-principles.zh-cn.md)
 
-- 状态：Accepted
-- 日期：2026-09-24
+# 0004 Regulatory access principles
 
-## 背景
+- Status: Accepted
+- Date: 2026-09-24
 
-项目目标之一是"留出监管介入的余地"：在监管介入时能解析出真实的转账金额与持仓。需要在不削弱普通用户隐私、不引入可单方面处置资产的角色的前提下定义这一能力。
+## Context
 
-## 决策
+One of the project goals is to "leave room for regulatory intervention": when a regulator intervenes, the real transfer amounts and holdings can be resolved. This capability must be defined without weakening the privacy of ordinary users and without introducing any role that can unilaterally dispose of assets.
 
-所有 Track / Variant 遵守：
+## Decision
 
-1. **密码学强制，非自愿配合**：监管可读性是交易有效性的一部分。缺少监管密文、或监管密文与实际金额不一致的交易无法通过验证。
-2. **只读**：监管密钥只能解密，协议不提供冻结、没收、强制转账接口。若发行方需要此类能力，通过独立的策略钩子实现并单独披露。
-3. **可轮换、历史保留**：监管公钥可轮换；旧公钥永久保留，每笔交易记录所用密钥编号。
-4. **阈值化是部署选择**：协议只见一个监管公钥；该私钥是否 t-of-n 分片由部署方决定。
-5. **不需要任何人配合即可重建**：监管方仅凭链上数据与自身私钥即可重建任意账户任意时刻的余额。
+All Tracks / Variants comply with:
 
-具体机制（密文格式、解密流程）由各 Variant 自行定义。
+1. **Cryptographically enforced, not voluntary cooperation**: regulator readability is part of transaction validity. A transaction that lacks the regulator ciphertext, or whose regulator ciphertext is inconsistent with the actual amount, cannot pass verification.
+2. **Read-only**: the regulator key can only decrypt; the protocol provides no freeze, seizure, or forced-transfer interface. If an issuer needs such capabilities, they are implemented through independent policy hooks and disclosed separately.
+3. **Rotatable, history preserved**: the regulator public key can be rotated; old public keys are kept permanently, and every transaction records the key number used.
+4. **Thresholding is a deployment choice**: the protocol sees only one regulator public key; whether that private key is t-of-n sharded is decided by the deployer.
+5. **Reconstructable without anyone's cooperation**: the regulator can reconstruct the balance of any account at any point in time using only on-chain data and its own private key.
 
-## 备选方案
+The concrete mechanisms (ciphertext format, decryption flow) are defined by each Variant.
 
-- viewing key 自愿披露（Zcash 模式）：不满足"监管介入时一定能解析"的目标，作恶者可拒绝披露。
-- 内置冻结权限：与"不引入可单方面处置资产的角色"的安全目标冲突。
+## Alternatives
 
-## 后果
+- Voluntary viewing-key disclosure (Zcash model): does not meet the goal of "always resolvable when a regulator intervenes"; a malicious actor can refuse to disclose.
+- Built-in freeze authority: conflicts with the security goal of "not introducing any role that can unilaterally dispose of assets".
 
-- 正面：监管能力可验证、可审计，普通用户隐私不受影响。
-- 负面：监管私钥泄露等于全网金额透明，必须靠阈值化与密钥管理缓解；这是接受的风险。
+## Consequences
+
+- Positive: the regulatory capability is verifiable and auditable, and ordinary users' privacy is unaffected.
+- Negative: leaking the regulator private key equals network-wide amount transparency; this must be mitigated through thresholding and key management. This is an accepted risk.

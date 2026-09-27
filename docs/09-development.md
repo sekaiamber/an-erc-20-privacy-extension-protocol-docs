@@ -1,85 +1,87 @@
-# 09 开发指南
+English | [中文](09-development.zh-cn.md)
 
-状态：`Review`
+# 09 Development guide
 
-## 环境要求
+Status: `Review`
+
+## Requirements
 
 - Git
-- Node.js 22 或更高版本（合约仓库使用 Hardhat 3，要求 Node.js ≥ 22）
-- npm（随 Node.js 安装）
+- Node.js 22 or later (the contract repository uses Hardhat 3, which requires Node.js ≥ 22)
+- npm (installed with Node.js)
 
-## 获取代码
+## Getting the code
 
 ```bash
 git clone --recurse-submodules https://github.com/sekaiamber/an-erc-20-privacy-extension-protocol-docs.git
 cd an-erc-20-privacy-extension-protocol-docs
 ```
 
-已 clone 但没有拉取 submodule 时：
+If you already cloned without fetching the submodules:
 
 ```bash
 git submodule update --init --recursive
 ```
 
-## Submodule 工作流
+## Submodule workflow
 
-`contracts/` 是独立仓库，主仓库只记录它的某个 commit。日常流程：
+`contracts/` is an independent repository; the main repository only records one of its commits. Day-to-day flow:
 
 ```bash
-# 1. 进入子仓库修改并提交
+# 1. Enter the submodule, make changes and commit
 cd contracts
 git checkout main
-# ... 修改 ...
+# ... changes ...
 git add -A && git commit -m "feat: ..."
 git push origin main
 
-# 2. 回到主仓库，更新 submodule 指针
+# 2. Return to the main repository and update the submodule pointer
 cd ..
 git add contracts
 git commit -m "chore: bump contracts submodule"
 git push
 ```
 
-拉取他人的更新：
+Pulling others' updates:
 
 ```bash
 git pull
 git submodule update --init --recursive
 ```
 
-注意：在子仓库中提交后，如果忘记回到主仓库提交指针，其他人拉取主仓库时看到的仍是旧版本。
+Note: after committing in the submodule, if you forget to go back to the main repository and commit the pointer, others pulling the main repository will still see the old version.
 
-## 合约开发
+## Contract development
 
-合约仓库使用 Hardhat 3 + TypeScript + ethers v6，详见 `contracts/README.md`。常用命令：
+The contract repository uses Hardhat 3 + TypeScript + ethers v6; see `contracts/README.md` for details. Common commands:
 
 ```bash
 cd contracts
-npm install                 # 安装依赖
-npx hardhat compile         # 编译
-npx hardhat test            # 运行全部测试（Solidity + mocha）
-npx hardhat test solidity   # 只运行 Solidity 测试
-npx hardhat test mocha      # 只运行 TypeScript 测试
-npx hardhat ignition deploy ignition/modules/TestToken.ts   # 部署到本地模拟链
+npm install                 # install dependencies
+npx hardhat compile         # compile
+npx hardhat test            # run all tests (Solidity + mocha)
+npx hardhat test solidity   # run only the Solidity tests
+npx hardhat test mocha      # run only the TypeScript tests
+npx hardhat ignition deploy ignition/modules/TestToken.ts   # deploy to the local simulated chain
 ```
 
-## 验证前端（dapp）
+## Verification frontend (dapp)
 
-`dapp/` 使用 pnpm（Node.js ≥ 24）。
+`dapp/` uses pnpm (Node.js ≥ 24).
 
 ```bash
 cd dapp
-cp .env.example .env      # BSC testnet 参数与 sqlite 路径
-pnpm install              # postinstall 会执行 prisma generate
-pnpm db:migrate           # 首次或 schema 变更后
+cp .env.example .env      # BSC testnet parameters and sqlite path
+pnpm install              # postinstall runs prisma generate
+pnpm db:migrate           # first time, or after a schema change
 pnpm dev                  # http://localhost:3000
 ```
 
-约定见 `dapp/AGENTS.md`：全局状态在 `stores/`，组件内部状态在组件同级 `*.store.ts`；服务端数据走 react-query；链配置只从 `lib/wagmi.ts` 读取。
+Conventions are in `dapp/AGENTS.md`: global state lives in `stores/`, component-internal state in a sibling `*.store.ts` next to the component; server-side data goes through react-query; chain configuration is read only from `lib/wagmi.ts`.
 
-## 文档编写
+## Writing documentation
 
-- 文档使用 Markdown，中文撰写，技术术语保留英文。
-- 新增文档在 `docs/README.md` 索引中登记。
-- 重要决策使用 ADR，模板见 `docs/adr/README.md`。
-- 外部资料统一登记到 `docs/references.md`。
+- Documents are Markdown. **English is the default** (`xxx.md`); the Chinese version is `xxx.zh-cn.md` in the same directory and must stay in sync. The first line of every document is a language-switch link. The Chinese versions keep technical terms in English.
+- Register new documents in the `docs/README.md` index.
+- Use ADRs for important decisions; the template is in `docs/adr/README.md`.
+- Register external references in `docs/references.md`.

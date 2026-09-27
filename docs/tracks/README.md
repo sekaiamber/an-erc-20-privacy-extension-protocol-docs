@@ -1,13 +1,15 @@
+English | [中文](README.zh-cn.md)
+
 # Tracks
 
-协议家族按 **Track / Variant** 组织：
+The protocol family is organized by **Track / Variant**:
 
-- **Track**：集成方（钱包、DEX、浏览器）看到的接口契约与账本拓扑。同一 Track 下的所有 Variant 对集成方表现一致。
-- **Variant**：Track 之下的一种具体机制实现，各自自包含，互不依赖。每个 Variant 独立版本号 `a.b.c`。
+- **Track**: the interface contract and ledger topology as seen by integrators (wallets, DEXes, explorers). All Variants under the same Track behave identically to integrators.
+- **Variant**: a concrete mechanism implementation under a Track, each self-contained and independent of the others. Each Variant has its own version number `a.b.c`.
 
-| Track | 机制 | Variant | 状态 |
+| Track | Mechanism | Variant | Status |
 | --- | --- | --- | --- |
-| [A](track-a/README.md) | 双账本：公开账本 + 机密账本 | [A.1](track-a/variant-1/README.md) ElGamal 加密账户 + SNARK | **主线，设计中** |
-| [B](track-b/README.md) | 纯机密：无公开账本 | — | 占位 |
+| [A](track-a/README.md) | Dual ledger: public ledger + confidential ledger | [A.1](track-a/variant-1/README.md) ElGamal encrypted accounts + SNARK | **Mainline, in design** |
+| [B](track-b/README.md) | Pure confidential: no public ledger | — | Placeholder |
 
-纪律：只有主线 Variant 有实现。其它 Track / Variant 在主线端到端跑通并给出 Gas 数据前，只允许存在一页纸设计草图。
+Discipline: only the mainline Variant has an implementation. Other Tracks / Variants are allowed only a one-page design sketch until the mainline runs end to end and produces gas figures.

@@ -1,28 +1,30 @@
-# 0003 ERC-20 表面约定：复用标准选择器与尾部 payload
+English | [中文](0003-erc20-surface-conventions.zh-cn.md)
 
-- 状态：Accepted
-- 日期：2026-09-24
+# 0003 ERC-20 surface conventions: reuse standard selectors and trailing payload
 
-## 背景
+- Status: Accepted
+- Date: 2026-09-24
 
-机密操作需要携带密文与证明，而 ERC-20 的 `transfer` / `transferFrom` 只有固定参数。目标是让现有钱包与合约无需新 ABI 就能触达机密功能，同时让协议语义精确、无歧义。
+## Context
 
-## 决策
+Confidential operations need to carry ciphertexts and proofs, while ERC-20's `transfer` / `transferFrom` have only fixed parameters. The goal is to let existing wallets and contracts reach confidential functionality without a new ABI, while keeping the protocol semantics precise and unambiguous.
 
-1. **不新增转账选择器**。机密操作复用 `transfer(address,uint256)` 与 `transferFrom(address,address,uint256)`。
-2. **payload 附加在 ABI 参数之后**：`transfer` 从 `msg.data[68:]` 读，`transferFrom` 从 `msg.data[100:]` 读。依赖 Solidity ABI 解码器忽略多余字节的特性（与 ERC-2771 相同）。
-3. **payload 首字节为类型，次字节为 flags**。类型编号在家族级统一：`0x01` 机密→机密、`0x02` stealth、`0x03` 公开→机密、`0x04` 机密→公开。无 payload 即公开转账。
-4. **`to` / `from` 的解释完全由 payload 类型决定**。协议不判断一个 20 字节值是钱包地址还是机密 id；无 payload 一律走公开账本；发错类型的后果由发送方承担，协议不做兜底。
-5. **机密转账的 `amount` 槽位承载句柄**：`handle = keccak256(payload) | (1 << 255)`，最高位为 1 供索引器区分。
-6. **所有类型都发标准 `Transfer` 事件**；机密细节另发专用事件。
-7. **兜底路径**：无法拼 calldata 的调用方可先 `prepare(payload)` 登记，再以裸调用执行。
+## Decision
 
-## 备选方案
+1. **No new transfer selectors**. Confidential operations reuse `transfer(address,uint256)` and `transferFrom(address,address,uint256)`.
+2. **The payload is appended after the ABI parameters**: `transfer` reads from `msg.data[68:]`, `transferFrom` reads from `msg.data[100:]`. This relies on the Solidity ABI decoder ignoring extra bytes (the same property used by ERC-2771).
+3. **The first byte of the payload is the type, the second byte is flags**. Type numbers are unified at the family level: `0x01` confidential -> confidential, `0x02` stealth, `0x03` public -> confidential, `0x04` confidential -> public. No payload means a public transfer.
+4. **The interpretation of `to` / `from` is determined entirely by the payload type**. The protocol does not judge whether a 20-byte value is a wallet address or a confidential id; with no payload it always goes through the public ledger; the consequences of sending the wrong type are borne by the sender, and the protocol provides no fallback.
+5. **The `amount` slot of a confidential transfer carries a handle**: `handle = keccak256(payload) | (1 << 255)`, with the top bit set to 1 so indexers can distinguish it.
+6. **All types emit the standard `Transfer` event**; confidential details are emitted in separate dedicated events.
+7. **Fallback path**: callers that cannot assemble calldata can first register with `prepare(payload)`, then execute with a bare call.
 
-- 新增 `transfer(address,uint256,bytes)` 重载：多一个 ABI 表面，且钱包原生界面同样用不了，收益不如尾部 payload。
-- 给机密 id 加固定前缀并拒绝对其的公开转账：会误伤前缀相同的真实钱包，且违背第 4 条。
+## Alternatives
 
-## 后果
+- Add a `transfer(address,uint256,bytes)` overload: one more ABI surface, and native wallet UIs still cannot use it; the benefit is lower than the trailing payload.
+- Give confidential ids a fixed prefix and reject public transfers to them: would mistakenly hit real wallets sharing the same prefix, and violates rule 4.
 
-- 正面：集成方零改动即可发起公开转账；dApp 与脚本可一笔完成机密操作；一个选择器覆盖全部模式。
-- 负面：钱包会把句柄显示为一个巨大数字；ERC-2771 forwarder 的尾部追加与 payload 冲突，v0.x 不支持 2771。
+## Consequences
+
+- Positive: integrators can initiate public transfers with zero changes; dApps and scripts can complete a confidential operation in a single transaction; one selector covers all modes.
+- Negative: wallets will display the handle as a huge number; ERC-2771 forwarders' trailing append conflicts with the payload, so v0.x does not support 2771.

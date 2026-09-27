@@ -1,72 +1,74 @@
-# 04 设计目标
+English | [中文](04-design-goals.zh-cn.md)
 
-状态：`Draft`
+# 04 Design Goals
 
-本文列出协议应满足的性质，并显式记录需要权衡的地方。每一条目标在后续规范中都应能找到对应的机制或明确的放弃理由。
+Status: `Draft`
 
-## 功能性目标
+This document lists the properties the protocol should satisfy and explicitly records the places where trade-offs are required. Every goal here should have a corresponding mechanism, or an explicit reason for abandoning it, in the later specifications.
 
-| 编号 | 目标 | 说明 |
+## Functional Goals
+
+| ID | Goal | Description |
 | --- | --- | --- |
-| G1 | ERC-20 兼容 | 公开模式下的代币完全遵循 EIP-20，现有基础设施零改动 |
-| G2 | 双向转换 | 用户可以把公开余额转入隐私状态（shield），也可以转回公开状态（unshield） |
-| G3 | 隐私内转账 | 隐私状态下可以在用户之间转账，不需要先转回公开状态 |
-| G4 | 总量守恒可验证 | 公开总量 + 隐私池总量 = `totalSupply()`，任何人可验证 |
-| G5 | 无需许可 | 任何地址都可以使用隐私功能，不依赖运营方审批 |
+| G1 | ERC-20 compatible | In public mode the token fully follows EIP-20; existing infrastructure needs zero changes |
+| G2 | Bidirectional conversion | Users can move a public balance into the private state (shield) and back to the public state (unshield) |
+| G3 | In-private transfers | In the private state, users can transfer between each other without first converting back to the public state |
+| G4 | Verifiable supply conservation | Public total + private pool total = `totalSupply()`, verifiable by anyone |
+| G5 | Permissionless | Any address can use the privacy features, without approval from an operator |
 
-## 隐私性目标
+## Privacy Goals
 
-| 编号 | 目标 | 覆盖维度 |
+| ID | Goal | Dimension covered |
 | --- | --- | --- |
-| P1 | 隐私内转账的金额不可见 | 金额隐私 |
-| P2 | 隐私内转账的接收方不可见（等级：隐藏 / 化名 / 公开） | 身份隐私 |
-| P3 | 隐私内转账的发送方不可见（等级：隐藏 / 化名 / 公开） | 身份隐私 |
-| P4 | 同一用户的多笔隐私转账不可关联 | 关联隐私 |
-| P5 | shield / unshield 的金额与地址是公开的，但与隐私内活动不可关联 | 关联隐私 |
+| P1 | The amount of an in-private transfer is invisible | Amount privacy |
+| P2 | The receiver of an in-private transfer is invisible (levels: hidden / pseudonymous / public) | Identity privacy |
+| P3 | The sender of an in-private transfer is invisible (levels: hidden / pseudonymous / public) | Identity privacy |
+| P4 | Multiple in-private transfers of the same user are unlinkable | Linkability |
+| P5 | The amount and address of shield / unshield are public, but unlinkable to in-private activity | Linkability |
 
-P1 至 P4 的达成程度取决于 Variant 的技术路线，并非所有路线都能同时满足。每个 Variant 按 [07 家族级约定](07-family-conventions.md) 第 12 节的评估表自评。"化名"指收付方以稳定的机密 id 出现：不可反推真实身份，但同一 id 的多笔交易可关联（A.1 的现状）。
+The degree to which P1 to P4 are achieved depends on the technical route of the Variant; not all routes can satisfy them simultaneously. Each Variant self-assesses against the evaluation table in Section 12 of [07 Family Conventions](07-family-conventions.md). "Pseudonymous" means the payer and payee appear as a stable confidential id: the real identity cannot be derived from it, but multiple transactions of the same id can be linked (the current state of A.1).
 
-## 安全性目标
+## Security Goals
 
-| 编号 | 目标 |
+| ID | Goal |
 | --- | --- |
-| S1 | 无法凭空铸造隐私余额（soundness） |
-| S2 | 无法双花（nullifier 唯一性或等价机制） |
-| S3 | 无法盗用他人隐私余额 |
-| S4 | 隐私功能的故障不影响公开模式代币的正常使用 |
-| S5 | 不引入可以单方面冻结或没收用户资产的角色 |
+| S1 | Private balance cannot be minted out of thin air (soundness) |
+| S2 | No double spending (nullifier uniqueness or an equivalent mechanism) |
+| S3 | Other users' private balances cannot be stolen |
+| S4 | A failure of the privacy features does not affect normal use of the token in public mode |
+| S5 | No role is introduced that can unilaterally freeze or confiscate user assets |
 
-## 工程性目标
+## Engineering Goals
 
-| 编号 | 目标 |
+| ID | Goal |
 | --- | --- |
-| E1 | 主流 EVM 链可部署，不依赖预编译之外的特殊 opcode |
-| E2 | 隐私转账的 Gas 成本在可接受范围（目标值待调研后确定） |
-| E3 | 证明生成可以在普通消费级设备或浏览器中完成 |
-| E4 | 合约可升级策略明确（或明确为不可升级） |
+| E1 | Deployable on mainstream EVM chains, without relying on special opcodes beyond precompiles |
+| E2 | The gas cost of a private transfer is within an acceptable range (target value to be determined after research) |
+| E3 | Proof generation can be completed on ordinary consumer devices or in a browser |
+| E4 | The contract upgrade strategy is explicit (or the contract is explicitly non-upgradeable) |
 
-## 合规可选性
+## Optional Compliance
 
-协议本身不强制合规，但应为以下能力预留接口，由代币发行方或用户自行选择启用：
+The protocol itself does not enforce compliance, but should reserve interfaces for the following capabilities, to be enabled at the discretion of the token issuer or the user:
 
-- 查看密钥（viewing key）：用户可向第三方披露自己的隐私交易历史。
-- 关联集合证明：用户可证明资金来源属于（或不属于）某个集合。
+- Viewing key: a user can disclose their own private transaction history to a third party.
+- Association set proof: a user can prove that the source of their funds belongs (or does not belong) to some set.
 
-这两项能力不应削弱不启用它们的用户的隐私。
+These two capabilities must not weaken the privacy of users who do not enable them.
 
-## 明确的非目标
+## Explicit Non-goals
 
-- 不隐藏 shield / unshield 操作本身的存在。
-- 不隐藏代币合约地址（即"用户在使用哪个代币"是公开的）。
-- 不解决 Gas 支付带来的关联问题；该问题交由账户抽象 / 中继者层处理，本协议只保证与之兼容。
+- Do not hide the existence of shield / unshield operations themselves.
+- Do not hide the token contract address (i.e. "which token the user is using" is public).
+- Do not solve the linkage problem caused by gas payment; that problem is left to the account abstraction / relayer layer, and this protocol only guarantees compatibility with it.
 
-## 主要权衡
+## Main Trade-offs
 
-| 权衡 | 一端 | 另一端 |
+| Trade-off | One end | The other end |
 | --- | --- | --- |
-| 隐私强度 vs Gas | 完整 ZK 证明，Gas 高 | 部分隐私，Gas 低 |
-| 兼容性 vs 隐私 | 保留账户模型，身份公开 | note 模型，完全隐私但脱离标准接口 |
-| 无信任 vs 功能 | 纯 ZK，无额外假设 | FHE 阈值网络，功能丰富但有信任假设 |
-| 合规 vs 抗审查 | 内置合规钩子 | 完全不可审查 |
+| Privacy strength vs gas | Full ZK proofs, high gas | Partial privacy, low gas |
+| Compatibility vs privacy | Keep the account model, identities public | Note model, full privacy but departs from the standard interface |
+| Trustlessness vs functionality | Pure ZK, no extra assumptions | FHE threshold network, rich functionality but with trust assumptions |
+| Compliance vs censorship resistance | Built-in compliance hooks | Completely uncensorable |
 
-这些权衡的最终选择将通过 ADR 记录。
+The final choices for these trade-offs will be recorded through ADRs.

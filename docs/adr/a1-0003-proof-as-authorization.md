@@ -1,25 +1,27 @@
-# A1-0003 证明即授权，`transferFrom` 为机密付款入口
+English | [中文](a1-0003-proof-as-authorization.zh-cn.md)
 
-- 状态：Accepted
-- 日期：2026-09-24
-- 范围：A.1
+# A1-0003 Proof-as-authorization; `transferFrom` is the confidential payment entry point
 
-## 背景
+- Status: Accepted
+- Date: 2026-09-24
+- Scope: A.1
 
-机密账户没有以太坊地址，不可能成为 `msg.sender`。花费机密余额的本质授权是"知道私钥"，这已经包含在花费证明中。
+## Context
 
-## 决策
+A confidential account has no Ethereum address and can never be `msg.sender`. The essential authorization for spending a confidential balance is "knowing the private key", which is already included in the spend proof.
 
-1. 机密账户作为付款方时，入口是 `transferFrom(from, to, x)` + payload（`0x01` / `0x04`）。
-2. **`msg.sender` 不做任何检查**。授权 = 证明（含私钥知识与 `nonce`）。
-3. `from` 为公开账户时，`transferFrom` 保持标准 allowance 语义（含 `0x03`）。
-4. `transfer(to, x)` 只用于 `msg.sender` 的公开账户付款。
+## Decision
 
-## 备选方案
+1. When a confidential account is the payer, the entry point is `transferFrom(from, to, x)` + payload (`0x01` / `0x04`).
+2. **No check whatsoever on `msg.sender`**. Authorization = proof (including knowledge of the private key and the `nonce`).
+3. When `from` is a public account, `transferFrom` keeps the standard allowance semantics (including `0x03`).
+4. `transfer(to, x)` is used only for payments from `msg.sender`'s public account.
 
-- 要求 `msg.sender` 为某个绑定地址：机密账户没有地址；即使有，也会把 gas 来源与账户关联。
+## Alternatives
 
-## 后果
+- Require `msg.sender` to be some bound address: confidential accounts have no address; even if they did, it would link the gas source to the account.
 
-- 正面：任何中继者可代付 gas；机密账户永远不需要 ETH；stealth 场景无需一次性以太坊密钥；DEX router 可通过 allowance 直接把兑换结果送入机密账本。
-- 负面：第三方**不持有私钥**代为花费（托管式 allowance）不在此机制内，列入 backlog。
+## Consequences
+
+- Positive: any relayer can pay gas on behalf of the user; a confidential account never needs ETH; the stealth scenario needs no one-time Ethereum key; a DEX router can send swap results directly into the confidential ledger via allowance.
+- Negative: spending on behalf of a third party who **does not hold the private key** (custodial-style allowance) is not covered by this mechanism; listed in the backlog.

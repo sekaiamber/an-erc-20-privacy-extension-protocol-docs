@@ -1,5 +1,7 @@
-# Track B：纯机密隐私机制
+English | [中文](README.zh-cn.md)
 
-状态：`Placeholder`
+# Track B: Pure-Confidential Privacy Mechanism
 
-无公开账本，`balanceOf` 返回句柄，所有余额与金额均为密文。在 Track A 主线跑通前不展开。
+Status: `Placeholder`
+
+No public ledger; `balanceOf` returns a handle, and all balances and amounts are ciphertexts. Not elaborated until the Track A mainline runs end to end.

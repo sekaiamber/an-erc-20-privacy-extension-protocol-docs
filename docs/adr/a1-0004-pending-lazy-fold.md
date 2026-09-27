@@ -1,33 +1,35 @@
-# A1-0004 available / pending 拆分与惰性折叠
+English | [中文](a1-0004-pending-lazy-fold.zh-cn.md)
 
-- 状态：Accepted
-- 日期：2026-09-24
-- 范围：A.1
+# A1-0004 available / pending split and lazy fold
 
-## 背景
+- Status: Accepted
+- Date: 2026-09-24
+- Scope: A.1
 
-花费证明绑定付款账户的余额密文。若他人的入账直接修改该密文，本人在途的证明会失效。最初设计用本人调用 `applyPending()` 折叠待入账；账户与地址解耦后，该函数失去了 `msg.sender` 授权：开放调用可被用来反复改 `nonce` 打断本人证明（griefing），加证明则要 ~200k gas 做一件本应 40k 的事。
+## Context
 
-## 决策
+The spend proof binds to the paying account's balance ciphertext. If incoming transfers from others modified that ciphertext directly, the owner's in-flight proof would be invalidated. The initial design had the owner call `applyPending()` to fold pending funds; once accounts were decoupled from addresses, that function lost its `msg.sender` authorization: an open call could be used to repeatedly change the `nonce` and interrupt the owner's proofs (griefing), while requiring a proof would cost ~200k gas for something that should cost 40k.
 
-1. 每个账户维护 `available`（只被本人的证明修改）与 `pending`（只被他人写入）。
-2. **删除 `applyPending`**。每次花费（`0x01` / `0x04`）后合约自动 `available += pending; pending = 0`。本人通过 memo 与事件已知每笔入账。
-3. 证明默认只绑定 `available`，永不因他人入账失效。
-4. flags 位 `includePending`：证明绑定 `available + pending`，用于 `available` 为零的新账户。此时上链前若有新入账，证明失效需重做；这是用户的选择，协议不兜底。
-5. 两种情况下合约状态更新公式相同，仅公开输入中的前状态不同。
+## Decision
 
-## 备选方案
+1. Each account maintains `available` (modified only by the owner's proofs) and `pending` (written only by others).
+2. **Remove `applyPending`**. After every spend (`0x01` / `0x04`), the contract automatically performs `available += pending; pending = 0`. The owner already knows every incoming transfer through memos and events.
+3. By default the proof binds only to `available` and is never invalidated by others' incoming transfers.
+4. The flags bit `includePending`: the proof binds to `available + pending`, used for new accounts whose `available` is zero. In this case, if a new incoming transfer arrives before the transaction lands, the proof is invalidated and must be redone; this is the user's choice, and the protocol provides no fallback.
+5. In both cases the contract's state update formula is identical; only the prior state in the public inputs differs.
 
-- 保留 `applyPending` 并开放给任何人：griefing。
-- 保留 `applyPending` 并要求证明：Gas 不成比例。
-- 取消 `pending`，入账直接进 `available`：证明频繁失效。
+## Alternatives
 
-## 后果
+- Keep `applyPending` and open it to anyone: griefing.
+- Keep `applyPending` and require a proof: disproportionate gas.
+- Drop `pending` and credit incoming transfers directly into `available`: proofs invalidated frequently.
 
-- 正面：函数表面减少一个；无 griefing 面；常规花费永不遇到并发失效。
-- 负面：`pending` 中的资金在本人下一次花费前不可用；新账户首次花费承担一次竞争风险。
-- 负面：`pending` 的明文不在链上状态中，本人需从上次折叠之后的事件 memo 重建；长期只收不花的账户依赖 RPC 的日志保留深度。
+## Consequences
 
-## 修订
+- Positive: one fewer function on the surface; no griefing surface; regular spends never encounter concurrent invalidation.
+- Negative: funds in `pending` are unavailable until the owner's next spend; a new account bears a one-time race risk on its first spend.
+- Negative: the plaintext of `pending` is not in on-chain state; the owner must reconstruct it from event memos since the last fold; an account that only receives and never spends for a long time depends on the RPC's log retention depth.
 
-- 2026-09-26（0.2.5）：账户增加 `foldedAtBlock`，每次花费记录 `block.number`，与 `nonce` 同槽打包、零额外 gas。客户端由此得到重建 pending 的精确事件窗口 `[foldedAtBlock, latest]`，不再需要猜测扫描深度。不改变决策本身。
+## Revisions
+
+- 2026-09-26 (0.2.5): the account gains `foldedAtBlock`; every spend records `block.number`, packed in the same slot as `nonce` at zero extra gas. The client thereby obtains the exact event window `[foldedAtBlock, latest]` for reconstructing pending and no longer needs to guess the scan depth. Does not change the decision itself.

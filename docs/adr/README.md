@@ -1,52 +1,54 @@
-# 架构决策记录（ADR）
+English | [中文](README.zh-cn.md)
 
-记录项目中重要且不易逆转的技术决策。每条 ADR 一个文件，编号递增。
+# Architecture Decision Records (ADR)
 
-- 家族级：`NNNN-短标题.md`
-- Variant 级：`a1-NNNN-短标题.md`（前缀为 Variant 编号小写）
+Records the important and hard-to-reverse technical decisions in the project. One file per ADR, numbered incrementally.
 
-## 家族级
+- Family level: `NNNN-short-title.md`
+- Variant level: `a1-NNNN-short-title.md` (the prefix is the lowercase Variant number)
 
-| 编号 | 标题 | 状态 |
+## Family level
+
+| No. | Title | Status |
 | --- | --- | --- |
-| [0001](0001-use-hardhat3-for-contracts.md) | 合约开发环境采用 Hardhat 3 | Accepted |
-| [0002](0002-track-variant-structure.md) | 协议家族按 Track / Variant 组织 | Accepted |
-| [0003](0003-erc20-surface-conventions.md) | ERC-20 表面约定：复用标准选择器与尾部 payload | Accepted |
-| [0004](0004-regulatory-access-principles.md) | 监管接入原则 | Accepted |
+| [0001](0001-use-hardhat3-for-contracts.md) | Use Hardhat 3 as the contract development environment | Accepted |
+| [0002](0002-track-variant-structure.md) | Organize the protocol family by Track / Variant | Accepted |
+| [0003](0003-erc20-surface-conventions.md) | ERC-20 surface conventions: reuse standard selectors and trailing payload | Accepted |
+| [0004](0004-regulatory-access-principles.md) | Regulatory access principles | Accepted |
 
 ## A.1
 
-| 编号 | 标题 | 状态 |
+| No. | Title | Status |
 | --- | --- | --- |
-| [A1-0001](a1-0001-account-is-public-key.md) | 机密账户 = 公钥，公钥不上链 | Accepted |
-| [A1-0002](a1-0002-crypto-core.md) | 密码内核：twisted ElGamal on Baby Jubjub + Groth16 | Accepted |
-| [A1-0003](a1-0003-proof-as-authorization.md) | 证明即授权，`transferFrom` 为机密付款入口 | Accepted |
-| [A1-0004](a1-0004-pending-lazy-fold.md) | available / pending 拆分与惰性折叠 | Accepted |
-| [A1-0005](a1-0005-numeric-parameters.md) | 数值参数：位宽、decimals、供应上限 | Accepted |
-| [A1-0006](a1-0006-fold-and-received-block.md) | 纯折叠 `0x80` 与 `lastReceivedAtBlock`（仅 A.1） | Accepted |
+| [A1-0001](a1-0001-account-is-public-key.md) | Confidential account = public key; public key never goes on-chain | Accepted |
+| [A1-0002](a1-0002-crypto-core.md) | Crypto core: twisted ElGamal on Baby Jubjub + Groth16 | Accepted |
+| [A1-0003](a1-0003-proof-as-authorization.md) | Proof-as-authorization; `transferFrom` is the confidential payment entry point | Accepted |
+| [A1-0004](a1-0004-pending-lazy-fold.md) | available / pending split and lazy fold | Accepted |
+| [A1-0005](a1-0005-numeric-parameters.md) | Numeric parameters: bit widths, decimals, supply cap | Accepted |
+| [A1-0006](a1-0006-fold-and-received-block.md) | Pure fold `0x80` and `lastReceivedAtBlock` (A.1 only) | Accepted |
 
-## 模板
+## Template
 
 ```markdown
-# NNNN 标题
+# NNNN Title
 
-- 状态：Proposed / Accepted / Deprecated / Superseded by NNNN
-- 日期：YYYY-MM-DD
-- 范围：家族 / A.1 / …
+- Status: Proposed / Accepted / Deprecated / Superseded by NNNN
+- Date: YYYY-MM-DD
+- Scope: Family / A.1 / ...
 
-## 背景
+## Context
 
-为什么需要做这个决定，当前面临的约束。
+Why this decision is needed and the constraints currently faced.
 
-## 决策
+## Decision
 
-做了什么决定。
+What was decided.
 
-## 备选方案
+## Alternatives
 
-考虑过但没有采用的方案，以及原因。
+Options that were considered but not adopted, and why.
 
-## 后果
+## Consequences
 
-这个决定带来的正面与负面影响。
+The positive and negative effects of this decision.
 ```

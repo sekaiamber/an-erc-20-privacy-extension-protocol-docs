@@ -1,31 +1,33 @@
-# A1-0005 数值参数：位宽、decimals、供应上限
+English | [中文](a1-0005-numeric-parameters.zh-cn.md)
 
-- 状态：Accepted
-- 日期：2026-09-24
-- 范围：A.1
+# A1-0005 Numeric parameters: bit widths, decimals, supply cap
 
-## 背景
+- Status: Accepted
+- Date: 2026-09-24
+- Scope: A.1
 
-范围证明的位宽决定电路成本；ElGamal 若需解离散对数则限制金额位宽；同态累加可能使余额超出范围证明覆盖的区间。
+## Context
 
-## 决策
+The bit width of the range proof determines circuit cost; if ElGamal requires solving a discrete logarithm, that limits the amount bit width; homomorphic accumulation may push a balance outside the interval covered by the range proof.
 
-| 参数 | 值 |
+## Decision
+
+| Parameter | Value |
 | --- | --- |
-| 单笔金额 | `v < 2⁴⁸` |
-| 余额 | `b < 2⁶⁴` |
-| `totalSupply` 上限 | `2⁶⁴ − 1` 最小单位，合约强制 |
+| Single transfer amount | `v < 2⁴⁸` |
+| Balance | `b < 2⁶⁴` |
+| `totalSupply` cap | `2⁶⁴ − 1` smallest units, enforced by the contract |
 | decimals | 6 |
 
-- 供应上限保证任何账户余额都在 64 位范围证明内，累加不会把账户锁死。
-- 收款方与监管方通过电路强制正确的 memo 获得明文，不解离散对数；48 位离散对数（2²⁴ 表）仅作实现有 bug 时的兜底。
+- The supply cap guarantees that any account balance stays within the 64-bit range proof, so accumulation can never lock an account.
+- The payee and the regulator obtain the plaintext via the circuit-enforced memo, without solving a discrete logarithm; the 48-bit discrete logarithm (2²⁴ table) serves only as a fallback in case of an implementation bug.
 
-## 备选方案
+## Alternatives
 
-- 单段 32 位金额 + 查表解密：单笔上限仅 4,294（decimals 6），不够用。
-- 拆分低 16 / 高 32 位分别加密：每份密文多一个点，memo 方案更省。
+- Single-segment 32-bit amount + table-lookup decryption: the per-transfer cap is only 4,294 (decimals 6), not enough.
+- Split into low 16 / high 32 bits encrypted separately: one extra point per ciphertext; the memo approach is cheaper.
 
-## 后果
+## Consequences
 
-- 正面：单笔上限约 2.8 亿，总供应上限约 1.8 × 10¹³，覆盖绝大多数代币场景。
-- 负面：decimals 不能是 18；不适合总供应极大的 meme 类代币。
+- Positive: per-transfer cap of about 280 million, total supply cap of about 1.8 × 10¹³, covering the vast majority of token scenarios.
+- Negative: decimals cannot be 18; unsuitable for meme-style tokens with extremely large total supply.

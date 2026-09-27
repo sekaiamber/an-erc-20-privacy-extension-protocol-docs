@@ -1,32 +1,34 @@
-# A1-0006 纯折叠 `0x80` 与 `lastReceivedAtBlock`
+English | [中文](a1-0006-fold-and-received-block.zh-cn.md)
 
-- 状态：Accepted
-- 日期：2026-09-26
-- 范围：A.1（`lastReceivedAtBlock` 明确**不**升为家族约定）
+# A1-0006 Pure fold `0x80` and `lastReceivedAtBlock`
 
-## 背景
+- Status: Accepted
+- Date: 2026-09-26
+- Scope: A.1 (`lastReceivedAtBlock` is explicitly **not** promoted to a family convention)
 
-A1-0004 把折叠搭在花费上。两个后果在测试网试用中暴露：
+## Context
 
-1. 收款方重建 pending 明文依赖上次折叠之后的事件 memo；只收不花的账户窗口无限增长，公共 RPC 的日志保留（publicnode 约 9 万块）很快就不够。折叠本身不产生知识，但能把已经解出的知识（`decryptable`）存进链上、推进窗口起点——前提是能在不转账的情况下折叠。
-2. 安全自审 F1：新账户首次花费必须 `includePending`，攻击者逐块打 1 单位即可让证明永远失效。
+A1-0004 piggybacked folding on spending. Two consequences surfaced during testnet trials:
 
-同时，客户端事件窗口只有起点（0.2.5 的 `foldedAtBlock`）没有终点，收款很久以前、之后再没收过的账户要空扫一整段。
+1. The payee's reconstruction of the pending plaintext depends on event memos since the last fold; for an account that only receives and never spends, the window grows without bound, and the log retention of public RPCs (publicnode, roughly 90k blocks) quickly becomes insufficient. Folding itself produces no knowledge, but it can store already-derived knowledge (`decryptable`) on-chain and advance the window's start point, provided that folding is possible without transferring.
+2. Security self-review F1: a new account's first spend must use `includePending`; an attacker sending 1 unit every block can keep the proof permanently invalid.
 
-## 决策
+At the same time, the client's event window has only a start point (0.2.5's `foldedAtBlock`) and no end point; an account that received long ago and never received again has to scan an entire empty span.
 
-1. 新增 A.1 私有 payload 类型 `0x80`：电路只证明「持有 `from` 的私钥」并绑定 `(from, nonce, contract, chainId)`；合约执行与花费相同的折叠更新（`available += pending − folded`，`nonce++`，`foldedAtBlock`，可选写 `decryptable`），不移动任何资金，不支持 `prepare`。
-2. 账户增加 `lastReceivedAtBlock`，在 `_addPending` 中写入，与 `nonce` / `foldedAtBlock` 同一存储槽。客户端事件窗口收紧为 `[foldedAtBlock, lastReceivedAtBlock]`。
-3. `lastReceivedAtBlock` 仅限 A.1。理由：A.1 的收款事件本来就公开 `to`（明文 id）与区块，状态中再记一份不增加信息；但任何隐藏收款人的变体（stealth 类）里，「按 id 记录收款区块」会把交易重新和账户连起来，因此不得作为家族约定。
+## Decision
 
-## 备选方案
+1. Add the A.1-private payload type `0x80`: the circuit proves only "holds the private key of `from`" and binds `(from, nonce, contract, chainId)`; the contract executes the same fold update as a spend (`available += pending − folded`, `nonce++`, `foldedAtBlock`, optionally writing `decryptable`), moves no funds, and does not support `prepare`.
+2. The account gains `lastReceivedAtBlock`, written in `_addPending`, in the same storage slot as `nonce` / `foldedAtBlock`. The client's event window tightens to `[foldedAtBlock, lastReceivedAtBlock]`.
+3. `lastReceivedAtBlock` is restricted to A.1. Rationale: A.1's receive events already expose `to` (plaintext id) and the block, so recording another copy in state adds no information; but in any variant that hides the recipient (stealth-style), "recording the receive block per id" would re-link transactions to accounts, so it must not become a family convention.
 
-- 只加 `lastReceivedAtBlock`、不做纯折叠：窗口有界但仍随「不花费的时间」增长；F1 仍在。
-- 让任何人可调用折叠（无证明）：A1-0004 已否——可被用来打乱本人 nonce。
-- 收款 memo 写入存储以摆脱事件依赖：每笔约 +44k，且仍需本人解密；不采用。
+## Alternatives
 
-## 后果
+- Add only `lastReceivedAtBlock` without a pure fold: the window is bounded but still grows with "time without spending"; F1 remains.
+- Let anyone call fold (without a proof): already rejected in A1-0004; it can be used to scramble the owner's nonce.
+- Write receive memos into storage to escape the event dependency: about +44k per transfer, and the owner still has to decrypt; not adopted.
 
-- 正面：F1 关闭；「收款频繁、花费很少」的账户可定期折叠把窗口归零；有终点的窗口让 dapp 能在扫描前判断请求量并拒绝过大的跨度。
-- 负面：合约多一个验证器（部署一次，共享）；每笔收款多一次热写 2.9k（首次收款 22.1k，但抵消了该账户首次花费的一次冷写）；折叠本身是一笔约 250k gas 的交易（首次约 450k）。
-- 折叠仍不替代「知道金额」：写入正确的 `decryptable` 需要本人已经解出 pending 总额（memo 或本地离散对数）。
+## Consequences
+
+- Positive: F1 is closed; accounts that "receive often, spend rarely" can fold periodically to reset the window to zero; a window with an end point lets the dapp estimate the request volume before scanning and refuse an excessively large span.
+- Negative: the contract has one more verifier (deployed once, shared); every receive incurs one more warm write of 2.9k (22.1k on the first receive, but this offsets one cold write on that account's first spend); the fold itself is a transaction of about 250k gas (about 450k the first time).
+- Folding still does not replace "knowing the amount": writing a correct `decryptable` requires the owner to have already derived the pending total (via memo or local discrete logarithm).

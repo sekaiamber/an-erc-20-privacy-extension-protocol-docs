@@ -1,43 +1,45 @@
-# 01 项目概述
+English | [中文](01-overview.zh-cn.md)
 
-状态：`Draft`
+# 01 Project Overview
 
-## 动机
+Status: `Draft`
 
-ERC-20 是 EVM 生态中使用最广泛的代币标准，但它的账户模型是完全透明的：任何人都可以读取任意地址的余额，以及每一笔转账的发送方、接收方与金额。这对于个人用户、企业财务、DAO 国库与做市商等场景都是明显的隐私缺陷。
+## Motivation
 
-现有的链上隐私方案（混币池、隐私 L2、隐私链）多数要求用户**离开 ERC-20 的原生使用方式**：或者把代币锁进一个独立的池子，或者迁移到另一条链。这削弱了可组合性，也提高了使用门槛。
+ERC-20 is the most widely used token standard in the EVM ecosystem, but its account model is fully transparent: anyone can read the balance of any address, as well as the sender, receiver and amount of every transfer. This is an obvious privacy deficiency for individual users, corporate finance, DAO treasuries, market makers and similar scenarios.
 
-本项目研究的问题是：
+Most existing on-chain privacy solutions (mixer pools, privacy L2s, privacy chains) require users to **leave the native way of using ERC-20**: either lock the tokens into a separate pool, or migrate to another chain. This weakens composability and raises the barrier to use.
 
-> 能否设计一种**扩展协议**，让一个 ERC-20 代币在保持标准接口兼容的同时，获得可选的隐私能力？
+The question this project studies is:
 
-答案不是一个协议，而是一个**协议家族**：按集成方看到的接口契约分 Track，按隐私保证与密码学内核分 Variant，各条路线并存、独立演进（见 [06 家族架构](06-family-architecture.md)）。
+> Can we design an **extension protocol** that gives an ERC-20 token optional privacy capabilities while keeping it compatible with the standard interface?
 
-## 目标
+The answer is not a single protocol but a **protocol family**: Tracks are divided by the interface contract seen by integrators, Variants by privacy guarantees and cryptographic core; the routes coexist and evolve independently (see [06 Family Architecture](06-family-architecture.md)).
 
-1. **兼容性**：现有钱包、DEX、桥等基础设施对该代币的"公开模式"无需修改即可使用。
-2. **可选隐私**：用户可以自主选择把资产从公开状态转入隐私状态，并在隐私状态下完成转账。
-3. **可验证性**：隐私状态下的代币总量、守恒性可被公开验证，不引入额外的信任假设。
-4. **可实现性**：在主流 EVM 链上以可接受的 Gas 成本部署与使用。
+## Goals
 
-## 范围
+1. **Compatibility**: existing wallets, DEXes, bridges and other infrastructure can use the token's "public mode" without modification.
+2. **Optional privacy**: users can choose on their own to move assets from the public state into the private state, and complete transfers in the private state.
+3. **Verifiability**: the total supply and conservation of tokens in the private state can be publicly verified, without introducing additional trust assumptions.
+4. **Implementability**: deployable and usable on mainstream EVM chains at acceptable gas cost.
 
-- 以太坊主网及主流 EVM 兼容链（L2 Rollup、侧链）。
-- 同质化代币（ERC-20）。ERC-721 / ERC-1155 不在本阶段范围内。
-- 协议层设计与合约实现，附带必要的客户端（证明生成）研究。
+## Scope
 
-## 非目标
+- Ethereum mainnet and mainstream EVM-compatible chains (L2 rollups, sidechains).
+- Fungible tokens (ERC-20). ERC-721 / ERC-1155 are out of scope for this phase.
+- Protocol-level design and contract implementation, together with the necessary client-side (proof generation) research.
 
-- 不研究网络层隐私（IP 地址、节点关联性）。
-- 不研究新的共识或新的链。
-- 不承诺满足任何特定司法辖区的合规要求，但会把"合规可选性"作为设计考量之一（见 [04 设计目标](04-design-goals.md)）。
+## Non-goals
 
-## 交付物
+- No research on network-layer privacy (IP addresses, node correlation).
+- No research on new consensus mechanisms or new chains.
+- No commitment to satisfy the compliance requirements of any specific jurisdiction, but "optional compliance" is treated as one of the design considerations (see [04 Design Goals](04-design-goals.md)).
 
-- 家族级约定、Track 定义、各 Variant 的设计与规范（本仓库 `docs/`）。
-- 主线 Variant 的参考实现：合约、电路、客户端库、测试（`contracts/` 子仓库）。
+## Deliverables
 
-## 当前主线
+- Family-level conventions, Track definitions, and the design and specification of each Variant (`docs/` in this repository).
+- Reference implementation of the mainline Variant: contracts, circuits, client library, tests (`contracts/` sub-repository).
 
-**Track A（双账本）/ A.1（ElGamal 加密账户 + Groth16）**。原型已在本地网络端到端跑通，见 [tracks/track-a/variant-1/01-design.md](tracks/track-a/variant-1/01-design.md)。
+## Current Mainline
+
+**Track A (dual ledger) / A.1 (ElGamal encrypted accounts + Groth16)**. The prototype has been run end-to-end on a local network; see [tracks/track-a/variant-1/01-design.md](tracks/track-a/variant-1/01-design.md).

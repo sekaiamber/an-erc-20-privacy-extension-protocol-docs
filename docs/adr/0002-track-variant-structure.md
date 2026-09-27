@@ -1,28 +1,30 @@
-# 0002 协议家族按 Track / Variant 组织
+English | [中文](0002-track-variant-structure.zh-cn.md)
 
-- 状态：Accepted
-- 日期：2026-09-23
+# 0002 Organize the protocol family by Track / Variant
 
-## 背景
+- Status: Accepted
+- Date: 2026-09-23
 
-不同隐私机制之间的取舍（账本拓扑、密码学内核、信任假设）在没有实验数据时无法比较优劣。作为研究项目，需要一种能让多条路线并存、各自演进、互不阻塞的组织方式。
+## Context
 
-## 决策
+The trade-offs between different privacy mechanisms (ledger topology, cryptographic core, trust assumptions) cannot be ranked without experimental data. As a research project, we need an organizational scheme that lets multiple routes coexist, evolve independently, and never block one another.
 
-1. **Track**：按集成方（钱包、DEX、浏览器）看到的接口契约与账本拓扑划分。Track A 双账本，Track B 纯机密。
-2. **Variant**：Track 之下的具体机制实现，编号 `A.1`、`A.2`…，各自独立版本号 `a.b.c`。
-3. **Variant 之间自包含**：代码与文档各写各的，不为复用抽公共模块；相似之处在文档中引用说明即可。
-4. **家族级只保留文档**：ERC-20 表面约定、威胁模型与隐私目标、监管接入原则。
-5. **纪律**：只有主线 Variant 有实现；其它 Track / Variant 在主线端到端跑通并给出 Gas 数据前，只允许一页纸设计草图。
+## Decision
 
-当前主线：A.1。
+1. **Track**: divided by the interface contract and ledger topology as seen by integrators (wallets, DEXes, explorers). Track A is dual ledger; Track B is purely confidential.
+2. **Variant**: a concrete mechanism implementation under a Track, numbered `A.1`, `A.2`, ..., each with its own independent version number `a.b.c`.
+3. **Variants are self-contained**: code and documentation are written separately for each; no shared modules are extracted for reuse; similarities are simply cross-referenced in the documentation.
+4. **The family level keeps documentation only**: ERC-20 surface conventions, threat model and privacy goals, regulatory access principles.
+5. **Discipline**: only the mainline Variant has an implementation; other Tracks / Variants are allowed only a one-page design sketch until the mainline runs end to end and produces gas data.
 
-## 备选方案
+Current mainline: A.1.
 
-- 按密码学内核划分 Track、再以 Profile 区分账本拓扑：被否决，因为集成方关心的是接口而非内核。
-- 抽取跨 Track 共享的 Core 模块：被否决，研究阶段的过早抽象会让每次改细节都牵动多个差别很小的抽象层。
+## Alternatives
 
-## 后果
+- Divide Tracks by cryptographic core, then distinguish ledger topology by Profile: rejected, because integrators care about the interface, not the core.
+- Extract a Core module shared across Tracks: rejected, because premature abstraction during the research phase would make every detail change ripple through multiple abstraction layers that differ only slightly.
 
-- 正面：路线之间无依赖，可以随时新增、废弃、升级某一条线而不影响其它。
-- 负面：若多条线同时推进会摊薄精力，靠第 5 条纪律约束。
+## Consequences
+
+- Positive: no dependencies between routes; any single route can be added, deprecated, or upgraded at any time without affecting the others.
+- Negative: pushing multiple routes forward simultaneously would dilute effort; this is held in check by discipline rule 5.

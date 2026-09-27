@@ -1,63 +1,65 @@
-# 05 威胁模型
+English | [中文](05-threat-model.zh-cn.md)
 
-状态：`Draft`
+# 05 Threat Model
 
-## 攻击者类型
+Status: `Draft`
 
-| 攻击者 | 能力 |
+## Attacker Types
+
+| Attacker | Capabilities |
 | --- | --- |
-| 链上观察者 | 读取全部区块、状态、事件日志、mempool；可运行任意分析 |
-| 交易对手 | 是某笔隐私转账的一方，掌握该笔交易的明文信息 |
-| 中继者 / 排序器 | 看到交易提交来源（IP、时间）；可以延迟或拒绝交易但不能篡改 |
-| 恶意用户 | 试图构造非法证明、双花、盗取资产 |
-| 代币发行方 | 控制代币合约的管理权限（如有）；可能试图冻结或追踪用户 |
-| 阈值网络成员（若采用 FHE 方案） | 掌握部分解密份额；串谋超过阈值即可解密 |
+| On-chain observer | Reads all blocks, state, event logs and the mempool; can run arbitrary analysis |
+| Counterparty | Is one party of a private transfer and holds the plaintext information of that transaction |
+| Relayer / sequencer | Sees the origin of transaction submission (IP, time); can delay or reject transactions but cannot tamper with them |
+| Malicious user | Attempts to construct invalid proofs, double spend, or steal assets |
+| Token issuer | Controls the admin privileges of the token contract (if any); may attempt to freeze or track users |
+| Threshold network members (if an FHE solution is adopted) | Hold partial decryption shares; collusion beyond the threshold enables decryption |
 
-## 需要保护的信息
+## Information to Protect
 
-- 隐私状态下每个用户的余额。
-- 隐私内转账的金额、发送方、接收方。
-- 同一用户多笔隐私操作之间的关联。
+- Each user's balance in the private state.
+- The amount, sender and receiver of in-private transfers.
+- The link between multiple private operations of the same user.
 
-## 明确不保护的信息
+## Information Explicitly Not Protected
 
-- 用户参与了隐私功能这一事实（shield / unshield 是公开的）。
-- shield / unshield 的金额与公开地址。
-- 隐私操作发生的时间与所在区块。
-- 隐私池的总余额。
-- 网络层元数据。
+- The fact that a user participates in the privacy features (shield / unshield is public).
+- The amount and public address of shield / unshield.
+- The time and block in which private operations occur.
+- The total balance of the private pool.
+- Network-layer metadata.
 
-## 安全假设
+## Security Assumptions
 
-- 底层 EVM 链的共识安全与状态正确性。
-- 所用密码学原语（哈希、椭圆曲线、证明系统）的标准安全假设。
-- 若采用可信设置的证明系统，假设设置仪式中至少一方诚实。
-- 用户的私钥与查看密钥不泄露。
+- Consensus security and state correctness of the underlying EVM chain.
+- Standard security assumptions of the cryptographic primitives used (hash functions, elliptic curves, proof systems).
+- If a proof system with a trusted setup is adopted, at least one party in the setup ceremony is assumed to be honest.
+- Users' private keys and viewing keys are not leaked.
 
-## 典型攻击场景
+## Typical Attack Scenarios
 
-以下场景在规范与实现阶段都应有对应的防御或明确的"接受该风险"说明：
+Each of the following scenarios should have a corresponding defense, or an explicit "accept this risk" statement, at both the specification and implementation stages:
 
-1. **时间关联**：shield 后立即 unshield 相同金额，观察者可关联两笔操作。
-2. **金额指纹**：使用非整数的特殊金额使其在池内可被追踪。
-3. **匿名集过小**：池内用户很少时，任何操作都容易被推断。
-4. **Gas 来源关联**：unshield 到新地址后，该地址的 Gas 由旧地址提供。
-5. **证明伪造**：利用电路漏洞或验证合约错误铸造隐私余额。
-6. **nullifier 重放**：同一 note 被花费两次。
-7. **前端 / 客户端泄露**：证明生成过程中把明文发送到远端服务。
-8. **管理权限滥用**：升级合约以引入后门。
+1. **Timing correlation**: unshielding the same amount immediately after shielding lets an observer link the two operations.
+2. **Amount fingerprinting**: using unusual, non-round amounts makes them traceable inside the pool.
+3. **Anonymity set too small**: when there are very few users in the pool, any operation is easy to infer.
+4. **Gas source linkage**: after unshielding to a new address, that address's gas is provided by the old address.
+5. **Proof forgery**: exploiting a circuit vulnerability or a verifier contract bug to mint private balance.
+6. **nullifier replay**: the same note is spent twice.
+7. **Frontend / client leakage**: plaintext is sent to a remote service during proof generation.
+8. **Admin privilege abuse**: upgrading the contract to introduce a backdoor.
 
-前四项主要靠使用指引与生态配套缓解，后四项由协议与实现直接负责。
+The first four are mitigated mainly by usage guidance and ecosystem support; the last four are the direct responsibility of the protocol and its implementation.
 
-## 家族级已接受的风险
+## Family-level Accepted Risks
 
-以下风险在设计上被明确接受，各 Variant 不再单独论证：
+The following risks are explicitly accepted by design; individual Variants need not argue them again:
 
-| 风险 | 说明 | 缓解 |
+| Risk | Description | Mitigation |
 | --- | --- | --- |
-| 公开 ↔ 机密划转的可关联性 | `0x03` / `0x04` 的地址、金额、时间公开；shield 后立即 unshield 同额等于自曝 | 使用指引：资金尽量留在机密账本、只解需要的数额、金额取整 |
-| 机密 id 是稳定化名 | 同一 id 的收付历史可关联 | `0x02` stealth 每次收款换 id |
-| `includePending` 的竞争 | 证明绑定含待入账的状态时，上链前若有新入账则证明失效 | 用户重做证明；默认只绑定 available 不受影响 |
-| 发错 payload 类型 | 公开转账发到机密 id 等 | 协议不兜底，由前端校验（ADR-0003） |
-| 监管私钥泄露 | 全网金额对泄露方透明 | 阈值化 + 轮换（ADR-0004） |
-| 拒绝服务 / 消耗类攻击 | 攻击者只能让他人多花 gas 或暂时办不成事，且必须持续付费 | 研究阶段仅记录；A.1 的清单见 [tracks/track-a/variant-1/02-security-review.md](tracks/track-a/variant-1/02-security-review.md) 附录 A |
+| Linkability of public ↔ confidential transfers | The address, amount and time of `0x03` / `0x04` are public; unshielding the same amount immediately after shielding is self-exposure | Usage guidance: keep funds on the confidential ledger as much as possible, unshield only the amount needed, round the amounts |
+| Confidential id is a stable pseudonym | The payment history of the same id is linkable | `0x02` stealth changes the id on every receipt |
+| Race on `includePending` | When the proof is bound to a state that includes pending, the proof becomes invalid if a new receipt arrives before it lands on chain | The user redoes the proof; the default binds only available and is unaffected |
+| Sending the wrong payload type | A public transfer sent to a confidential id, etc. | The protocol does not backstop this; validated by the frontend (ADR-0003) |
+| Regulator private key leakage | All amounts network-wide become transparent to whoever holds the leaked key | Thresholdization + rotation (ADR-0004) |
+| Denial of service / resource-exhaustion attacks | The attacker can only make others spend more gas or temporarily fail to complete an action, and must keep paying to do so | Only recorded during the research phase; A.1's checklist is in Appendix A of [tracks/track-a/variant-1/02-security-review.md](tracks/track-a/variant-1/02-security-review.md) |

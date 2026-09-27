@@ -1,22 +1,24 @@
-# 术语表
+English | [中文](glossary.zh-cn.md)
 
-| 术语 | 英文 | 解释 |
+# Glossary
+
+| Term | 中文 | Explanation |
 | --- | --- | --- |
-| 屏蔽 / 解除屏蔽 | shield / unshield | 把代币从公开状态转入隐私状态，或反向操作 |
-| 隐私池 / 屏蔽池 | shielded pool | 存放隐私状态代币的逻辑集合 |
-| 承诺 | commitment | 对某个值（如 note）的绑定且隐藏的摘要，通常是哈希或 Pedersen 承诺 |
-| note | note | UTXO 风格隐私系统中的"一张钞票"，包含金额、所有者、随机数 |
-| 作废符 | nullifier | 由 note 派生的唯一值，花费时公开以防止双花，但不泄露对应的 note |
-| 增量 Merkle 树 | incremental Merkle tree | 只支持追加叶子的 Merkle 树，用于存放承诺集合 |
-| 零知识证明 | zero-knowledge proof (ZKP) | 证明某陈述为真而不泄露额外信息 |
-| 可信设置 | trusted setup | 某些证明系统（如 Groth16）需要的一次性参数生成仪式 |
-| 全同态加密 | fully homomorphic encryption (FHE) | 允许直接对密文进行运算的加密方案 |
-| 阈值解密 | threshold decryption | 需要多方中的 t 方合作才能解密 |
-| 隐匿地址 | stealth address | 由发送方为接收方派生的一次性地址 |
-| 隐匿元地址 | stealth meta-address | 接收方公开的、用于派生隐匿地址的公钥对 |
-| 查看密钥 | viewing key | 可以解密查看但不能花费的密钥 |
-| 花费密钥 | spending key | 可以花费隐私资产的密钥 |
-| 关联集合 | association set | Privacy Pools 中用户声称自己资金来源所属的集合 |
-| 匿名集 | anonymity set | 观察者无法区分的候选用户集合 |
-| 中继者 | relayer | 代替用户提交交易并支付 Gas 的第三方 |
-| 账户抽象 | account abstraction (ERC-4337) | 让合约账户能发起交易并支持代付 Gas 的机制 |
+| shield / unshield | 屏蔽 / 解除屏蔽 | Move tokens from the public state into the private state, or the reverse |
+| shielded pool | 隐私池 / 屏蔽池 | The logical set holding tokens in the private state |
+| commitment | 承诺 | A binding and hiding digest of a value (such as a note), usually a hash or a Pedersen commitment |
+| note | note | "One banknote" in a UTXO-style privacy system, containing amount, owner and randomness |
+| nullifier | 作废符 | A unique value derived from a note, revealed when spending to prevent double-spends without revealing the corresponding note |
+| incremental Merkle tree | 增量 Merkle 树 | An append-only Merkle tree used to store the set of commitments |
+| zero-knowledge proof (ZKP) | 零知识证明 | Proves that a statement is true without revealing any additional information |
+| trusted setup | 可信设置 | A one-time parameter generation ceremony required by some proof systems (such as Groth16) |
+| fully homomorphic encryption (FHE) | 全同态加密 | An encryption scheme that allows computation directly on ciphertexts |
+| threshold decryption | 阈值解密 | Decryption that requires t out of multiple parties to cooperate |
+| stealth address | 隐匿地址 | A one-time address derived by the sender for the recipient |
+| stealth meta-address | 隐匿元地址 | The recipient's published key pair used to derive stealth addresses |
+| viewing key | 查看密钥 | A key that can decrypt and view but cannot spend |
+| spending key | 花费密钥 | A key that can spend private assets |
+| association set | 关联集合 | In Privacy Pools, the set a user claims their funds originate from |
+| anonymity set | 匿名集 | The set of candidate users an observer cannot distinguish between |
+| relayer | 中继者 | A third party that submits transactions and pays gas on behalf of the user |
+| account abstraction (ERC-4337) | 账户抽象 | A mechanism that lets contract accounts initiate transactions and supports sponsored gas |

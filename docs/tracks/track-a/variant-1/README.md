@@ -1,13 +1,15 @@
-# A.1：ElGamal 加密账户 + SNARK
+English | [中文](README.zh-cn.md)
 
-版本：`0.3.0-draft`　状态：`Draft`
+# A.1: ElGamal Encrypted Accounts + SNARK
 
-| 文档 | 内容 |
+Version: `0.3.0-draft`. Status: `Draft`.
+
+| Document | Contents |
 | --- | --- |
-| [01-design.md](01-design.md) | 细节设计：账户模型、payload 类型、执行流程、电路、Gas、范围与待决 |
-| [02-security-review.md](02-security-review.md) | 第一轮安全自审：发现、修复、信任假设 |
-| [03-deployments.md](03-deployments.md) | 部署记录（BSC testnet） |
+| [01-design.md](01-design.md) | Detailed design: account model, payload types, execution flow, circuits, gas, scope and open questions |
+| [02-security-review.md](02-security-review.md) | Round-one security self-review: findings, fixes, trust assumptions |
+| [03-deployments.md](03-deployments.md) | Deployment record (BSC testnet) |
 
-## 一句话
+## In One Sentence
 
-在 Track A 双账本之上，机密账本采用**账户模型**：机密账户就是一把 Baby Jubjub 公钥（链上只见其哈希 id，公钥本身不上链），余额是一份 twisted ElGamal 密文，花费靠零知识证明授权并保证守恒与非负，每笔机密转账同时把金额加密给监管公钥。收付方以稳定化名出现，金额与余额隐藏。
+On top of the Track A dual ledger, the confidential ledger uses an **account model**: a confidential account is a Baby Jubjub public key (only its hash id is visible on-chain; the public key itself never goes on-chain), the balance is a twisted ElGamal ciphertext, spending is authorized by a zero-knowledge proof that also guarantees conservation and non-negativity, and every confidential transfer simultaneously encrypts the amount to the regulator public key. Payers and recipients appear as stable pseudonyms; amounts and balances are hidden.
