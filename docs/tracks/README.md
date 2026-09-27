@@ -10,6 +10,6 @@ The protocol family is organized by **Track / Variant**:
 | Track | Mechanism | Variant | Status |
 | --- | --- | --- | --- |
 | [A](track-a/README.md) | Dual ledger: public ledger + confidential ledger | [A.1](track-a/variant-1/README.md) ElGamal encrypted accounts + SNARK | **Mainline, in design** |
-| [B](track-b/README.md) | Pure confidential: no public ledger | — | Placeholder |
+| [B](track-b/README.md) | Pure confidential: no public ledger | [B.1](track-b/variant-1/README.md) A.1's confidential ledger without the public ledger | In design (0.1.0-draft) |
 
 Discipline: only the mainline Variant has an implementation. Other Tracks / Variants are allowed only a one-page design sketch until the mainline runs end to end and produces gas figures.

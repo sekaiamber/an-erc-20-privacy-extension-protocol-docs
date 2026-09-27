@@ -10,6 +10,6 @@
 | Track | 机制 | Variant | 状态 |
 | --- | --- | --- | --- |
 | [A](track-a/README.zh-cn.md) | 双账本：公开账本 + 机密账本 | [A.1](track-a/variant-1/README.zh-cn.md) ElGamal 加密账户 + SNARK | **主线，设计中** |
-| [B](track-b/README.zh-cn.md) | 纯机密：无公开账本 | — | 占位 |
+| [B](track-b/README.zh-cn.md) | 纯机密：无公开账本 | [B.1](track-b/variant-1/README.zh-cn.md) A.1 的机密账本去掉公开账本 | 设计中（0.1.0-draft） |
 
 纪律：只有主线 Variant 有实现。其它 Track / Variant 在主线端到端跑通并给出 Gas 数据前，只允许存在一页纸设计草图。

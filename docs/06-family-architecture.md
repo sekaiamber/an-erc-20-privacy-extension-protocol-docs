@@ -21,8 +21,8 @@ From an integrator's point of view, different Tracks are different interface con
 ```
 Track A  Dual ledger: public ledger (standard ERC-20) + confidential ledger
   └─ A.1  twisted ElGamal encrypted accounts + Groth16, account = public key   ← mainline, prototype running
-Track B  Purely confidential: no public ledger
-  └─ (placeholder)
+Track B  Pure confidential: no public ledger
+  └─ B.1  A.1's confidential ledger without the public ledger, public mint / burn   ← in design (0.1.0-draft)
 ```
 
 ## Typical structure of a Variant (A.1 as the example)
