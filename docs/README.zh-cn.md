@@ -17,6 +17,7 @@
 | — | [Tracks](tracks/README.zh-cn.md) | 协议家族的 Track / Variant 目录，主线 A.1 设计在此 |
 | 09 | [开发指南](09-development.zh-cn.md) | 仓库、submodule、合约环境的使用方法 |
 | 10 | [家族工具：Wrapper](10-wrapper.zh-cn.md) | 通用 Wrapper：无公开账本代币（Track B）进 DeFi 的标准通道 |
+| 11 | [家族工具：监管委员会](11-regulatory-committee.zh-cn.md) | 门限监管密钥 + 链上成员 / 策略 / 查看审计；按项目部署的工具 |
 | — | [术语表](glossary.zh-cn.md) | 项目中使用的术语定义 |
 | — | [参考资料](references.zh-cn.md) | EIP、论文、代码库链接 |
 | — | [ADR](adr/README.zh-cn.md) | 架构决策记录 |

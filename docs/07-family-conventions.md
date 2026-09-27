@@ -85,7 +85,7 @@ function rotateRegulatorKey(...) external;                          // REGULATOR
 event RegulatorKeyRotated(uint32 indexed keyId, ...);
 ```
 
-Every operation that must be regulator-readable records the `keyId` used. The regulator can rebuild the balance of any account at any point in time from on-chain data and its own private key alone, without anyone's cooperation; there are no freeze, seizure or forced-transfer interfaces.
+Every operation that must be regulator-readable records the `keyId` used. The regulator can rebuild the balance of any account at any point in time from on-chain data and its own private key alone, without anyone's cooperation; there are no freeze, seizure or forced-transfer interfaces. `pk_reg` may be a single key or the threshold group key of a [Regulatory Committee](11-regulatory-committee.md); the token interface is the same.
 
 ## 10. Family descriptor and ERC-165
 

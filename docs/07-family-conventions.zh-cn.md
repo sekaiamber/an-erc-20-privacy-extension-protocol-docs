@@ -85,7 +85,7 @@ function rotateRegulatorKey(...) external;                          // REGULATOR
 event RegulatorKeyRotated(uint32 indexed keyId, ...);
 ```
 
-每笔需要监管可读的操作记录所用 `keyId`。监管方仅凭链上数据与自身私钥即可重建任意账户任意时刻余额，不需要任何人配合；没有冻结、没收、强制转账接口。
+每笔需要监管可读的操作记录所用 `keyId`。监管方仅凭链上数据与自身私钥即可重建任意账户任意时刻余额，不需要任何人配合；没有冻结、没收、强制转账接口。`pk_reg` 可以是单把密钥，也可以是[监管委员会](11-regulatory-committee.zh-cn.md)的门限群公钥——代币接口相同。
 
 ## 10. 家族描述符与 ERC-165
 

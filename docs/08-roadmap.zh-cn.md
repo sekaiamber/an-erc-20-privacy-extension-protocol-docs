@@ -27,6 +27,7 @@
 - [x] A.1 0.3.0：`0x80` 纯折叠 + `lastReceivedAtBlock` → ADR A1-0006
 - [x] Track B / B.1 设计与原型（2026-09-27，0.1.0，BSC testnet）→ `tracks/track-b/variant-1/`
 - [x] 家族级 Wrapper 设计与原型（2026-09-27）→ `10-wrapper.md`、ADR-0005、`contracts/family/`
+- [ ] 监管委员会设计（2026-09-27，草案）→ `11-regulatory-committee.md`、ADR-0006；需要 A.1 v0.4 / B.1 v0.2 的 memo 修订
 - [ ] 威胁模型评审
 - [ ] 家族级约定与 A.1 设计的 `Review` 版本
 

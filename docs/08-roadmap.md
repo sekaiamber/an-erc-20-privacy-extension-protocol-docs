@@ -27,6 +27,7 @@ Status: `Draft`
 - [x] A.1 0.3.0: `0x80` pure fold + `lastReceivedAtBlock` → ADR A1-0006
 - [x] Track B / B.1 design and prototype (2026-09-27, 0.1.0, BSC testnet) → `tracks/track-b/variant-1/`
 - [x] Family-level Wrapper design and prototype (2026-09-27) → `10-wrapper.md`, ADR-0005, `contracts/family/`
+- [ ] Regulatory Committee design (2026-09-27, draft) → `11-regulatory-committee.md`, ADR-0006; requires A.1 v0.4 / B.1 v0.2 memo amendment
 - [ ] Threat model review
 - [ ] `Review` versions of the family conventions and the A.1 design
 
