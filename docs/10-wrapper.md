@@ -2,7 +2,7 @@ English | [中文](10-wrapper.zh-cn.md)
 
 # 10 Family tool: the generic Wrapper
 
-Status: `Draft` (2026-09-27). Decision record: [ADR-0005](adr/0005-family-wrapper.md).
+Status: `Prototype` (2026-09-27). Decision record: [ADR-0005](adr/0005-family-wrapper.md). Implementation: `contracts/contracts/family/{IPEPWrappable,PEPWrapper,WrappedERC20}.sol`; deployed on BSC testnet at `0xF76615A85583896bDF945B97d6dEf9C73819cC25` (see [B.1 deployments](tracks/track-b/variant-1/02-deployments.md)).
 
 ## 1. What it is
 

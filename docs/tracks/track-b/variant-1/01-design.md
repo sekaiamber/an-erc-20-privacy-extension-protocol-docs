@@ -4,7 +4,7 @@ English | [中文](01-design.zh-cn.md)
 
 Version: `0.1.0-draft`  Status: `Draft`  Date: 2026-09-27
 
-> 0.1.0: first cut, derived from A.1 0.3.0 by removing the public ledger. Nothing implemented yet; every number below is A.1's measurement adjusted for the removed custody transfer.
+> 0.1.0: derived from A.1 0.3.1 by removing the public ledger. **Implemented and deployed on BSC testnet (2026-09-27)** together with the family Wrapper; measured gas in [02-deployments](02-deployments.md). Decisions B1-1..B1-5 settled as drafted.
 
 ## 0. Why B.1 exists
 
@@ -143,10 +143,12 @@ What B.1 still reveals: `totalSupply`, every mint and burn (id, amount, block), 
 
 | Operation | A.1 measured | B.1 estimate | Delta |
 | --- | --- | --- | --- |
-| mint (fresh id) | shield 214k | ≈ 190k | no ERC20 `_update`, no custody |
+| mint (fresh id) | shield 214k | **177k measured** (194k local) | no ERC20 `_update`, no custody |
 | `0x01` (first spend, includePending) | 716k | 716k | identical |
 | `0x80` fold (first) | 464k | 464k | identical |
-| `0x81` burn (default mode) | unshield 374k | ≈ 350k | no `_update` to a recipient |
+| `0x81` burn (default mode) | unshield 374k | **362k measured** | no `_update` to a recipient |
+| `wrap` (first for a token) | — | **967k measured** (≈ 410k afterwards) | burn + wCLS creation + wCLS mint |
+| `unwrap` | — | **125k measured** | wCLS burn + confidential mint |
 
 ## 11. Scope of 0.1
 

@@ -2,7 +2,7 @@
 
 # Track B：纯机密隐私机制
 
-状态：`Draft`（2026-09-27 启动，起因是「能否隐藏被机密化的总量」——在 Track A 里不可能，见 A.1 03-deployments 与威胁模型）
+状态：`Prototype`——B.1 已于 2026-09-27 部署到 BSC testnet（同日启动，起因是「能否隐藏被机密化的总量」——在 Track A 里不可能，见 A.1 03-deployments 与威胁模型）
 
 ## 集成方契约
 

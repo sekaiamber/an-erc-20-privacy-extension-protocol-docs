@@ -25,8 +25,8 @@
 - [x] 01–05 改写为家族口径；06 / 07 改为 [家族架构](06-family-architecture.zh-cn.md) 与 [家族级约定](07-family-conventions.zh-cn.md)
 - [x] A.1 第一轮安全自审 → `tracks/track-a/variant-1/02-security-review.md`
 - [x] A.1 0.3.0：`0x80` 纯折叠 + `lastReceivedAtBlock` → ADR A1-0006
-- [ ] Track B / B.1 初步设计（2026-09-27 启动，0.1.0-draft）→ `tracks/track-b/variant-1/01-design.md`；待决 B1-1 ~ B1-5
-- [ ] 家族级 Wrapper 设计（2026-09-27 启动）→ `10-wrapper.md`、ADR-0005
+- [x] Track B / B.1 设计与原型（2026-09-27，0.1.0，BSC testnet）→ `tracks/track-b/variant-1/`
+- [x] 家族级 Wrapper 设计与原型（2026-09-27）→ `10-wrapper.md`、ADR-0005、`contracts/family/`
 - [ ] 威胁模型评审
 - [ ] 家族级约定与 A.1 设计的 `Review` 版本
 

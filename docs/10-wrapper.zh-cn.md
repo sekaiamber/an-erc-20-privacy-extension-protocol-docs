@@ -2,7 +2,7 @@
 
 # 10 家族工具：通用 Wrapper
 
-状态：`Draft`（2026-09-27）。决策记录：[ADR-0005](adr/0005-family-wrapper.zh-cn.md)。
+状态：`Prototype`（2026-09-27）。决策记录：[ADR-0005](adr/0005-family-wrapper.zh-cn.md)。实现：`contracts/contracts/family/{IPEPWrappable,PEPWrapper,WrappedERC20}.sol`；已部署到 BSC testnet `0xF76615A85583896bDF945B97d6dEf9C73819cC25`（见 [B.1 部署记录](tracks/track-b/variant-1/02-deployments.zh-cn.md)）。
 
 ## 1. 它是什么
 

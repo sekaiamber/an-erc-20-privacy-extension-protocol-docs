@@ -2,7 +2,7 @@ English | [中文](README.zh-cn.md)
 
 # Track B: pure confidential
 
-Status: `Draft` (started 2026-09-27, triggered by the question "can the shielded total be hidden?" — in Track A it cannot, see A.1 03-deployments and the threat model)
+Status: `Prototype` — B.1 deployed on BSC testnet 2026-09-27 (started the same day, triggered by the question "can the shielded total be hidden?" — in Track A it cannot, see A.1 03-deployments and the threat model)
 
 ## The integrator contract
 
@@ -30,7 +30,7 @@ Consequences for integrators:
 
 | Variant | Core | Recipient | Amount | Regulator | Status |
 | --- | --- | --- | --- | --- | --- |
-| [B.1](variant-1/README.md) | A.1's confidential ledger (twisted ElGamal accounts + Groth16) without the public ledger | Pseudonymous (stable id) | Hidden | Third ciphertext, cryptographically enforced | 0.1.0-draft |
+| [B.1](variant-1/README.md) | A.1's confidential ledger (twisted ElGamal accounts + Groth16) without the public ledger | Pseudonymous (stable id) | Hidden | Third ciphertext, cryptographically enforced | 0.1.0 (prototype) |
 
 ## Decisions taken at Track level
 

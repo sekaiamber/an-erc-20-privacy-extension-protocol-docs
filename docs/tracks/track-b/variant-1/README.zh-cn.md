@@ -2,11 +2,12 @@
 
 # B.1：A.1 的机密账本，去掉公开账本
 
-版本：`0.1.0-draft`　状态：`Draft`
+版本：`0.1.0`　状态：`Prototype`（2026-09-27 部署到 BSC testnet）
 
 | 文档 | 内容 |
 | --- | --- |
-| [01-design.md](01-design.zh-cn.md) | 初步设计：从 A.1 继承什么、删掉什么、ERC-20 表面、payload 类型、流程、电路、评估、待决 |
+| [01-design.md](01-design.zh-cn.md) | 设计：从 A.1 继承什么、删掉什么、ERC-20 表面、payload 类型、流程、电路、评估、wrapper 钩子、决策 |
+| [02-deployments.md](02-deployments.zh-cn.md) | 部署记录（BSC testnet），含 mint / 转账 / 折叠 / 销毁 / wrap / unwrap 实测 gas |
 
 ## 一句话
 
