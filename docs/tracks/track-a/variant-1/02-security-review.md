@@ -30,6 +30,7 @@ Date: 2026-09-25. Subject: `contracts` repository at `21ebe6b` (circuits, contra
 | F11 | Info | Circuit | The range check on `s` is 251 bits rather than `< L`, so `s` and `s + L` alias. | No security impact (both correspond to the same public key and the same decryption), accepted. |
 | F12 | Info | Circuit | The id takes the low 160 bits of Poseidon: an attacker can produce two colliding keys of their own with 2⁸⁰ work; a second preimage of someone else's id is still 2¹⁶⁰. | No impact, accepted. |
 | F13 | Info | Client | The memo key stream is a one-time pad: reusing the same `e` for the same recipient leaks `v` and `r`. | The client generates a fresh `e` for every transfer; the spec states "`e` must not be reused". |
+| F14 | **High** | Circuit / contract §4.4 | **Unshield recipient not bound** (found 2026-09-27 while designing the wrapper): the `0x04` proof's public inputs did not include `to`; `to` was taken straight from the `transferFrom` argument. Anyone seeing the payload in the mempool could resubmit it with their own `to` (or `prepare` it first) and take the whole amount; `0x01` was unaffected (its `w1` carries `to`). | **Fixed (0.3.1)**: `to` is packed into `w2` (`amount \| signBits<<48 \| to<<64`) with a 160-bit range check; the contract builds the public input from the call's `to` and rejects the zero address. Regression test: the same proof submitted with another recipient → `InvalidProof`. Testnet instances 0.3.0 and earlier are deprecated. |
 
 ## Item-by-Item Check Record
 

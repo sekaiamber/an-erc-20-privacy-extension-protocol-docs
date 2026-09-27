@@ -2,8 +2,9 @@
 
 # A.1 细节设计
 
-版本：`0.3.0-draft`　状态：`Draft`　日期：2026-09-26
+版本：`0.3.1-draft`　状态：`Draft`　日期：2026-09-27
 
+> 0.3.1：**安全修复 F14**——`0x04` 的公开收款地址 `to` 打包进证明（`w2 = amount | signBits<<48 | to<<64`），此前中继者或抢跑者可改写 `to` 偷走整笔 unshield。电路 16,622 → 17,358 约束，公开输入仍为 7 个。`pep()` = `A:1:0.3.1`。
 > 0.3.0：新增 A.1 私有类型 `0x80` 纯折叠（只证明私钥知识，不涉及金额，§4.6 / §5.3），根治安全自审 F1；账户增加 `lastReceivedAtBlock`（与 `nonce` 同槽），客户端事件窗口收紧为 `[foldedAtBlock, lastReceivedAtBlock]`。`pep()` = `A:1:0.3.0`。
 > 0.2.5：账户增加 `foldedAtBlock`（本人上次花费的区块号，与 `nonce` 同槽打包，零额外 gas），客户端重建 pending 的事件窗口由此精确可知（§4.3）。`pep()` = `A:1:0.2.5`。
 > 0.2.4：实现家族描述符 `pep()` = `A:1:0.2.4`（07 §10），ERC-165 只保留 `IPEP` id。
@@ -230,7 +231,7 @@ emit ConfidentialTransfer(from, to, handle, regKeyId, C_amt, D_recv, D_reg, E, m
 ```
 acc = _accounts[from]
 pre = flags.includePending ? acc.available + acc.pending : acc.available
-verify(proof, H(chainId, this, from, acc.nonce, pre, C_amt, D_sender, x))
+verify(proof, H(chainId, this, from, to, acc.nonce, pre, C_amt, D_sender, x))   // to 自 0.3.1 起绑定（F14）
 acc.available = acc.available + (acc.pending − acc.folded) − (C_amt, D_sender)
 acc.folded    = acc.pending
 acc.nonce    += 1
@@ -297,7 +298,7 @@ emit Folded(from, handle, acc.nonce)
 
 ### 5.2 `0x04`
 
-去掉 3、9 的后两项、10、11；公开输入 7 个：`w0 = from | nonce<<160`，`w1 = contract | chainId<<160`，`w2 = amount | signBits<<48`，`xs[4]`。实测 16,622 个约束。
+去掉 3、9 的后两项、10、11；公开输入 7 个：`w0 = from | nonce<<160`，`w1 = contract | chainId<<160`，`w2 = amount | signBits<<48 | to<<64`（`to` 为公开收款地址，0.3.1 起绑定，见安全自审 F14），`xs[4]`。实测 17,358 个约束。
 
 ### 5.3 `0x80`
 

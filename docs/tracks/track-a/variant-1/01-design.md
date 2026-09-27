@@ -2,8 +2,9 @@ English | [中文](01-design.zh-cn.md)
 
 # A.1 Detailed Design
 
-Version: `0.3.0-draft` Status: `Draft` Date: 2026-09-26
+Version: `0.3.1-draft`. Status: `Draft`. Date: 2026-09-27
 
+> 0.3.1: **Security fix F14** — the public recipient `to` of `0x04` is packed into the proof (`w2 = amount | signBits<<48 | to<<64`); before, a relayer or front-runner could rewrite `to` and take the whole unshield. Circuit 16,622 → 17,358 constraints, still 7 public inputs. `pep()` = `A:1:0.3.1`.
 > 0.3.0: Added the A.1-private type `0x80` pure fold (proves only knowledge of the private key, no amounts involved, §4.6 / §5.3), which fully resolves finding F1 of the security self-review; accounts gain `lastReceivedAtBlock` (same slot as `nonce`), and the client event window tightens to `[foldedAtBlock, lastReceivedAtBlock]`. `pep()` = `A:1:0.3.0`.
 > 0.2.5: Accounts gain `foldedAtBlock` (block number of the owner's last spend, packed into the same slot as `nonce`, zero extra gas), which gives the client an exact event window for rebuilding pending (§4.3). `pep()` = `A:1:0.2.5`.
 > 0.2.4: Implemented the family descriptor `pep()` = `A:1:0.2.4` (07 §10); ERC-165 keeps only the `IPEP` id.
@@ -230,7 +231,7 @@ In both cases the contract's state-update formula is identical; the only differe
 ```
 acc = _accounts[from]
 pre = flags.includePending ? acc.available + acc.pending : acc.available
-verify(proof, H(chainId, this, from, acc.nonce, pre, C_amt, D_sender, x))
+verify(proof, H(chainId, this, from, to, acc.nonce, pre, C_amt, D_sender, x))   // to bound since 0.3.1 (F14)
 acc.available = acc.available + (acc.pending − acc.folded) − (C_amt, D_sender)
 acc.folded    = acc.pending
 acc.nonce    += 1
@@ -297,7 +298,7 @@ Measured constraint count: **35,137 non-linear constraints** (30,356 for the unp
 
 ### 5.2 `0x04`
 
-Drops 3, the last two items of 9, 10 and 11; 7 public inputs: `w0 = from | nonce<<160`, `w1 = contract | chainId<<160`, `w2 = amount | signBits<<48`, `xs[4]`. Measured 16,622 constraints.
+Drops 3, the last two items of 9, 10 and 11; 7 public inputs: `w0 = from | nonce<<160`, `w1 = contract | chainId<<160`, `w2 = amount | signBits<<48 | to<<64` (`to` = public recipient, bound since 0.3.1, see security review F14), `xs[4]`. Measured 17,358 constraints.
 
 ### 5.3 `0x80`
 

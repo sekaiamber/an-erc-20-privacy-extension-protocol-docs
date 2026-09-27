@@ -2,7 +2,32 @@ English | [中文](03-deployments.zh-cn.md)
 
 # A.1 Deployment Record
 
-## BSC testnet (chain id 97) — 0.3.0 (current)
+## BSC testnet (chain id 97) — 0.3.1 (current)
+
+Deployed: 2026-09-27. Deployment id: `a1-v0_3_1-bsc-testnet`. `pep()` = `A:1:0.3.1`. Contract source: contracts `3563f29`
+
+| Contract | Address |
+| --- | --- |
+| **`ConfidentialERC20A1`** | [`0x2f2bDD5772E8F765F12B05268356558E95cFeD3c`](https://testnet.bscscan.com/address/0x2f2bDD5772E8F765F12B05268356558E95cFeD3c) |
+| `TransferVerifier` | `0x1154910e4CDfCb20D89D285FaaBbe2aaE5a70fE9` |
+| `UnshieldVerifier` | `0xb856aCD391459b1B4143b7FB31ce8ff9B8dfb213` (new circuit) |
+| `FoldVerifier` | `0x13f41DA46756d665AB09d1A06367aFc8Ba3dEFa1` |
+| `G8Table` | `0xB4e749938Ed451f38BF175D9584993bb4AF55D82` |
+
+The only change from 0.3.0 is security fix F14 (the unshield recipient is bound into the proof). **The 0.3.0 instance is vulnerable to front-running theft of unshields and is deprecated.**
+
+### On-chain measurements (dapp client library, 2026-09-27)
+
+| Operation | gas | Transaction |
+| --- | --- | --- |
+| `0x03` shield 100 TEST (recipient's first receipt) | 214,534 | [0xff14…e720](https://testnet.bscscan.com/tx/0xff1452111fc2d7e2366d0bc8858da8cc22e2dadc4223dd7a7247cbd03acfe720) |
+| `0x01` confidential transfer 12.5 TEST (both parties' first) | 715,555 | [0x6018…26b0](https://testnet.bscscan.com/tx/0x60189a36614e2c4af775e48c181892fd46d331a42723774cc31cb31c45f726b0) |
+| `0x80` pure fold (recipient's first operation) | 463,918 | [0x8e3d…c9cf](https://testnet.bscscan.com/tx/0x8e3d8689caeb83ada75475d9bdc2db0b5c0ddaa53ec6708a82fb63799cfc6c9f) |
+| `0x04` unshield 5 TEST (default mode after the fold, relayed, recipient bound) | 373,642 | [0xd745…23a7](https://testnet.bscscan.com/tx/0xd74552cf032aa71d687b81de9ebc5e4d95aa3d2f556ac977306e9d4352f923a7) |
+
+Proving (Node): transfer 2.12 s, fold 0.25 s, unshield 1.02 s. Binding `to` has no visible gas impact (+103).
+
+## BSC testnet (chain id 97) — 0.3.0 (deprecated: F14 vulnerability)
 
 Deployment date: 2026-09-26. deployment id: `a1-v0_3_0-bsc-testnet`. `pep()` = `A:1:0.3.0`. Contract source: contracts `fb3505f`.
 
