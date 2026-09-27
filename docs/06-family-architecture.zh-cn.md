@@ -21,6 +21,7 @@ Track 之间在集成方看来是不同的接口契约；同一 Track 下的 Var
 ```
 Track A  双账本：公开账本（标准 ERC-20）+ 机密账本
   └─ A.1  twisted ElGamal 加密账户 + Groth16，账户 = 公钥          ← 主线，原型已跑通
+家族工具  通用 Wrapper（10-wrapper）：为无公开账本的代币发行 wTOKEN 进 DeFi     ← 设计中
 Track B  纯机密：无公开账本
   └─ B.1  A.1 的机密账本去掉公开账本，mint / burn 金额公开          ← 设计中（0.1.0-draft）
 ```

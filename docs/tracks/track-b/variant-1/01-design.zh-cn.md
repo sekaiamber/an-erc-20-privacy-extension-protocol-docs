@@ -152,11 +152,23 @@ B.1 仍然暴露的：`totalSupply`、每次铸造与销毁（id、金额、区�
 
 **包含**：§2–§8 的全部。**不包含**：stealth `0x02`、机密铸造（隐藏发行量）、任何公开账本或通往公开账本的桥、正式可信设置（暂时沿用 A.1 的开发 ptau）。
 
-## 12. 待决
+## 12. Wrapper 钩子（家族工具，[10-wrapper](../../../10-wrapper.zh-cn.md)）
+
+B.1 实现 `IPEPWrappable`，使 B.1 代币能经家族 wrapper 进 DeFi：
+
+| 接口 | B.1 实现 |
+| --- | --- |
+| `wrapperMint(bytes recipient, amount)` | `recipient` = 20 字节机密 id；函数体同 `mint`（§5.1），但门禁改为 `msg.sender == wrapper()` 而非 `MINTER_ROLE`；发 `Transfer(0x0, id, amount)` 与 `Minted` |
+| `wrapperBurn(from, to, amount, payload)` | 即 `0x81` 销毁（§5.3），`to` = 将收到 `wTOKEN` 的公开地址；复用的 unshield 电路绑定 `to` 与 `amount`（F14）；门禁 `msg.sender == wrapper()`；发 `Transfer(id, 0x0, amount)` 与 `Burned` |
+| `wrapper()` | 构造时设置一次（或在未设置时由 `DEFAULT_ADMIN_ROLE` 设置）；0.1 不支持轮换 |
+
+不经 wrapper 的直接 `0x81` 保持 `to == address(0)`。两条路径都减少 `totalSupply`。
+
+## 13. 待决
 
 | # | 问题 | 草案答案 | 为何需要 owner 拍板 |
 | --- | --- | --- | --- |
-| B1-1 | 要不要保留 `0x81` 销毁？ | 保留 | 一个永远不能缩减的闭环代币很少见；但去掉销毁会让 `totalSupply` 不可变，审计叙事更简单 |
+| B1-1 | 要不要保留 `0x81` 销毁？ | **保留（2026-09-27 已定）** | wrapper 的 `wrapperBurn` 就是这个操作；没有它 B.1 代币永远进不了 DeFi |
 | B1-2 | `mint` 是否接受一批 id，以隐藏*谁*被铸了多少？ | 0.1 不做 | 批量铸造仍通过事件暴露每个 id 的金额；要隐藏需要机密铸造（已排除） |
 | B1-3 | `approve` / `allowance`：保留为空操作还是 revert？ | 保留为空操作 | 有些钱包展示代币前会先调 `allowance`；在那里 revert 只有敌意没有收益 |
 | B1-4 | 合约代码：复制 A.1 删路径，还是继承 A.1 再覆盖？ | 复制 | ADR-0002（Variant 自包含）；继承会把公开账本的存储布局一并带进来 |

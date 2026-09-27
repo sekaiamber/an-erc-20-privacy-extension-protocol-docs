@@ -152,11 +152,23 @@ What B.1 still reveals: `totalSupply`, every mint and burn (id, amount, block), 
 
 **Included**: everything in §2–§8. **Excluded**: stealth `0x02`, a confidential mint (hidden issuance), any public ledger or bridge to one, an official trusted setup (A.1's dev ptau is reused for now).
 
-## 12. Open decisions
+## 12. Wrapper hooks (family tool, [10-wrapper](../../../10-wrapper.md))
+
+B.1 implements `IPEPWrappable` so a B.1 token can reach DeFi through the family wrapper:
+
+| Interface | B.1 implementation |
+| --- | --- |
+| `wrapperMint(bytes recipient, amount)` | `recipient` = 20-byte confidential id; same body as `mint` (§5.1) but gated by `msg.sender == wrapper()` instead of `MINTER_ROLE`; emits `Transfer(0x0, id, amount)` and `Minted` |
+| `wrapperBurn(from, to, amount, payload)` | the `0x81` burn (§5.3) with `to` = the public address that will receive `wTOKEN`; the reused unshield circuit binds `to` and `amount` (F14); gated by `msg.sender == wrapper()`; emits `Transfer(id, 0x0, amount)` and `Burned` |
+| `wrapper()` | set once at construction (or by `DEFAULT_ADMIN_ROLE` while unset); no rotation in 0.1 |
+
+A direct `0x81` (not via the wrapper) keeps `to == address(0)`. Both paths reduce `totalSupply`.
+
+## 13. Open decisions
 
 | # | Question | Draft answer | Why it needs the owner |
 | --- | --- | --- | --- |
-| B1-1 | Keep `0x81` burn at all? | Yes | A closed-loop token that can never shrink is unusual; but removing burn makes `totalSupply` immutable and simplifies the audit story |
+| B1-1 | Keep `0x81` burn at all? | **Yes (settled 2026-09-27)** | The wrapper's `wrapperBurn` is this operation; without it a B.1 token could never reach DeFi |
 | B1-2 | Should `mint` accept a batch of ids to hide *who* got minted how much? | No for 0.1 | Batch mint still reveals per-id amounts via events; hiding them needs a confidential mint (excluded) |
 | B1-3 | `approve` / `allowance`: keep as no-ops or revert? | Keep as no-ops | Some wallets call `allowance` before showing a token; reverting there is hostile for no gain |
 | B1-4 | Contract code: copy of A.1 with paths deleted, or inherit A.1 and override? | Copy | ADR-0002 (self-contained Variants); inheriting would drag the public ledger's storage layout along |

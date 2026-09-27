@@ -21,6 +21,7 @@ From an integrator's point of view, different Tracks are different interface con
 ```
 Track A  Dual ledger: public ledger (standard ERC-20) + confidential ledger
   └─ A.1  twisted ElGamal encrypted accounts + Groth16, account = public key   ← mainline, prototype running
+Family tool  generic Wrapper (10-wrapper): issues wTOKEN for ledger-less tokens to reach DeFi   ← in design
 Track B  Pure confidential: no public ledger
   └─ B.1  A.1's confidential ledger without the public ledger, public mint / burn   ← in design (0.1.0-draft)
 ```

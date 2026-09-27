@@ -26,6 +26,7 @@ Status: `Draft`
 - [x] First round of A.1 security self-review → `tracks/track-a/variant-1/02-security-review.md`
 - [x] A.1 0.3.0: `0x80` pure fold + `lastReceivedAtBlock` → ADR A1-0006
 - [ ] Track B / B.1 initial design (started 2026-09-27, 0.1.0-draft) → `tracks/track-b/variant-1/01-design.md`; open decisions B1-1 ~ B1-5
+- [ ] Family-level Wrapper design (started 2026-09-27) → `10-wrapper.md`, ADR-0005
 - [ ] Threat model review
 - [ ] `Review` versions of the family conventions and the A.1 design
 
