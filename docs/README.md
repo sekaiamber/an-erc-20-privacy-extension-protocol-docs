@@ -16,7 +16,7 @@ This directory contains all research and design documents of the "ERC-20 Privacy
 | 08 | [Roadmap](08-roadmap.md) | Phase plan and milestones |
 | — | [Tracks](tracks/README.md) | Track / Variant directory of the protocol family; the mainline A.1 design lives here |
 | 09 | [Development guide](09-development.md) | How to use the repository, submodules and the contract environment |
-| 09 | Family tool: the generic Wrapper (the standard DeFi path for Track B tokens) |
+| 10 | [Family tool: Wrapper](10-wrapper.md) | The generic Wrapper: the standard DeFi path for tokens without a public ledger (Track B) |
 | — | [Glossary](glossary.md) | Definitions of terms used in the project |
 | — | [References](references.md) | Links to EIPs, papers and code repositories |
 | — | [ADR](adr/README.md) | Architecture decision records |
