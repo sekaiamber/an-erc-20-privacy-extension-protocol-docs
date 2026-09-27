@@ -2,7 +2,7 @@
 
 # 10 家族工具：通用 Wrapper
 
-状态：`Prototype`（2026-09-27）。决策记录：[ADR-0005](adr/0005-family-wrapper.zh-cn.md)。实现：`contracts/contracts/family/{IPEPWrappable,PEPWrapper,WrappedERC20}.sol`；已部署到 BSC testnet `0xF76615A85583896bDF945B97d6dEf9C73819cC25`（见 [B.1 部署记录](tracks/track-b/variant-1/02-deployments.zh-cn.md)）。
+状态：`Prototype`（2026-09-27）。决策记录：[ADR-0005](adr/0005-family-wrapper.zh-cn.md)。实现：`contracts/contracts/family/{IPEPWrappable,PEPWrapper,WrappedERC20}.sol`；已部署到 BSC testnet `0xcAF2c404a7EB33D3EE9f08AEB3Cf9a743c0Abe24`（0.1.1；0.1.0 实例作废）（见 [B.1 部署记录](tracks/track-b/variant-1/02-deployments.zh-cn.md)）。
 
 ## 1. 它是什么
 
@@ -66,6 +66,7 @@ contract PEPWrapper {
 | W1 | 销毁证明绑定 `to` 与 `amount`（以及一贯的 `from`、nonce、代币地址、链 id） | 否则中继者可改写收款地址（A.1 F14） |
 | W2 | `wrapperMint` / `wrapperBurn` 检查 `msg.sender == wrapper()` | wrapper 是唯一允许铸造的一方 |
 | W3 | `wrapper()` 由代币 admin 设置一次（或在构造时设置），变更需经 Variant 文档规定的时间锁 | 换 wrapper 等于换铸币者 |
+| W5 | `wrapperMint` 记入的量不得超过该代币尚未回流的 wrap 量 | 把被攻破的 wrapper 限制在记错账户，绝不会增发（B.1 自审 B1-F2） |
 | W4 | 两个方向的 `amount` 都遵守 Variant 的单笔与供应上限 | wrapper 自身不做范围检查 |
 
 ## 5. 信任与影响面

@@ -2,7 +2,19 @@ English | [中文](02-deployments.zh-cn.md)
 
 # B.1 deployment record
 
-## BSC testnet (chain id 97) — 0.1.0 (current)
+## BSC testnet (chain id 97) — 0.1.1 (current)
+
+Deployed: 2026-09-27 (after the round-1 security review). Deployment id: `b1-v0_1_1-bsc-testnet`. `pep()` = `B:1:0.1.1`. Contract source: contracts `ab723ee`.
+
+| Contract | Address |
+| --- | --- |
+| **`ConfidentialERC20B1`** (Closed / CLS) | [`0xd53eb8f539153e73Db5532A9281f24f479Fa8e75`](https://testnet.bscscan.com/address/0xd53eb8f539153e73Db5532A9281f24f479Fa8e75) |
+| **`PEPWrapper`** | [`0xcAF2c404a7EB33D3EE9f08AEB3Cf9a743c0Abe24`](https://testnet.bscscan.com/address/0xcAF2c404a7EB33D3EE9f08AEB3Cf9a743c0Abe24) |
+| `WrappedERC20` wCLS | [`0x6273c1684B281fdFe3252f99B857D6Bb74010Bf2`](https://testnet.bscscan.com/address/0x6273c1684B281fdFe3252f99B857D6Bb74010Bf2) |
+
+Changes from 0.1.0: review fixes B1-F1..F4 ([03-security-review](03-security-review.md)). Live run of the same flow: mint 196,300 · 0x01 715,485 · fold 463,801 · burn 362,387 · wrap (first) 991,115 · unwrap 129,631; balances and `issuedSupply` conservation verified.
+
+## BSC testnet (chain id 97) — 0.1.0 (deprecated: B1-F1 / B1-F2)
 
 Deployed: 2026-09-27. Deployment id: `b1-v0_1_0-bsc-testnet`. `pep()` = `B:1:0.1.0`. Contract source: contracts `56ab57d`.
 

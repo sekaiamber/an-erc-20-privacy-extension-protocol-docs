@@ -2,7 +2,7 @@ English | [中文](10-wrapper.zh-cn.md)
 
 # 10 Family tool: the generic Wrapper
 
-Status: `Prototype` (2026-09-27). Decision record: [ADR-0005](adr/0005-family-wrapper.md). Implementation: `contracts/contracts/family/{IPEPWrappable,PEPWrapper,WrappedERC20}.sol`; deployed on BSC testnet at `0xF76615A85583896bDF945B97d6dEf9C73819cC25` (see [B.1 deployments](tracks/track-b/variant-1/02-deployments.md)).
+Status: `Prototype` (2026-09-27). Decision record: [ADR-0005](adr/0005-family-wrapper.md). Implementation: `contracts/contracts/family/{IPEPWrappable,PEPWrapper,WrappedERC20}.sol`; deployed on BSC testnet at `0xcAF2c404a7EB33D3EE9f08AEB3Cf9a743c0Abe24` (0.1.1; the 0.1.0 instance is deprecated) (see [B.1 deployments](tracks/track-b/variant-1/02-deployments.md)).
 
 ## 1. What it is
 
@@ -68,6 +68,7 @@ A contract cannot own a confidential account: it holds no private key and cannot
 | W1 | The burn proof binds `to` and `amount` (and, as always, `from`, nonce, token address, chain id) | Otherwise a relayer rewrites the payout address (A.1 F14) |
 | W2 | `wrapperMint` / `wrapperBurn` check `msg.sender == wrapper()` | The wrapper is the only party allowed to mint |
 | W3 | `wrapper()` is set once by the token admin (or at construction) and cannot be changed without a timelock the Variant documents | Rotating the wrapper is equivalent to rotating the minter |
+| W5 | `wrapperMint` never credits more than the token's outstanding wrapped-out amount | Bounds a compromised wrapper to mis-crediting, never inflation (B.1 review B1-F2) |
 | W4 | `amount` respects the Variant's per-operation and supply bounds on both directions | The wrapper does no range checks of its own |
 
 ## 5. Trust and blast radius
