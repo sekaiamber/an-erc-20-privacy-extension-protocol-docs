@@ -2,7 +2,7 @@ English | [中文](README.zh-cn.md)
 
 # A.1: ElGamal Encrypted Accounts + SNARK
 
-Version: `0.3.1-draft`. Status: `Draft`.
+Version: `0.4.0-draft`. Status: `Draft`.
 
 | Document | Contents |
 | --- | --- |

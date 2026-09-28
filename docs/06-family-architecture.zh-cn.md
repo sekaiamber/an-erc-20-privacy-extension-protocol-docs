@@ -24,7 +24,7 @@ Track A  双账本：公开账本（标准 ERC-20）+ 机密账本
 家族工具  通用 Wrapper（10-wrapper）：为无公开账本的代币发行 wTOKEN 进 DeFi     ← 已部署（PEPWrapper）
 家族工具  监管委员会（11）：门限监管密钥、成员、策略、审计                     ← 设计中（按项目部署）
 Track B  纯机密：无公开账本
-  └─ B.1  A.1 的机密账本去掉公开账本，mint / burn 金额公开          ← 原型已上 BSC testnet（0.1.0）
+  └─ B.1  A.1 的机密账本去掉公开账本，mint / burn 金额公开          ← 原型已上 BSC testnet（0.2.0）
 ```
 
 ## 一个 Variant 的典型结构（以 A.1 为例）

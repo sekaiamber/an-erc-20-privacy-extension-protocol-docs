@@ -2,8 +2,9 @@ English | [中文](01-design.zh-cn.md)
 
 # A.1 Detailed Design
 
-Version: `0.3.1-draft`. Status: `Draft`. Date: 2026-09-27
+Version: `0.4.0-draft`. Status: `Draft`. Date: 2026-09-28
 
+> 0.4.0: **Crypto core switched to plain ElGamal** (ADR-0006 §3, A1-0002 revision): `pk = s·H`; a ciphertext is one shared `D = r·H` plus one `C_X = v·G + r·pk_X` per party; memo pads are derived from each party's shared secret `r·pk_X` (= `s_X·D`); the ECDH point `E` and scalar `e` are gone. Purpose: regulator-side decryption and memo opening become "share × public point", i.e. threshold-splittable (11-regulatory-committee). Side effects: transfer circuit 35,137 → 29,719 constraints, public inputs 15 → 14, payload 710 → 646 bytes, proving ≈ 2.1 s → 1.3 s, `0x01` gas 715k → 706k. `pep()` = `A:1:0.4.0`.
 > 0.3.1: **Security fix F14** — the public recipient `to` of `0x04` is packed into the proof (`w2 = amount | signBits<<48 | to<<64`); before, a relayer or front-runner could rewrite `to` and take the whole unshield. Circuit 16,622 → 17,358 constraints, still 7 public inputs. `pep()` = `A:1:0.3.1`.
 > 0.3.0: Added the A.1-private type `0x80` pure fold (proves only knowledge of the private key, no amounts involved, §4.6 / §5.3), which fully resolves finding F1 of the security self-review; accounts gain `lastReceivedAtBlock` (same slot as `nonce`), and the client event window tightens to `[foldedAtBlock, lastReceivedAtBlock]`. `pep()` = `A:1:0.3.0`.
 > 0.2.5: Accounts gain `foldedAtBlock` (block number of the owner's last spend, packed into the same slot as `nonce`, zero extra gas), which gives the client an exact event window for rebuilding pending (§4.3). `pep()` = `A:1:0.2.5`.
@@ -30,14 +31,14 @@ Version: `0.3.1-draft`. Status: `Draft`. Date: 2026-09-27
 | Curve | Baby Jubjub | Embedded curve over the BN254 scalar field, native inside the circuit |
 | Generators | `G` (amount), `H` (randomness / public key) | Discrete-log relation unknown |
 | Private key | `s ∈ Z_l` | Derived from a wallet EIP-712 signature hash, see §2.1 |
-| Public key | `pk = s⁻¹·H` | Verifying the private key inside the circuit takes a single scalar multiplication `s·pk == H` |
+| Public key | `pk = s·H` | One fixed-base scalar multiplication `s·H == pk` inside the circuit; DKG aggregation is a point sum (0.4) |
 | Account id | `id = address(uint160(Poseidon(pk.x, pk.y)))` | 20 bytes, fits into `to` / `from`; computed only inside the circuit |
-| Ciphertext | `Enc_pk(v; r) = (C, D)`, `C = v·G + r·H`, `D = r·pk` | Decryption `C − s·D = v·G` |
+| Ciphertext | `Enc_pk(v; r) = (C, D)`, `C = v·G + r·pk`, `D = r·H` | Decryption `C − s·D = v·G` (plain ElGamal, 0.4) |
 | Homomorphism | `(C₁,D₁) + (C₂,D₂)` ↔ plaintext addition | Under the same `pk` |
-| Multi-recipient | One `C`, multiple handles `D_X = r·pk_X` | The same amount encrypted to the payer, the payee and the regulator |
+| Multi-recipient | One shared `D = r·H`, one `C_X = v·G + r·pk_X` per party | The same amount encrypted to the payer, the payee and the regulator; each party's shared secret `r·pk_X = s_X·D` doubles as its memo key |
 | Proof system | Groth16 (circom + snarkjs) for the prototype; PLONK-family to be evaluated for production | |
-| Hash / memo | Poseidon; memos encrypted with a Poseidon keystream | |
-| Public-input packing | Scalars packed into 3 words (`from|nonce`, `to|chainId`, `contract|regKeyId|signBits`); points expose only x, with y as a private input bound by "on curve + parity bit" | Public inputs 25 → 15, verification gas 386k → 316k. The SHA-256 compression scheme was rejected: ~400k constraints in circuit |
+| Hash / memo | Poseidon; memos encrypted with a Poseidon keystream derived from `r·pk_X` (no ECDH point since 0.4) | |
+| Public-input packing | Scalars packed into 3 words (`from|nonce`, `to|chainId`, `contract|regKeyId|signBits`); points expose only x, with y as a private input bound by "on curve + parity bit" | Public inputs 25 → 15 (14 since 0.4), verification gas 386k → 316k. The SHA-256 compression scheme was rejected: ~400k constraints in circuit |
 | Amount width | Per transfer `v < 2⁴⁸` | |
 | Balance width | `b < 2⁶⁴` | Guaranteed by the `totalSupply` cap |
 | decimals | 6 | |
@@ -146,13 +147,12 @@ byte 2..    sections (determined by type and flags, fixed order)
 
 | Section | Size | Notes |
 | --- | --- | --- |
-| `C_amt` | 64 | `v·G + r·H` |
-| `D_sender` | 64 | `r·pk_sender` |
-| `D_recv` | 64 | `r·pk_recv` |
-| `D_reg` | 64 | `r·pk_reg` |
-| `E` | 64 | Ephemeral public key `e·H` |
-| `memo_recv` | 64 | `Enc(Poseidon(e·pk_recv); v ‖ r)` |
-| `memo_reg` | 64 | `Enc(Poseidon(e·pk_reg); v ‖ r)` |
+| `C_sender` | 64 | `v·G + r·pk_sender` |
+| `C_recv` | 64 | `v·G + r·pk_recv` |
+| `C_reg` | 64 | `v·G + r·pk_reg` |
+| `D` | 64 | `r·H`, shared by the three parties |
+| `memo_recv` | 64 | `Enc(Poseidon(r·pk_recv); v ‖ r)` |
+| `memo_reg` | 64 | `Enc(Poseidon(r·pk_reg); v ‖ r)` |
 | `regKeyId` | 4 | Index of the regulator public key used |
 | `proof` | 256 | Groth16 |
 | `decryptable` | 2 + n | Length prefix + ciphertext, present when flags.bit1 is set |
@@ -206,14 +206,14 @@ No `pk` is needed; `to` may be any id that has never had any activity.
 ```
 acc = _accounts[from]
 pre = flags.includePending ? acc.available + acc.pending : acc.available
-verify(proof, H(chainId, this, from, to, acc.nonce, pk_reg, pre, C_amt, D_sender, D_recv, D_reg, E, memo_recv, memo_reg))
+verify(proof, H(chainId, this, from, to, acc.nonce, pk_reg, pre, D, C_sender, C_recv, C_reg, memo_recv, memo_reg))
 acc.available = acc.available + (acc.pending − acc.folded) − (C_amt, D_sender)   // lazy fold, see §4.3
 acc.folded    = acc.pending
 acc.nonce    += 1
 if flags.bit1: acc.decryptable = payload.decryptable
 _accounts[to].pending += (C_amt, D_recv)
 emit Transfer(from, to, handle)
-emit ConfidentialTransfer(from, to, handle, regKeyId, C_amt, D_recv, D_reg, E, memo_recv, memo_reg)
+emit ConfidentialTransfer(from, to, handle, regKeyId, D, C_recv, C_reg, memo_recv, memo_reg)
 ```
 
 ### 4.3 Lazy Fold and `includePending`
@@ -246,7 +246,7 @@ emit LedgerCrossing(from, to, 0x04, x)
 | --- | --- | --- | --- | --- |
 | Public → public | `transfer(to, x)` / `transferFrom(from, to, x)` | None | No | Yes |
 | Public → confidential | Same as above + `0x03` | 2 bytes | No | Yes |
-| Confidential → confidential | `transferFrom(id, id, handle)` + `0x01` | ~900 bytes | Yes | No |
+| Confidential → confidential | `transferFrom(id, id, handle)` + `0x01` | ~840 bytes | Yes | No |
 | Confidential → public | `transferFrom(id, addr, x)` + `0x04` | ~450 bytes | Yes | Yes |
 | Fold (no transfer) | `transferFrom(id, id, handle)` + `0x80` | ~260 bytes | Yes | — |
 
@@ -275,26 +275,26 @@ Cost: one transaction of about 250k gas (the first fold costs about 450k due to 
 
 ### 5.1 `0x01`
 
-**Public inputs** (packed into 15 words per §1 before going on chain; the logical list follows): `chainId, contract, from, to, nonce, pk_reg, pre.C, pre.D, C_amt, D_sender, D_recv, D_reg, E, memo_recv, memo_reg`.
+**Public inputs** (packed into 14 words per §1 before going on chain; the logical list follows): `chainId, contract, from, to, nonce, pk_reg, pre.C, pre.D, D, C_sender, C_recv, C_reg, memo_recv, memo_reg`.
 
 **Private inputs**: `s, pk_sender, pk_recv, b, v, r, e`.
 
 | # | Statement | Notes |
 | --- | --- | --- |
-| 1 | `s·pk_sender == H` | Knows the payer account's private key |
+| 1 | `pk_sender == s·H` | Knows the payer account's private key |
 | 2 | `Poseidon(pk_sender) → from` | Payer account id is correct, `pk_sender` stays off chain |
 | 3 | `Poseidon(pk_recv) → to` | Payee account id is correct, `pk_recv` stays off chain |
 | 4 | `pre.C − s·pre.D == b·G` | The balance ciphertext encrypts `b` |
 | 5 | `0 ≤ b < 2⁶⁴` | |
 | 6 | `0 ≤ v < 2⁴⁸` | |
 | 7 | `0 ≤ b − v < 2⁶⁴` | Sufficient balance |
-| 8 | `C_amt == v·G + r·H` | |
-| 9 | `D_sender == r·pk_sender`, `D_recv == r·pk_recv`, `D_reg == r·pk_reg` | Same value for all three parties |
-| 10 | `E == e·H` | |
-| 11 | `memo_recv == Enc(Poseidon(e·pk_recv); v ‖ r)`, `memo_reg == Enc(Poseidon(e·pk_reg); v ‖ r)` | Hints are correct |
+| 8 | `D == r·H` | Shared by the three parties |
+| 9 | `C_sender == v·G + r·pk_sender`, `C_recv == v·G + r·pk_recv`, `C_reg == v·G + r·pk_reg` | Same value for all three parties |
+| 10 | `memo_recv == Enc(Poseidon(r·pk_recv); v ‖ r)`, `memo_reg == Enc(Poseidon(r·pk_reg); v ‖ r)` | The pads reuse the `r·pk_X` already computed in 9: no extra scalar multiplication |
+| 11 | (removed in 0.4: formerly `E == e·H`) | |
 | 12 | Packing: after range-checking each scalar, the `w0, w1, w2` equations hold; every point `(xs[i], ys[i])` is on the curve and `ys[i] mod 2 == signBits[i]` | y is uniquely determined by x and the parity bit |
 
-Measured constraint count: **35,137 non-linear constraints** (30,356 for the unpacked version). Proving takes 2.3~2.5 s in a Node environment.
+Measured constraint count: **29,719 non-linear constraints** (35,137 in 0.3.x; 30,356 for the unpacked version). Proving takes about 1.3~1.5 s in a Node environment.
 
 ### 5.2 `0x04`
 
@@ -309,7 +309,7 @@ Drops 3, the last two items of 9, 10 and 11; 7 public inputs: `w0 = from | nonce
 | Event | Fields | Purpose |
 | --- | --- | --- |
 | `Transfer` | `(from, to, x)` | Standard; the top bit of `x` distinguishes handles from amounts |
-| `ConfidentialTransfer` | `(from, to, handle, regKeyId, C_amt, D_recv, D_reg, E, memo_recv, memo_reg)` | Payee scanning, regulator decryption |
+| `ConfidentialTransfer` | `(from, to, handle, regKeyId, D, C_recv, C_reg, memo_recv, memo_reg)` | Payee scanning, regulator decryption (`C_sender` is not emitted: the payer knows it) |
 | `LedgerCrossing` | `(from, to, type, amount)` | `0x03` / `0x04`; indexers maintain `shieldedSupply` |
 | `Folded` | `(id, handle, nonce)` | `0x80`; `nonce` is the new value after the fold |
 | `Prepared` / `Cancelled` | `(from, handle)` | Fallback |
@@ -359,15 +359,15 @@ Environment: Hardhat 3 / solc 0.8.34 viaIR / Groth16 (snarkjs) / after public-in
 | `0x01` confidential → confidential, account's first spend | 709k | One-time: cold writes of available and folded, 4 slots each | 0.53 | 0.027 |
 | `0x04` confidential → public, account's first spend | 583k | Same as above | 0.44 | 0.022 |
 | Bare `transferFrom` after `prepare` (first time) | 360k | Excludes `prepare` itself | 0.27 | 0.0135 |
-| Groth16 `verifyProof` (15 inputs) | 316k | Includes 21k base and calldata; 386k with 25 inputs unpacked | | |
-| Proof generation (Node, M-series) | 2.3~2.5 s | 35,137 constraints | | |
+| Groth16 `verifyProof` (14 inputs, 0.4) | ~312k | Includes 21k base and calldata; 316k with 15 inputs, 386k with 25 inputs unpacked | | |
+| Proof generation (Node, M-series) | 1.3~1.5 s (0.4) | 29,719 constraints (0.3.x: 2.1~2.5 s, 35,137) | | |
 
 ### 9.3 Breakdown (`0x01`, steady state)
 
 | Component | Gas |
 | --- | --- |
-| Base + calldata (payload ~710 bytes) | ~35k |
-| Groth16 verification (15 public inputs) | ~290k |
+| Base + calldata (payload ~646 bytes) | ~33k |
+| Groth16 verification (14 public inputs) | ~288k |
 | Baby Jubjub point additions ×8 (effective pending 2, fold 2, debit 2, credit 2) | ~65k |
 | Storage: payer's available, folded, nonce; payee's pending, all warm writes | ~70k |
 | Events | ~7k |

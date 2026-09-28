@@ -1,6 +1,6 @@
 [English](a1-0002-crypto-core.md) | 中文
 
-# A1-0002 密码内核：twisted ElGamal on Baby Jubjub + Groth16
+# A1-0002 密码内核：ElGamal on Baby Jubjub + Groth16（0.4 起为普通 ElGamal）
 
 - 状态：Accepted
 - 日期：2026-09-24
@@ -29,3 +29,7 @@
 
 - 正面：机密转账验证约 195k gas，总成本 ~325k；证明生成浏览器内秒级。
 - 负面：Groth16 每电路一次可信设置；链上手写 Baby Jubjub 点加需审计。
+
+## 修订
+
+- 2026-09-28（0.4.0，ADR-0006 §3）：由 twisted ElGamal（`pk = s⁻¹·H`，共享 `C`、每方一个 `D_X`）改为普通 ElGamal（`pk = s·H`，共享 `D = r·H`、每方一个 `C_X = v·G + r·pk_X`）；memo 密钥流由 `r·pk_X` 派生，删掉 ECDH 点 `E`。动机：让监管侧的解密与 memo 打开都是「份额 × 公开点」，可门限拆分；DKG 聚合为点加。代价为零：点数不变，电路反而缩小（35,137 → 29,719 约束）。twisted 形式当初的收益（共享承诺便于 Bulletproofs 式范围证明）在 Groth16 下不存在。

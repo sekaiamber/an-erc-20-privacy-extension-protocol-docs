@@ -2,7 +2,7 @@ English | [中文](README.zh-cn.md)
 
 # B.1: A.1's confidential ledger, without the public ledger
 
-Version: `0.1.1`  Status: `Prototype` (deployed on BSC testnet 2026-09-27)
+Version: `0.2.0`  Status: `Prototype` (deployed on BSC testnet 2026-09-27)
 
 | Document | Content |
 | --- | --- |

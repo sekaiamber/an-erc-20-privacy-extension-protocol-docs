@@ -2,7 +2,32 @@ English | [中文](03-deployments.zh-cn.md)
 
 # A.1 Deployment Record
 
-## BSC testnet (chain id 97) — 0.3.1 (current)
+## BSC testnet (chain id 97) — 0.4.0 (current)
+
+Deployed: 2026-09-28. Deployment id: `a1-v0_4_0-bsc-testnet`. `pep()` = `A:1:0.4.0`. Contract source: contracts `c518c1c`.
+
+| Contract | Address |
+| --- | --- |
+| **`ConfidentialERC20A1`** | [`0x61035537DF2aac1CC21f9F56958938954786836c`](https://testnet.bscscan.com/address/0x61035537DF2aac1CC21f9F56958938954786836c) |
+| `TransferVerifier` (14 public inputs, new circuit) | `0x48A7CEbfdD43d5C9f10691609A8ec182f4DB53ed` |
+| `UnshieldVerifier` (new circuit) | `0x591046c256Dd0Bea8e365a0bd388139eaDdAE0A1` |
+| `FoldVerifier` (new circuit) | `0xfB6c2380D764c1BC88C015294b74bcf84a7E3014` |
+| `G8Table` | `0xE8282e0E03f052b7c25b56Bda6Ef6a8D3C7A2B2C` |
+
+Change from 0.3.1: the crypto core is plain ElGamal (01-design 0.4.0 changelog). All three circuits were rebuilt; **0.3.1 and earlier instances use an incompatible key convention and payload layout and are deprecated.**
+
+### On-chain measurements (dapp client library, 2026-09-28)
+
+| Operation | gas | Transaction |
+| --- | --- | --- |
+| `0x03` shield 100 TEST (recipient's first receipt) | 214,534 | [0xc1cd…9466](https://testnet.bscscan.com/tx/0xc1cdac2bb0f431b5dd15cd20df41233b7b74fe039e1777ba64e3813950e09466) |
+| `0x01` confidential transfer 12.5 TEST (both parties' first) | 705,970 | [0x7f57…6d94](https://testnet.bscscan.com/tx/0x7f574bc77d7c1594268bfd911a0c80c116fcb8d042acbb23930cd6db36396d94) |
+| `0x80` pure fold (recipient's first operation) | 463,871 | [0xf980…4f49](https://testnet.bscscan.com/tx/0xf980be3b2ddc0a7d5cbbc4827ece11e33985a4ae4340713f008de85b25334f49) |
+| `0x04` unshield 5 TEST (default mode after the fold, relayed) | 373,589 | [0x2655…ded0](https://testnet.bscscan.com/tx/0x2655fffa5e462946ffd48a4a2706976a8e5b58acbd132a8ded68da0cb9b5ded0) |
+
+Proving (Node): transfer **1.53 s** (0.3.1: 2.1 s), fold 0.34 s, unshield 1.04 s. `0x01` costs about 9.6k gas less than 0.3.1 (one public input and 64 payload bytes fewer).
+
+## BSC testnet (chain id 97) — 0.3.1 (deprecated: key convention and payload layout changed)
 
 Deployed: 2026-09-27. Deployment id: `a1-v0_3_1-bsc-testnet`. `pep()` = `A:1:0.3.1`. Contract source: contracts `3563f29`
 

@@ -2,8 +2,9 @@
 
 # A.1 细节设计
 
-版本：`0.3.1-draft`　状态：`Draft`　日期：2026-09-27
+版本：`0.4.0-draft`　状态：`Draft`　日期：2026-09-28
 
+> 0.4.0：**密码内核改为普通 ElGamal**（ADR-0006 §3、A1-0002 修订）：`pk = s·H`；密文为一个共享 `D = r·H` 加每方一个 `C_X = v·G + r·pk_X`；memo 密钥流由各方共享秘密 `r·pk_X`（= `s_X·D`）派生，删掉 ECDH 点 `E` 与 `e`。目的：监管侧解密与 memo 打开都成为「份额 × 公开点」，可门限拆分（11-regulatory-committee）。副作用：转账电路 35,137 → 29,719 约束，公开输入 15 → 14，payload 710 → 646 字节，证明约 2.1 s → 1.3 s，`0x01` gas 715k → 706k。`pep()` = `A:1:0.4.0`。
 > 0.3.1：**安全修复 F14**——`0x04` 的公开收款地址 `to` 打包进证明（`w2 = amount | signBits<<48 | to<<64`），此前中继者或抢跑者可改写 `to` 偷走整笔 unshield。电路 16,622 → 17,358 约束，公开输入仍为 7 个。`pep()` = `A:1:0.3.1`。
 > 0.3.0：新增 A.1 私有类型 `0x80` 纯折叠（只证明私钥知识，不涉及金额，§4.6 / §5.3），根治安全自审 F1；账户增加 `lastReceivedAtBlock`（与 `nonce` 同槽），客户端事件窗口收紧为 `[foldedAtBlock, lastReceivedAtBlock]`。`pep()` = `A:1:0.3.0`。
 > 0.2.5：账户增加 `foldedAtBlock`（本人上次花费的区块号，与 `nonce` 同槽打包，零额外 gas），客户端重建 pending 的事件窗口由此精确可知（§4.3）。`pep()` = `A:1:0.2.5`。
@@ -30,14 +31,14 @@
 | 曲线 | Baby Jubjub | BN254 标量域上的嵌入曲线，电路内原生 |
 | 生成元 | `G`（金额）、`H`（随机数 / 公钥） | 离散对数关系未知 |
 | 私钥 | `s ∈ Z_l` | 由钱包 EIP-712 签名哈希派生，见 §2.1 |
-| 公钥 | `pk = s⁻¹·H` | 电路内验证私钥只需一次标量乘 `s·pk == H` |
+| 公钥 | `pk = s·H` | 电路内验证私钥为一次固定基标量乘 `s·H == pk`；DKG 聚合为点加（0.4） |
 | 账户 id | `id = address(uint160(Poseidon(pk.x, pk.y)))` | 20 字节，可填入 `to` / `from`；只在电路内计算 |
-| 密文 | `Enc_pk(v; r) = (C, D)`，`C = v·G + r·H`，`D = r·pk` | 解密 `C − s·D = v·G` |
+| 密文 | `Enc_pk(v; r) = (C, D)`，`C = v·G + r·pk`，`D = r·H` | 解密 `C − s·D = v·G`（普通 ElGamal，0.4） |
 | 同态 | `(C₁,D₁) + (C₂,D₂)` ↔ 明文相加 | 同一 `pk` 下 |
-| 多接收方 | 一份 `C`，多个句柄 `D_X = r·pk_X` | 同一金额加密给付款方、收款方、监管方 |
+| 多接收方 | 一份共享 `D = r·H`，每方一个 `C_X = v·G + r·pk_X` | 同一金额加密给付款方、收款方、监管方；各方共享秘密 `r·pk_X = s_X·D` 同时用作 memo 密钥 |
 | 证明系统 | Groth16（circom + snarkjs）原型；正式版评估 PLONK 类 | |
-| 哈希 / memo | Poseidon；memo 用 Poseidon 密钥流加密 | |
-| 公开输入打包 | 标量打包进 3 个字（`from|nonce`、`to|chainId`、`contract|regKeyId|signBits`），点只公开 x，y 为私有输入并由"在曲线上 + 奇偶位"绑定 | 公开输入 25 → 15，验证 gas 386k → 316k。SHA-256 压缩方案已否决：电路内需 ~40 万约束 |
+| 哈希 / memo | Poseidon；memo 用 Poseidon 密钥流加密，密钥流由 `r·pk_X` 派生（0.4 起无 ECDH 点） | |
+| 公开输入打包 | 标量打包进 3 个字（`from|nonce`、`to|chainId`、`contract|regKeyId|signBits`），点只公开 x，y 为私有输入并由"在曲线上 + 奇偶位"绑定 | 公开输入 25 → 15（0.4 起 14），验证 gas 386k → 316k。SHA-256 压缩方案已否决：电路内需 ~40 万约束 |
 | 金额位宽 | 单笔 `v < 2⁴⁸` | |
 | 余额位宽 | `b < 2⁶⁴` | 由 `totalSupply` 上限保证 |
 | decimals | 6 | |
@@ -146,13 +147,12 @@ byte 2..    sections（按 type 与 flags 决定，顺序固定）
 
 | 段 | 大小 | 说明 |
 | --- | --- | --- |
-| `C_amt` | 64 | `v·G + r·H` |
-| `D_sender` | 64 | `r·pk_sender` |
-| `D_recv` | 64 | `r·pk_recv` |
-| `D_reg` | 64 | `r·pk_reg` |
-| `E` | 64 | 临时公钥 `e·H` |
-| `memo_recv` | 64 | `Enc(Poseidon(e·pk_recv); v ‖ r)` |
-| `memo_reg` | 64 | `Enc(Poseidon(e·pk_reg); v ‖ r)` |
+| `C_sender` | 64 | `v·G + r·pk_sender` |
+| `C_recv` | 64 | `v·G + r·pk_recv` |
+| `C_reg` | 64 | `v·G + r·pk_reg` |
+| `D` | 64 | `r·H`，三方共享 |
+| `memo_recv` | 64 | `Enc(Poseidon(r·pk_recv); v ‖ r)` |
+| `memo_reg` | 64 | `Enc(Poseidon(r·pk_reg); v ‖ r)` |
 | `regKeyId` | 4 | 使用的监管公钥编号 |
 | `proof` | 256 | Groth16 |
 | `decryptable` | 2 + n | 长度前缀 + 密文，flags.bit1 置位时存在 |
@@ -206,14 +206,14 @@ emit LedgerCrossing(from, to, 0x03, x)
 ```
 acc = _accounts[from]
 pre = flags.includePending ? acc.available + acc.pending : acc.available
-verify(proof, H(chainId, this, from, to, acc.nonce, pk_reg, pre, C_amt, D_sender, D_recv, D_reg, E, memo_recv, memo_reg))
+verify(proof, H(chainId, this, from, to, acc.nonce, pk_reg, pre, D, C_sender, C_recv, C_reg, memo_recv, memo_reg))
 acc.available = acc.available + (acc.pending − acc.folded) − (C_amt, D_sender)   // 惰性折叠，见 §4.3
 acc.folded    = acc.pending
 acc.nonce    += 1
 if flags.bit1: acc.decryptable = payload.decryptable
 _accounts[to].pending += (C_amt, D_recv)
 emit Transfer(from, to, handle)
-emit ConfidentialTransfer(from, to, handle, regKeyId, C_amt, D_recv, D_reg, E, memo_recv, memo_reg)
+emit ConfidentialTransfer(from, to, handle, regKeyId, D, C_recv, C_reg, memo_recv, memo_reg)
 ```
 
 ### 4.3 惰性折叠与 `includePending`
@@ -246,7 +246,7 @@ emit LedgerCrossing(from, to, 0x04, x)
 | --- | --- | --- | --- | --- |
 | 公开 → 公开 | `transfer(to, x)` / `transferFrom(from, to, x)` | 无 | 否 | 是 |
 | 公开 → 机密 | 同上 + `0x03` | 2 字节 | 否 | 是 |
-| 机密 → 机密 | `transferFrom(id, id, handle)` + `0x01` | ~900 字节 | 是 | 否 |
+| 机密 → 机密 | `transferFrom(id, id, handle)` + `0x01` | ~840 字节 | 是 | 否 |
 | 机密 → 公开 | `transferFrom(id, addr, x)` + `0x04` | ~450 字节 | 是 | 是 |
 | 折叠（不转账） | `transferFrom(id, id, handle)` + `0x80` | ~260 字节 | 是 | — |
 
@@ -275,26 +275,26 @@ emit Folded(from, handle, acc.nonce)
 
 ### 5.1 `0x01`
 
-**公开输入**（按 §1 打包为 15 个字上链；下面是逻辑清单）：`chainId, contract, from, to, nonce, pk_reg, pre.C, pre.D, C_amt, D_sender, D_recv, D_reg, E, memo_recv, memo_reg`。
+**公开输入**（按 §1 打包为 14 个字上链；下面是逻辑清单）：`chainId, contract, from, to, nonce, pk_reg, pre.C, pre.D, D, C_sender, C_recv, C_reg, memo_recv, memo_reg`。
 
 **私有输入**：`s, pk_sender, pk_recv, b, v, r, e`。
 
 | # | 语句 | 说明 |
 | --- | --- | --- |
-| 1 | `s·pk_sender == H` | 知道付款账户私钥 |
+| 1 | `pk_sender == s·H` | 知道付款账户私钥 |
 | 2 | `Poseidon(pk_sender) → from` | 付款账户 id 正确，`pk_sender` 不上链 |
 | 3 | `Poseidon(pk_recv) → to` | 收款账户 id 正确，`pk_recv` 不上链 |
 | 4 | `pre.C − s·pre.D == b·G` | 余额密文加密的是 `b` |
 | 5 | `0 ≤ b < 2⁶⁴` | |
 | 6 | `0 ≤ v < 2⁴⁸` | |
 | 7 | `0 ≤ b − v < 2⁶⁴` | 余额充足 |
-| 8 | `C_amt == v·G + r·H` | |
-| 9 | `D_sender == r·pk_sender`，`D_recv == r·pk_recv`，`D_reg == r·pk_reg` | 三方同值 |
-| 10 | `E == e·H` | |
-| 11 | `memo_recv == Enc(Poseidon(e·pk_recv); v ‖ r)`，`memo_reg == Enc(Poseidon(e·pk_reg); v ‖ r)` | 提示正确 |
+| 8 | `D == r·H` | 三方共享 |
+| 9 | `C_sender == v·G + r·pk_sender`，`C_recv == v·G + r·pk_recv`，`C_reg == v·G + r·pk_reg` | 三方同值 |
+| 10 | `memo_recv == Enc(Poseidon(r·pk_recv); v ‖ r)`，`memo_reg == Enc(Poseidon(r·pk_reg); v ‖ r)` | 密钥流复用第 9 条已算出的 `r·pk_X`，无额外标量乘 |
+| 11 | （0.4 起删除：原 `E == e·H`） | |
 | 12 | 打包：各标量范围检查后 `w0, w1, w2` 等式成立；每个点 `(xs[i], ys[i])` 在曲线上且 `ys[i] mod 2 == signBits[i]` | y 由 x 与奇偶位唯一确定 |
 
-约束量实测：**35,137 个非线性约束**（未打包版本 30,356）。Node 环境证明 2.3~2.5 s。
+约束量实测：**29,719 个非线性约束**（0.3.x 为 35,137；未打包版本 30,356）。Node 环境证明约 1.3~1.5 s。
 
 ### 5.2 `0x04`
 
@@ -309,7 +309,7 @@ emit Folded(from, handle, acc.nonce)
 | 事件 | 字段 | 用途 |
 | --- | --- | --- |
 | `Transfer` | `(from, to, x)` | 标准；`x` 最高位区分句柄与金额 |
-| `ConfidentialTransfer` | `(from, to, handle, regKeyId, C_amt, D_recv, D_reg, E, memo_recv, memo_reg)` | 收款方扫描、监管解密 |
+| `ConfidentialTransfer` | `(from, to, handle, regKeyId, D, C_recv, C_reg, memo_recv, memo_reg)` | 收款方扫描、监管解密（`C_sender` 不发出：付款方自己知道） |
 | `LedgerCrossing` | `(from, to, type, amount)` | `0x03` / `0x04`，索引器维护 `shieldedSupply` |
 | `Folded` | `(id, handle, nonce)` | `0x80`，`nonce` 为折叠后的新值 |
 | `Prepared` / `Cancelled` | `(from, handle)` | 兜底 |
@@ -359,15 +359,15 @@ function supportsInterface(bytes4) external view returns (bool);         // 家�
 | `0x01` 机密 → 机密，账户首次花费 | 709k | 一次性：available、folded 冷写各 4 槽 | 0.53 | 0.027 |
 | `0x04` 机密 → 公开，账户首次花费 | 583k | 同上 | 0.44 | 0.022 |
 | `prepare` 后裸 `transferFrom`（首次） | 360k | 不含 `prepare` 本身 | 0.27 | 0.0135 |
-| Groth16 `verifyProof`（15 输入） | 316k | 含 21k 基础与 calldata；25 输入未打包时 386k | | |
-| 证明生成（Node，M 系列） | 2.3~2.5 s | 35,137 约束 | | |
+| Groth16 `verifyProof`（14 输入，0.4） | ~312k | 含 21k 基础与 calldata；15 输入 316k，25 输入未打包时 386k | | |
+| 证明生成（Node，M 系列） | 1.3~1.5 s（0.4） | 29,719 约束（0.3.x：2.1~2.5 s，35,137） | | |
 
 ### 9.3 拆解（`0x01`，稳态）
 
 | 组成 | Gas |
 | --- | --- |
-| 基础 + calldata（payload ~710 字节） | ~35k |
-| Groth16 验证（15 个公开输入） | ~290k |
+| 基础 + calldata（payload ~646 字节） | ~33k |
+| Groth16 验证（14 个公开输入） | ~288k |
 | Baby Jubjub 点加 ×8（有效待入账 2、折叠 2、扣款 2、收款 2） | ~65k |
 | 存储：付款方 available、folded、nonce；收款方 pending，均为热写 | ~70k |
 | 事件 | ~7k |

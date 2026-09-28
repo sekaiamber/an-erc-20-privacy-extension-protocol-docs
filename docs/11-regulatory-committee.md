@@ -102,15 +102,15 @@ interface IRegulatorCommittee {
 
 `RegulatorCommittee` (Shamir) and `RegulatorCommitteeDesignated` (two-level) are the first two implementations; both sit in `contracts/contracts/family/` beside the wrapper.
 
-## 7. Protocol amendment required: memo keys from `r·H`
+## 7. Protocol amendment required: plain ElGamal, memo keys from `r·pk_X` (shipped as A.1 0.4.0)
 
 A.1's memo uses an extra ECDH point `E = e·H` and derives the pad from `e·pk = s⁻¹·E`. Opening it needs `s⁻¹·E` — a *division* by the shared secret, which does not split across shares. Fix (A.1 v0.4, B.1 v0.2):
 
-- derive both memo pads from **`r·H`**: the sender knows `r`; the recipient computes `s_recv·D_recv = r·H`; the regulator computes `s_reg·D_reg = r·H` (threshold-friendly);
+- **Careful**: "`pk = s·H`" and "pads from `r·H`" cannot both hold — under plain ElGamal `D = r·H` is a public point. The right combination: the ciphertext becomes one shared `D = r·H` plus one `C_X = v·G + r·pk_X` per party; each party's shared secret is **`r·pk_X`** (the sender knows `r`; party X computes `s_X·D`, threshold-friendly), and each memo pad is derived from that party's own `r·pk_X`;
 - delete `E`, `e`, and the `E`-related constraints and public inputs: −1 scalar multiplication (251 bits) in the transfer circuit, −2 public inputs (15 → 13), −64 bytes of payload;
-- and switch the key convention to `pk = s·H` (plain ElGamal / standard Baby Jubjub keys) so that DKG aggregation is a point sum; decryption becomes `C − s·D` as today (the twisted form only moved where the inverse sits).
+- the key convention becomes `pk = s·H` (plain ElGamal) so that DKG aggregation is a point sum; decryption stays `C_X − s·D`. The twisted form's benefit (a shared commitment) buys nothing under Groth16.
 
-Both memos then carry the same plaintext `(v, r)` under pads derived from the same point; that is intended (both parties are meant to learn exactly this) and the pads are still one-time because `r` is fresh per transfer.
+Both memos carry the same plaintext `(v, r)` under different pads (each party's own `r·pk_X`); `r` is fresh per transfer, so the pads are one-time.
 
 ## 8. Regulator UI
 

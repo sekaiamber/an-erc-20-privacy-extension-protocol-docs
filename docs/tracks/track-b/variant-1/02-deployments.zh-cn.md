@@ -2,7 +2,20 @@
 
 # B.1 部署记录
 
-## BSC testnet（chain id 97）— 0.1.1（当前）
+## BSC testnet（chain id 97）— 0.2.0（当前）
+
+部署日期：2026-09-28　deployment id：`b1-v0_2_0-bsc-testnet`　`pep()` = `B:1:0.2.0`　合约源码 contracts `c518c1c`
+
+| 合约 | 地址 |
+| --- | --- |
+| **`ConfidentialERC20B1`**（Closed / CLS） | [`0x48DE3039e44Ed7CFbce6A4f69e5EA0c83cfB7258`](https://testnet.bscscan.com/address/0x48DE3039e44Ed7CFbce6A4f69e5EA0c83cfB7258) |
+| **`PEPWrapper`** | [`0xfA04051c4cC38e439f871cBfA179424a257c5455`](https://testnet.bscscan.com/address/0xfA04051c4cC38e439f871cBfA179424a257c5455) |
+| `WrappedERC20` wCLS | [`0x9F2380D5a23250ce95f9308C3E4E98A6649f11e4`](https://testnet.bscscan.com/address/0x9F2380D5a23250ce95f9308C3E4E98A6649f11e4) |
+| 验证器 / 窗口表 | 复用 A.1 0.4.0 的（`a1-v0_4_0-bsc-testnet`） |
+
+相对 0.1.1：随 A.1 0.4.0 改为普通 ElGamal（密钥约定、payload 布局、事件字段变更）；**0.1.1 及更早实例作废。** 实测：mint 196,300 · 0x01 705,929 · 折叠 463,825 · 销毁 362,411 · wrap（首次）991,127 · unwrap 129,631；余额与 `issuedSupply` 守恒验证通过。
+
+## BSC testnet（chain id 97）— 0.1.1（已废弃：密钥约定与 payload 布局已变）
 
 部署日期：2026-09-27（第一轮安全自审之后）　deployment id：`b1-v0_1_1-bsc-testnet`　`pep()` = `B:1:0.1.1`　合约源码 contracts `ab723ee`
 

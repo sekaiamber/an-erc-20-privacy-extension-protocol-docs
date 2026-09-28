@@ -2,7 +2,20 @@ English | [中文](02-deployments.zh-cn.md)
 
 # B.1 deployment record
 
-## BSC testnet (chain id 97) — 0.1.1 (current)
+## BSC testnet (chain id 97) — 0.2.0 (current)
+
+Deployed: 2026-09-28. Deployment id: `b1-v0_2_0-bsc-testnet`. `pep()` = `B:1:0.2.0`. Contract source: contracts `c518c1c`.
+
+| Contract | Address |
+| --- | --- |
+| **`ConfidentialERC20B1`** (Closed / CLS) | [`0x48DE3039e44Ed7CFbce6A4f69e5EA0c83cfB7258`](https://testnet.bscscan.com/address/0x48DE3039e44Ed7CFbce6A4f69e5EA0c83cfB7258) |
+| **`PEPWrapper`** | [`0xfA04051c4cC38e439f871cBfA179424a257c5455`](https://testnet.bscscan.com/address/0xfA04051c4cC38e439f871cBfA179424a257c5455) |
+| `WrappedERC20` wCLS | [`0x9F2380D5a23250ce95f9308C3E4E98A6649f11e4`](https://testnet.bscscan.com/address/0x9F2380D5a23250ce95f9308C3E4E98A6649f11e4) |
+| verifiers / window table | A.1 0.4.0's (`a1-v0_4_0-bsc-testnet`) |
+
+Change from 0.1.1: plain ElGamal following A.1 0.4.0 (key convention, payload layout and event fields changed); **0.1.1 and earlier instances are deprecated.** Measured: mint 196,300 · 0x01 705,929 · fold 463,825 · burn 362,411 · wrap (first) 991,127 · unwrap 129,631; balances and `issuedSupply` conservation verified.
+
+## BSC testnet (chain id 97) — 0.1.1 (deprecated: key convention and payload layout changed)
 
 Deployed: 2026-09-27 (after the round-1 security review). Deployment id: `b1-v0_1_1-bsc-testnet`. `pep()` = `B:1:0.1.1`. Contract source: contracts `ab723ee`.
 

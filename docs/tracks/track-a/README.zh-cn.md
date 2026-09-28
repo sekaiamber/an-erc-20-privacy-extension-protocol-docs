@@ -31,4 +31,4 @@
 
 | Variant | 内核 | 收付方 | 金额 | 监管 | 状态 |
 | --- | --- | --- | --- | --- | --- |
-| [A.1](variant-1/README.zh-cn.md) | twisted ElGamal 加密账户 + SNARK，账户 = 公钥 | 化名（id 稳定可关联） | 隐藏 | 第三份密文，密码学强制 | 0.3.0-draft |
+| [A.1](variant-1/README.zh-cn.md) | twisted ElGamal 加密账户 + SNARK，账户 = 公钥 | 化名（id 稳定可关联） | 隐藏 | 第三份密文，密码学强制 | 0.4.0-draft |

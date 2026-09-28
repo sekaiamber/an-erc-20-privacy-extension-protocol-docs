@@ -102,15 +102,15 @@ interface IRegulatorCommittee {
 
 首批两个实现：`RegulatorCommittee`（Shamir）与 `RegulatorCommitteeDesignated`（两层），都放在 `contracts/contracts/family/`，与 wrapper 并列。
 
-## 7. 需要的协议修订：memo 密钥改由 `r·H` 派生
+## 7. 需要的协议修订：普通 ElGamal，memo 密钥改由 `r·pk_X` 派生（已随 A.1 0.4.0 落地）
 
 A.1 的 memo 多用一个 ECDH 点 `E = e·H`，密钥流由 `e·pk = s⁻¹·E` 派生。打开它要算 `s⁻¹·E`——对共享秘密做*除法*，无法拆到份额上。改法（A.1 v0.4、B.1 v0.2）：
 
-- 两份 memo 的密钥流都由 **`r·H`** 派生：发送方知道 `r`；收款方算 `s_recv·D_recv = r·H`；监管方算 `s_reg·D_reg = r·H`（门限友好）；
+- **注意**：不能同时要「`pk = s·H`」和「密钥流来自 `r·H`」——普通 ElGamal 下 `D = r·H` 是公开点。正确组合：密文改为一个共享 `D = r·H` 加每方一个 `C_X = v·G + r·pk_X`；各方的共享秘密是 **`r·pk_X`**（发送方知道 `r`；X 方算 `s_X·D`，门限友好），两份 memo 的密钥流各由自己的 `r·pk_X` 派生；
 - 删掉 `E`、`e` 及相关约束与公开输入：转账电路少一次 251 位标量乘，公开输入 15 → 13，payload 少 64 字节；
-- 同时把密钥约定改为 `pk = s·H`（普通 ElGamal / 标准 Baby Jubjub 密钥），DKG 聚合就是点加；解密仍是 `C − s·D`（twisted 形式只是把求逆挪了个位置）。
+- 密钥约定改为 `pk = s·H`（普通 ElGamal），DKG 聚合就是点加；解密仍是 `C_X − s·D`。twisted 形式的好处（共享承诺）在 Groth16 下没有收益。
 
-两份 memo 于是承载相同明文 `(v, r)`、密钥流来自同一个点；这是有意的（双方本来就该得到完全相同的信息），而 `r` 每笔新鲜，密钥流仍是一次性的。
+两份 memo 承载相同明文 `(v, r)` 但密钥流不同（各自的 `r·pk_X`）；`r` 每笔新鲜，密钥流一次性。
 
 ## 8. 监管界面
 

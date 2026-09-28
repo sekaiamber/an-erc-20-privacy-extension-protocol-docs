@@ -1,8 +1,8 @@
 English | [中文](0006-regulatory-committee.zh-cn.md)
 
-# 0006 Regulator as a threshold committee contract; memo keys from r·H
+# 0006 Regulator as a threshold committee contract; crypto core switched to plain ElGamal
 
-- Status: Proposed
+- Status: Accepted (2026-09-28; §3 shipped, §1–§2 in design)
 - Date: 2026-09-27
 - Scope: family (tool); protocol amendment for A.1 v0.4 / B.1 v0.2
 
@@ -14,7 +14,7 @@ The regulator is currently one private key. The owner asked for a contract that 
 
 1. Add [11-regulatory-committee](../11-regulatory-committee.md): `IRegulatorCommittee` (group key, epoch, members, policy, request / approve / combined) with DKG, resharing that keeps `pk_reg` fixed, and Chaum–Pedersen-verified partial decryptions. First implementations: Shamir majority and the two-level "designated + extra" structure. Deployed per project / team; several coexist.
 2. Tokens are unchanged: the committee holds a token's `REGULATOR_ADMIN_ROLE` and its `groupKey()` is the active `pk_reg` (family conventions §9).
-3. **Protocol amendment**: derive memo pads from `r·H` and drop `E` / `e`; switch the key convention to `pk = s·H`. Both changes are needed so that regulator-side decryption is a scalar multiplication (threshold-splittable) and DKG aggregation is a point sum. Scheduled as A.1 v0.4 and B.1 v0.2 (new transfer circuit, redeploy).
+3. **Protocol amendment (shipped 2026-09-28 as A.1 0.4.0 / B.1 0.2.0)**: plain ElGamal — `pk = s·H`, one shared `D = r·H`, one `C_X = v·G + r·pk_X` per party; memo pads derived from each party's shared secret `r·pk_X` (= `s_X·D`); `E` / `e` removed. Purpose: regulator-side decryption and memo opening become scalar multiplications (threshold-splittable) and DKG aggregation a point sum. (The first draft said "pads from `r·H`", which is wrong: under plain ElGamal `r·H` is public.)
 4. The policy structure and the secret-sharing structure must match; a policy contract is only valid together with the sharing it was deployed with.
 
 ## Alternatives

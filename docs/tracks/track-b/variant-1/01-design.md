@@ -2,8 +2,9 @@ English | [中文](01-design.zh-cn.md)
 
 # B.1 design (0.1.0-draft)
 
-Version: `0.1.0-draft`  Status: `Draft`  Date: 2026-09-27
+Version: `0.2.0-draft`  Status: `Draft`  Date: 2026-09-28
 
+> 0.2.0: follows A.1 0.4.0 to plain ElGamal (`pk = s·H`, shared `D`, one `C_X` per party, memo keys from `r·pk_X`, no `E`); circuits, payload layouts and event fields match A.1 0.4.0. `pep()` = `B:1:0.2.0`.
 > 0.1.0: derived from A.1 0.3.1 by removing the public ledger. **Implemented and deployed on BSC testnet (2026-09-27)** together with the family Wrapper; measured gas in [02-deployments](02-deployments.md). Decisions B1-1..B1-5 settled as drafted.
 
 ## 0. Why B.1 exists

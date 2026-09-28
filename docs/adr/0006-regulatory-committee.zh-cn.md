@@ -1,8 +1,8 @@
 [English](0006-regulatory-committee.md) | 中文
 
-# 0006 监管方改为门限委员会合约；memo 密钥改由 r·H 派生
+# 0006 监管方改为门限委员会合约；密码内核改为普通 ElGamal
 
-- 状态：Proposed
+- 状态：Accepted（2026-09-28；§3 已落地，§1–§2 设计中）
 - 日期：2026-09-27
 - 范围：家族（工具）；对 A.1 v0.4 / B.1 v0.2 的协议修订
 
@@ -14,7 +14,7 @@
 
 1. 新增 [11-regulatory-committee](../11-regulatory-committee.zh-cn.md)：`IRegulatorCommittee`（群公钥、epoch、成员、策略、request / approve / combined），配 DKG、保持 `pk_reg` 不变的重分享、带 Chaum–Pedersen 证明的部分解密。首批实现：Shamir 多数票与两层「指定 + 额外」结构。按项目 / 团队部署，多种并存。
 2. 代币不变：委员会持有代币的 `REGULATOR_ADMIN_ROLE`，其 `groupKey()` 即当前 `pk_reg`（家族约定 §9）。
-3. **协议修订**：memo 密钥流由 `r·H` 派生，删掉 `E` / `e`；密钥约定改为 `pk = s·H`。两项都是为了让监管侧解密成为标量乘（可门限拆分）、DKG 聚合成为点加。排入 A.1 v0.4 与 B.1 v0.2（新转账电路，重部署）。
+3. **协议修订（已于 2026-09-28 随 A.1 0.4.0 / B.1 0.2.0 落地）**：改为普通 ElGamal——`pk = s·H`，共享 `D = r·H`，每方一个 `C_X = v·G + r·pk_X`；memo 密钥流由各方共享秘密 `r·pk_X`（= `s_X·D`）派生，删掉 `E` / `e`。目的：监管侧解密与 memo 打开都成为标量乘（可门限拆分），DKG 聚合成为点加。（初稿写作「密钥流由 `r·H` 派生」是错的：普通 ElGamal 下 `r·H` 公开。）
 4. 策略结构必须与秘密分享结构一致；策略合约只与其部署时配套的分享方式一起有效。
 
 ## 备选方案

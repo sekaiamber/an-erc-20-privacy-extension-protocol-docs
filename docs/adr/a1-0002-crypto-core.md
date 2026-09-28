@@ -1,6 +1,6 @@
 English | [中文](a1-0002-crypto-core.zh-cn.md)
 
-# A1-0002 Crypto core: twisted ElGamal on Baby Jubjub + Groth16
+# A1-0002 Crypto core: ElGamal on Baby Jubjub + Groth16 (plain ElGamal since 0.4)
 
 - Status: Accepted
 - Date: 2026-09-24
@@ -29,3 +29,7 @@ We need to hide balances and amounts under an account model, support regulator d
 
 - Positive: confidential transfer verification costs about 195k gas, total cost ~325k; proof generation takes seconds in the browser.
 - Negative: Groth16 requires one trusted setup per circuit; the hand-written on-chain Baby Jubjub point addition needs an audit.
+
+## Revisions
+
+- 2026-09-28 (0.4.0, ADR-0006 §3): twisted ElGamal (`pk = s⁻¹·H`, shared `C`, one `D_X` per party) replaced by plain ElGamal (`pk = s·H`, shared `D = r·H`, one `C_X = v·G + r·pk_X` per party); memo pads derived from `r·pk_X`, the ECDH point `E` removed. Motivation: regulator-side decryption and memo opening become "share × public point", i.e. threshold-splittable, and DKG aggregation is a point sum. Cost: none — same number of points, and the circuit shrinks (35,137 → 29,719 constraints). The original benefit of the twisted form (a shared commitment for Bulletproofs-style range proofs) does not exist under Groth16.

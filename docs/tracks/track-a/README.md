@@ -31,4 +31,4 @@ Users can move funds between the two ledgers and can also transfer within each l
 
 | Variant | Core | Payer / recipient | Amount | Regulator | Status |
 | --- | --- | --- | --- | --- | --- |
-| [A.1](variant-1/README.md) | twisted ElGamal encrypted accounts + SNARK, account = public key | Pseudonymous (id stable and linkable) | Hidden | Third ciphertext, cryptographically enforced | 0.3.0-draft |
+| [A.1](variant-1/README.md) | twisted ElGamal encrypted accounts + SNARK, account = public key | Pseudonymous (id stable and linkable) | Hidden | Third ciphertext, cryptographically enforced | 0.4.0-draft |
