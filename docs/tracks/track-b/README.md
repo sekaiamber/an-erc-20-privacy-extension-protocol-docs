@@ -30,7 +30,7 @@ Consequences for integrators:
 
 | Variant | Core | Recipient | Amount | Regulator | Status |
 | --- | --- | --- | --- | --- | --- |
-| [B.1](variant-1/README.md) | A.1's confidential ledger (twisted ElGamal accounts + Groth16) without the public ledger | Pseudonymous (stable id) | Hidden | Third ciphertext, cryptographically enforced | 0.2.0 (prototype) |
+| [B.1](variant-1/README.md) | A.1's confidential ledger (ElGamal accounts + Groth16, plain ElGamal since 0.4) without the public ledger | Pseudonymous (stable id) | Hidden | Third ciphertext, cryptographically enforced | 0.2.0 (prototype) |
 
 ## Decisions taken at Track level
 
