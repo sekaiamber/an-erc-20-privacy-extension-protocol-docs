@@ -14,7 +14,7 @@ Records the important and hard-to-reverse technical decisions in the project. On
 | [0001](0001-use-hardhat3-for-contracts.md) | Use Hardhat 3 as the contract development environment | Accepted |
 | [0002](0002-track-variant-structure.md) | Organize the protocol family by Track / Variant | Accepted |
 | [0003](0003-erc20-surface-conventions.md) | ERC-20 surface conventions: reuse standard selectors and trailing payload | Accepted |
-| [0006](0006-regulatory-committee.md) | Regulator as a threshold committee contract; crypto core switched to plain ElGamal | Accepted (§3 shipped; committee contracts pending) |
+| [0006](0006-regulatory-committee.md) | Regulator as a threshold committee contract; crypto core switched to plain ElGamal | Accepted (§3 shipped; committee prototyped 2026-09-29) |
 | [0005](0005-family-wrapper.md) | A family-level Wrapper as a tool, not a replacement for Track A | Accepted |
 | [0004](0004-regulatory-access-principles.md) | Regulatory access principles | Accepted |
 

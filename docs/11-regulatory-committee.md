@@ -2,7 +2,7 @@ English | [中文](11-regulatory-committee.zh-cn.md)
 
 # 11 Family tool: the Regulatory Committee
 
-Status: `Draft` (2026-09-27). Decision record: [ADR-0006](adr/0006-regulatory-committee.md). Companion to [10-wrapper](10-wrapper.md): a second family tool, but deployed **per project or per team**, with a policy of that team's choosing.
+Status: `Prototype` (2026-09-29; designed 2026-09-27). Contracts, client, tests and a live BSC testnet run exist; see §9. Decision record: [ADR-0006](adr/0006-regulatory-committee.md). Companion to [10-wrapper](10-wrapper.md): a second family tool, but deployed **per project or per team**, with a policy of that team's choosing.
 
 ## 1. Problem
 
@@ -26,81 +26,97 @@ and `s·D_reg = Σ λ_i · (s_i·D_reg)` over any `t` shares with Lagrange coeff
 
 | Role | On chain | Off chain |
 | --- | --- | --- |
-| **Key custody** | `groupKey()` (= the token's `pk_reg`), `epoch()`, Feldman commitments of the current sharing | Shares `s_i` in members' wallets (derived per member, never exported) |
-| **Membership** | member set, weights / roles, threshold, policy contract, epoch history | Distributed key generation and resharing protocols among members |
-| **Access policy** | which approvals suffice: a pluggable `IViewPolicy` | — |
-| **Requests & audit** | `request(scope, purpose)`, `approve(requestId, partial)`, `combined(requestId)`; every step is an event | Combination of partials (free) and the actual decryption / balance reconstruction in the regulator UI |
-| **Token governance** | holds the token's `REGULATOR_ADMIN_ROLE`: `rotateRegulatorKey` only through committee epochs | — |
+| **Key custody** | `groupKey()` (= the token's `pk_reg`), epochs, each member's committee key per epoch, Feldman commitments and encrypted shares as `Dealt` events | Shares, recovered on demand from chain data plus the member's wallet (never stored) |
+| **Membership** | groups (threshold + members) per epoch, proposals and votes, dealing / acknowledgement / complaint state | Dealing and share verification |
+| **Access policy** | an AND over groups: a view needs `threshold(g)` members of every group | — |
+| **Requests & audit** | `request`, `approve`, `ViewReady`; every step is an event, and the block of every dealing, approval and request is stored | Partial decryptions (encrypted to the requester), their verification, combination and the decrypted table |
+| **Token governance** | `bindToken`: rotates a token's regulator key to `groupKey()` using the `REGULATOR_ADMIN_ROLE` the token admin granted | — |
 
-Tokens do not change: they keep `regulatorKey(keyId)` / `activeRegulatorKeyId` / `rotateRegulatorKey` exactly as in conventions §9; the committee is simply the address that owns the admin role and whose `groupKey()` is registered as the active key.
+Tokens do not change: they keep `regulatorKey(keyId)` / `activeRegulatorKeyId` / `rotateRegulatorKey` exactly as in conventions §9; the committee is simply an address holding the admin role whose `groupKey()` becomes the active key.
 
 ## 4. Protocols
 
-### 4.1 Distributed key generation (DKG)
+Notation: `H` is the key generator (`pk = s·H`, plain ElGamal, §7). The secret is `s = Σ_g s_g`; group `g` holds a Shamir sharing of `s_g` with threshold `t_g`. Member indices are 1-based positions in their group. Every member has a **committee key** `(x, X = x·H)`, derived from an EIP-712 signature of the member's wallet over the domain `(PEP, 1, chainId, committee)` with purpose `"Regulator committee key"`, and registered with `registerKey(X)`.
 
-Pedersen / Feldman DKG over the Baby Jubjub scalar field among the initial `n` members, threshold `t`:
+**Share delivery.** A dealer samples `k`, posts `K = k·H`, and for recipient `j` posts `enc_j = f(j) + Poseidon(Poseidon(k·X_j), j) mod p`. Recipient `j` computes the same pad from `x_j·K`. Shares therefore live on chain, encrypted; a member re-derives its key from the wallet and recovers its share whenever needed.
 
-1. Each member `i` samples a random polynomial `f_i` of degree `t − 1`, posts Feldman commitments `f_i(k)·H` for its coefficients on chain (`commit(epoch, i, C_i[])`), and sends `f_i(j)` to member `j` encrypted to `j`'s wallet key (off chain).
-2. Each member verifies received shares against the commitments (one scalar multiplication per coefficient, client side) and posts `ack` / `complaint`.
-3. After the acknowledgement window, `s_i = Σ_j f_j(i)` is member `i`'s share and `pk_reg = (Σ_i C_i[0])⁻¹`-style aggregation for our twisted key (`pk = s⁻¹·H`; see §7 for why we move to `pk = s·H` at the same time). The contract computes `groupKey()` from the posted commitments — no trusted dealer, no one ever sees `s`.
+### 4.1 Genesis: distributed key generation (DKG)
 
-Gas: commitments are `t` points per member (one-time); on-chain verification of complaints is optional (a complaint can be settled by publishing the disputed share, which is only ever useful against a cheating dealer).
+The constructor fixes the genesis groups. Epoch 1 waits until every member has registered a key (`Registering`), then snapshots the keys and opens dealing.
 
-### 4.2 Adding or removing members: resharing
+1. Every member `d` of group `g` samples a polynomial `f_d` of degree `t_g − 1`, posts the Feldman commitments `f_d(k)·H` and the encrypted shares for its group (`deal`). The contract adds `f_d(0)·H` into the group part `pk_g`.
+2. Once every group is fully dealt, every member recovers `x_j = Σ_d f_d(j)` and checks each sub-share against its dealer's commitments (`f_d(j)·H = Σ_k j^k·C_d[k]`), and that every commitment lies in the prime-order subgroup. It then `ack`s, or `complain`s, which fails the epoch; `restart()` retries the same configuration under a new epoch number.
+3. The last acknowledgement activates the epoch: `groupKey = Σ_g pk_g`, checked on chain to be a non-identity point of the prime-order subgroup. Nobody ever holds `s`.
 
-Any `t` current members run a resharing round: each re-splits their share `s_i` into a fresh degree-`t' − 1` polynomial for the new member set `n'`, posts commitments, and delivers sub-shares. New shares are Lagrange-weighted sums of sub-shares. **`pk_reg` is unchanged**, so:
+### 4.2 Membership change: resharing with an unchanged key
 
-- no token has to rotate its key, and every historical ciphertext stays decryptable by the new committee;
-- removed members' old shares become useless only if the *sharing* changed — which it did (a new polynomial). Proactive security for free.
+1. An active member `propose`s new groups (the number of groups is fixed per committee; every proposed member must already have registered a key). Members `vote`; the proposal passes when **every current group reaches its threshold of votes**, the same rule as viewing. The new epoch opens immediately.
+2. In each group the first `t_g` members of the current epoch deal: dealer `d` shares its current share with a fresh polynomial `f_d` of the new group's degree, `f_d(0) = x_d`.
+3. New member `j` recovers `x'_j = Σ_d λ_d · f_d(j)` with Lagrange coefficients `λ_d` over the dealers' old indices, verifies every sub-share, and verifies that each dealer's constant-term commitment equals that dealer's old public share `x_d·H` (computable from the previous epoch's commitments). The last acknowledgement activates the epoch.
 
-Rotating `pk_reg` (a new DKG + `rotateRegulatorKey` on each token) is reserved for the case where a share is believed leaked and the team wants past ciphertexts to remain openable only by the old committee.
+`groupKey()` does not change, so no token rotates its key and every historical ciphertext remains readable by the new committee. Requests opened in the old epoch stop accepting approvals.
+
+**Limit of proactive security.** Because shares are recoverable from chain data and the wallet, a removed member can still rebuild its old-epoch share. Any `t_g` members of an old epoch (for every group) can therefore still decrypt together off chain. Resharing removes a member from the *audited* process, not from what an old quorum can do by colluding. When a leak is suspected, rotate instead: new committee (new DKG) and `bindToken` on every token; past ciphertexts stay readable only under the old key.
 
 ### 4.3 View request → approvals → combination
 
 ```
-request(token, scope, purposeHash)                 // scope: an id, a tx list, or a block range
-approve(requestId, epoch, partial[])               // member i posts s_i·D for each D in scope (or a hash of them)
-combine(requestId) -> (s·D)[]                      // anyone, once policy(requestId) is satisfied; on or off chain
+request(token, fromBlock, toBlock, account, purpose)   // any active member; purpose is emitted in clear
+approve(requestId, K, blob)                             // members of the request's epoch, while it is current
+ViewReady(requestId)                                    // once every group has t_g approvals
 ```
 
-Partials are verified with a **Chaum–Pedersen proof** that `partial = s_i·D` for the member's committed public share `s_i·H` (two scalar multiplications per partial on chain, or off chain with the proof stored by hash). Combination is `Σ λ_i·partial_i`. Everything is logged: who asked, for what, who approved, when — the audit trail regulators themselves are usually required to keep.
+**Scope.** Every `ConfidentialTransfer` and `ConfidentialTransferPrepared` event of `token` in `[fromBlock, toBlock]` whose `regKeyId` maps to `groupKey()`, optionally only those where `account` is sender or recipient, ordered by `(block, logIndex)`. Each member derives this list `D_1 … D_m` from chain data; nobody can slip in a point that is not a real transfer.
 
-Cost model: on-chain verification is ≈ 2 × 8k gas (point adds via the A.1 library) plus ≈ 2 scalar multiplications (≈ 550k each with the generic `mul`; ≈ 80k with a fixed-base table per member) per partial. For bulk viewing the partials and proofs go off chain and only their hash is anchored; per-transfer verification on chain is for high-stakes requests.
+**Partials.** Member `i` computes `P_ij = x_i·D_j` and one batch Chaum–Pedersen proof that `log_H X_i = log_{D_j} P_ij` for all `j`: random weights `ρ_j = Poseidon(seed, j)` aggregate `D* = Σ ρ_j D_j`, `P* = Σ ρ_j P_j`, and a single DLEQ proof `(c, z)` covers them. The Fiat–Shamir seed binds `(chainId, committee, requestId, X_i, D_1..m, P_1..m)`, so a proof cannot be replayed into another request. `X_i` is the member's public share, computed by anyone from the epoch's commitments.
+
+**Partials are never posted in clear.** If `t_g` plaintext partials of every group were public, anyone could combine `s·D_j` and read the amounts. Each member masks `[P_1 … P_m, c, z]` word by word with pads derived from `k·X_requester` and posts `K = k·H` with the masked words. Only the requester can open them.
+
+**Combination (requester, off chain).** Open every approval, verify its proof against the member's public share, and keep `t_g` verified approvals per group. Then `s·D_j = Σ_g Σ_{i∈S_g} λ_i·P_ij`. Each memo opens with the pads from `s·D_j`, and every amount is checked with `C_reg − s·D_j = v·G`.
+
+Offline, any quorum can do all of this without the contract. The on-chain flow is the audited path for an honest committee, not a technical barrier.
 
 ## 5. Policies as access structures
 
-The contract asks a pluggable `IViewPolicy.satisfied(requestId)`; the *cryptographic* structure must match the *policy* structure, otherwise approvals would not be enough (or too much) to decrypt.
+The access structure is an **AND of thresholds**, and the sharing is built to match it, so approvals that satisfy the policy are exactly the approvals that can decrypt.
 
-| Policy | Access structure | Sharing |
+| Policy | Groups | Why it holds |
 | --- | --- | --- |
-| Majority (`t` of `n`) | threshold | Shamir over the scalar field |
-| Designated + extra; designated alone cannot decrypt | `s = a + b`; `a` held by the designated party, `b` shared `t`-of-`n` among the rest | two independent Shamir instances; combination adds the two recovered points |
-| Weighted / departmental | general monotone structure | linear secret sharing (LSSS) or replicated shares; same `approve` / `combine` interface |
+| Majority (`t` of `n`) | one group, threshold `t` | plain Shamir |
+| Designated + extra; designated alone cannot decrypt | group A = {designated}, threshold 1; group B = the others, threshold `t` | `s = s_A + s_B`: the designated member holds `s_A` and needs `t` members of B for `s_B`; B without A lacks `s_A` |
+| Departments (each must agree) | one group per department | every department contributes its part |
 
-A team picks a policy at deployment (or upgrades by resharing into a new structure). Several committees with different policies coexist; a token binds to exactly one at a time via its active `keyId`.
+OR-structures ("either the compliance team or the court") and weighted votes need linear secret sharing and are not implemented. Several committees with different structures coexist; a token binds to one at a time through its active `keyId`.
 
-## 6. Interface sketch
+## 6. Interface
+
+`IRegulatorCommittee` / `RegulatorCommittee` in `contracts/contracts/family/`:
 
 ```solidity
-interface IRegulatorCommittee {
-    function groupKey() external view returns (BabyJubjub.Point memory);   // = the token's active pk_reg
-    function epoch() external view returns (uint64);
-    function isMember(address) external view returns (bool);
-    function threshold() external view returns (uint32);                    // or policy-specific
-    function policy() external view returns (address);                      // IViewPolicy
-
-    function request(address token, bytes calldata scope, bytes32 purposeHash) external returns (uint256 requestId);
-    function approve(uint256 requestId, bytes calldata partialsOrHash, bytes calldata proof) external;
-    function combined(uint256 requestId) external view returns (bool ready);
-
-    event MemberSetChanged(uint64 indexed epoch, address[] members, uint32 threshold);
-    event ViewRequested(uint256 indexed requestId, address indexed token, address indexed by, bytes scope, bytes32 purposeHash);
-    event ViewApproved(uint256 indexed requestId, address indexed member, uint64 epoch);
-    event ViewReady(uint256 indexed requestId);
-}
+// lifecycle
+constructor(string name, GroupConfig[] genesis);                 // GroupConfig = (uint32 threshold, address[] members)
+function registerKey(Point pk) external;
+function deal(uint64 epoch, Point[] commitments, Point K, uint256[] enc) external;
+function ack(uint64 epoch) external;
+function complain(uint64 epoch, address dealer, uint8 reason) external;
+function restart() external;
+function propose(GroupConfig[] groups) external returns (uint256 proposalId);
+function vote(uint256 proposalId) external;
+// tokens and viewing
+function bindToken(address token) external;
+function request(address token, uint64 fromBlock, uint64 toBlock, address account, bytes purpose) external returns (uint256);
+function approve(uint256 requestId, Point K, uint256[] blob) external;
+// views
+function groupKey() external view returns (Point memory);
+function currentEpoch() / latestEpoch() / groupCount() / isMember(address);
+function epochInfo(uint64) / groupOf(uint64, uint256) / slotOf(uint64, address) / memberKey(address) / memberKeyAt(uint64, address);
+function dealtAt(uint64, address) / hasAcked(uint64, address) / proposal(uint256) / hasVoted(uint256, address);
+function viewRequest(uint256) / approvedAt(uint256, address) / requestCount() / proposalCount();
+// events: MemberKeyRegistered, EpochCreated, GroupConfigured, DealingStarted, Dealt, Acked, Complained,
+//         EpochActivated, EpochFailed, Proposed, Voted, TokenBound, ViewRequested, ViewApproved, ViewReady
 ```
 
-`RegulatorCommittee` (Shamir) and `RegulatorCommitteeDesignated` (two-level) are the first two implementations; both sit in `contracts/contracts/family/` beside the wrapper.
+`dealtAt`, `approvedAt` and `ViewRequest.requestedAt` store the block of each event, so a client fetches it with a one-block `eth_getLogs` instead of a range scan. The client (`test/family/lib/committee.ts`, copied to the dapp as `lib/family/committee.ts`) implements dealing, share recovery and verification, partials and proofs, masking and combination.
 
 ## 7. Protocol amendment required: plain ElGamal, memo keys from `r·pk_X` (shipped as A.1 0.4.0)
 
@@ -114,10 +130,35 @@ Both memos carry the same plaintext `(v, r)` under different pads (each party's 
 
 ## 8. Regulator UI
 
-The dapp's regulator view gets two modes: **single key** (paste `s_reg`, decrypt everything, today's design) and **committee** (a member signs in with their wallet, derives their share, and either posts partials for an open request or combines the posted partials into the decrypted table). Balance reconstruction per id is the same code in both modes.
+The dapp's **Family tools → Regulator view** (`/tools/regulator`) has two modes:
 
-## 9. Open points
+- **Single key**: paste `s_reg`, pick a token and a block range, and every regulated transfer in the scope is decrypted locally. A single key is a committee of one.
+- **Committee**: deploy a committee (presets for majority and designated + extra), derive and register the member key, deal / verify / acknowledge / complain / restart, propose and vote on membership, grant and bind a token, open requests, approve them, and, as requester, combine and decrypt.
 
-- Whether on-chain Chaum–Pedersen verification is mandatory or optional per request (draft: optional, hash-anchored by default).
-- Share derivation: from the member's wallet via EIP-712 like account keys (draft: yes, so a member never stores a file), with the DKG transcript rebuildable from chain + the member's wallet.
-- Whether the committee may also hold `MINTER_ROLE` for Track B tokens (draft: no — issuance and oversight stay separate).
+Both modes share the scope scan, the memo opening and check, and a net-change table per confidential id (confidential transfers plus public shield / unshield, mint / burn and wrap / unwrap amounts). A scope covering the token's whole life gives balances. One scan is capped by the same RPC budget as the token pages.
+
+## 9. Measured cost (BSC testnet, 2026-09-29)
+
+Committee of four: designated member (1 of 1) and a 2-of-3 group; one membership change. Committee `0x6f0c5070Ec246a6e68aCc9B0c530d3B07662477D`, test token CTT `0xC6487EF5cbBeBAe0F4f112E58ACe8726325F5Cd2` (the live A.1 / B.1 tokens keep their regulator keys).
+
+| Step | Gas |
+| --- | --- |
+| Deploy | 3,593,958 |
+| `registerKey` (the last genesis key also snapshots keys and opens dealing) | 73,739–79,201 (last 290,788) |
+| `deal` (threshold 2, three recipients) | 113,803–165,246 |
+| `ack` (the last genesis ack also checks the group key's subgroup) | 58,062–75,162 (last 2,263,793) |
+| `bindToken` (the token checks the new key's subgroup) | 2,275,272 |
+| `request` | 146,451 |
+| `approve` (one transfer in scope) | 83,114–96,113 |
+| `propose` / `vote` (last vote opens the new epoch) | 348,008 / 66,520 (last 744,104) |
+| Full run, including a real 0x01 transfer | 12,614,790 |
+
+Reproduce with `npx hardhat run scripts/family/committee-e2e-bsc.ts --network bscTestnet` in `contracts/`, then check the dapp's read path with `scripts/check-regulator.mts` in `dapp/`.
+
+## 10. Open points
+
+- **Liveness.** Genesis needs every member to deal, and every epoch needs every new member to acknowledge; one absent member stalls it. A timeout that drops non-responders is not implemented.
+- **Complaint griefing.** Any member of a dealing epoch can fail it. Complaints are not adjudicated on chain; a dispute resolution that reveals the disputed share would settle who cheated.
+- **Rogue-key bias in DKG.** The last dealer sees the others' commitments before dealing and can bias `groupKey`. Accepted for a regulator key; commit-then-reveal fixes it if needed.
+- **Third-party audit of partials.** Partials are encrypted to the requester, so only the requester can check them. Revealing `k·X_requester` for a disputed approval would let anyone verify it.
+- **Membership of the committee in `MINTER_ROLE`**: no. Issuance and oversight stay separate.
