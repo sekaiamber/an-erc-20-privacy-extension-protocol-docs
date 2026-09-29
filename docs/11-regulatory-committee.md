@@ -118,6 +118,16 @@ function viewRequest(uint256) / approvedAt(uint256, address) / requestCount() / 
 
 `dealtAt`, `approvedAt` and `ViewRequest.requestedAt` store the block of each event, so a client fetches it with a one-block `eth_getLogs` instead of a range scan. The client (`test/family/lib/committee.ts`, copied to the dapp as `lib/family/committee.ts`) implements dealing, share recovery and verification, partials and proofs, masking and combination.
 
+**Interface levels (ERC-165).** Tokens do not depend on any of this: they only hold a regulator public key and a role allowed to rotate it. The levels exist so the dapp can recognise a key holder.
+
+| Level | Interface (ERC-165 id) | Declares | What the dapp does |
+| --- | --- | --- | --- |
+| 1 | `IRegulatorKeyHolder` (`0x96ca07c9`) | `name()`, `groupKey()` | Names the holder, matches its key against a token's keys, decrypts through the offline job (§8) |
+| 2 | `IRegulatorCommittee` (`0x5d0a3fce`, extends level 1) | the whole protocol above, plus the off-chain formats of §4 | Drives it fully: administration, requests, approvals, combination |
+
+A team with its own design (another sharing scheme, an MPC custodian, a multisig) can declare level 1 and use the offline job; implementing level 2 gets the full screens. Declaring nothing still works through the offline job.
+
+
 ## 7. Protocol amendment required: plain ElGamal, memo keys from `r·pk_X` (shipped as A.1 0.4.0)
 
 A.1's memo uses an extra ECDH point `E = e·H` and derives the pad from `e·pk = s⁻¹·E`. Opening it needs `s⁻¹·E` — a *division* by the shared secret, which does not split across shares. Fix (A.1 v0.4, B.1 v0.2):
@@ -130,28 +140,43 @@ Both memos carry the same plaintext `(v, r)` under different pads (each party's 
 
 ## 8. Regulator UI
 
-The dapp's **Family tools → Regulator view** (`/tools/regulator`) has two modes:
+Decryption only ever needs `s·D` for each regulated transfer, and every value is self-checking: the memo opened with it must reproduce the regulator ciphertext (`C_reg − s·D = v·G`). So the dapp does not need to understand or trust how a regulator holds its key. It asks where `s·D` comes from.
 
-- **Single key**: paste `s_reg`, pick a token and a block range, and every regulated transfer in the scope is decrypted locally. A single key is a committee of one.
-- **Committee**: deploy a committee (presets for majority and designated + extra), derive and register the member key, deal / verify / acknowledge / complain / restart, propose and vote on membership, grant and bind a token, open requests, approve them, and, as requester, combine and decrypt.
+**Family tools → Regulator view** (`/tools/regulator`):
 
-Both modes share the scope scan, the memo opening and check, and a net-change table per confidential id (confidential transfers plus public shield / unshield, mint / burn and wrap / unwrap amounts). A scope covering the token's whole life gives balances. One scan is capped by the same RPC budget as the token pages.
+1. **Token.** Pick an A.1 or B.1 token; the page lists every regulator key it has had and labels those it recognises.
+2. **Source of `s·D`:**
+
+| Source | For | How |
+| --- | --- | --- |
+| Secret | a key kept as a file or in a vault | paste `s_reg`; computed locally |
+| Wallet | a regulator whose only credential is one wallet | `s = keccak256(EIP-712 signature) mod L`, domain `(PEP, 1, chainId)`, purpose `"Regulator key"`, an `index`; not bound to a token, so the key exists before the token and can serve several |
+| Committee | a level-2 contract (the family template or a compatible one) | request, approvals, combination (§4.3); a level-1 contract is sent to the offline job |
+| Offline job | anything else: a custom contract, an MPC custodian, a multisig, an air-gapped machine | export a job, the holder computes `s·D` its own way, import the result |
+
+3. **Results.** One table of decrypted transfers and one of net change per confidential id (confidential transfers plus public shield / unshield, mint / burn and wrap / unwrap amounts). A scope covering the token's whole life gives balances. One scan is capped by the same RPC budget as the token pages.
+
+**Offline job format.** The job (`pep-regulator-job/1`) lists the scope's items in order, each with `D`, `C_reg` and the regulator memo, plus the regulator keys and the public flows; `jobId` is the keccak256 of its canonical JSON, so an edited job is rejected. The result (`pep-regulator-result/1`) is `{ jobId, sD: [[x, y], …] }`, one point per item in the same order, decimal strings. A threshold system combines its own partials before answering. A wrong point shows up as a failed row.
+
+**Setting the key at deployment.** The A.1 and B.1 deploy forms take the regulator public key from any of: a generated or pasted secret, the wallet derivation above, a pasted public key, or a key holder's `groupKey()`.
+
+**Family tools → Committee admin** (`/tools/committee`) runs a level-2 committee: deployment (presets for majority and designated + extra), member keys, dealing / verification / acknowledgement / complaints / restart, membership votes, and granting and binding a token.
 
 ## 9. Measured cost (BSC testnet, 2026-09-29)
 
-Committee of four: designated member (1 of 1) and a 2-of-3 group; one membership change. Committee `0x6f0c5070Ec246a6e68aCc9B0c530d3B07662477D`, test token CTT `0xC6487EF5cbBeBAe0F4f112E58ACe8726325F5Cd2` (the live A.1 / B.1 tokens keep their regulator keys).
+Committee of four: designated member (1 of 1) and a 2-of-3 group; one membership change. Committee `0xa1ca936E528fD907866a6939dcBCD877074b5d51`, test token CTT `0xd2D3Ebe235302D98C3321F084C937c0Fb08F4cb0` (the live A.1 / B.1 tokens keep their regulator keys).
 
 | Step | Gas |
 | --- | --- |
-| Deploy | 3,593,958 |
-| `registerKey` (the last genesis key also snapshots keys and opens dealing) | 73,739–79,201 (last 290,788) |
-| `deal` (threshold 2, three recipients) | 113,803–165,246 |
-| `ack` (the last genesis ack also checks the group key's subgroup) | 58,062–75,162 (last 2,263,793) |
-| `bindToken` (the token checks the new key's subgroup) | 2,275,272 |
-| `request` | 146,451 |
-| `approve` (one transfer in scope) | 83,114–96,113 |
-| `propose` / `vote` (last vote opens the new epoch) | 348,008 / 66,520 (last 744,104) |
-| Full run, including a real 0x01 transfer | 12,614,790 |
+| Deploy | 3,620,075 |
+| `registerKey` (the last genesis key also snapshots keys and opens dealing) | 73,773–79,223 (last 290,810) |
+| `deal` (threshold 2, three recipients) | 113,801–165,280 |
+| `ack` (the last genesis ack also checks the group key's subgroup) | 58,084–75,184 (last 2,263,815) |
+| `bindToken` (the token checks the new key's subgroup) | 2,275,294 |
+| `request` | 146,473 |
+| `approve` (one transfer in scope) | 83,112–96,135 |
+| `propose` / `vote` (last vote opens the new epoch) | 348,030 / 66,520 (last 744,104) |
+| Full run, including a real 0x01 transfer | 12,641,431 |
 
 Reproduce with `npx hardhat run scripts/family/committee-e2e-bsc.ts --network bscTestnet` in `contracts/`, then check the dapp's read path with `scripts/check-regulator.mts` in `dapp/`.
 
