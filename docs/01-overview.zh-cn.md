@@ -14,7 +14,7 @@ ERC-20 是 EVM 生态中使用最广泛的代币标准，但它的账户模型�
 
 > 能否设计一种**扩展协议**，让一个 ERC-20 代币在保持标准接口兼容的同时，获得可选的隐私能力？
 
-答案不是一个协议，而是一个**协议家族**：Track 是别的 Track 做不到、并且改变了集成方、用户或监管方所依赖前提的路线（Track A 与 Track B 的差别是集成方看到的接口契约），Variant 按隐私保证与密码学内核划分，各条路线并存、独立演进（见 [06 家族架构](06-family-architecture.zh-cn.md)）。
+答案不是一个协议，而是一个**协议家族**：Track 是别的 Track 做不到的一种状态模型加信任基础，Variant 是 Track 之下的一套电路，模块是 Variant 上的合约层选配（例如公开账本）。各条路线并存、独立演进（见 [06 家族架构](06-family-architecture.zh-cn.md)）。
 
 ## 目标
 
@@ -42,4 +42,4 @@ ERC-20 是 EVM 生态中使用最广泛的代币标准，但它的账户模型�
 
 ## 当前主线
 
-**Track A（双账本）/ A.1（ElGamal 加密账户 + Groth16）**。原型已在本地网络端到端跑通，见 [tracks/track-a/variant-1/01-design.md](tracks/track-a/variant-1/01-design.zh-cn.md)。
+**Track A（加密账户）/ A.1（ElGamal + Groth16）**，有两种组合：带公开账本，以及纯隐私加 Wrapper 端口。原型已在本地网络端到端跑通，见 [tracks/track-a/variant-1/01-design.md](tracks/track-a/variant-1/01-design.zh-cn.md)。

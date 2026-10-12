@@ -14,7 +14,7 @@ The question this project studies is:
 
 > Can we design an **extension protocol** that gives an ERC-20 token optional privacy capabilities while keeping it compatible with the standard interface?
 
-The answer is not a single protocol but a **protocol family**: a Track is a route that no other Track can deliver and that changes what integrators, users or regulators must assume (Tracks A and B differ in the interface contract seen by integrators); Variants are divided by privacy guarantees and cryptographic core; the routes coexist and evolve independently (see [06 Family Architecture](06-family-architecture.md)).
+The answer is not a single protocol but a **protocol family**: a Track is a state model and a trust base that no other Track can deliver; a Variant is one set of circuits under a Track; a module is a contract-level option on a Variant, such as the public ledger. The routes coexist and evolve independently (see [06 Family Architecture](06-family-architecture.md)).
 
 ## Goals
 
@@ -42,4 +42,4 @@ The answer is not a single protocol but a **protocol family**: a Track is a rout
 
 ## Current Mainline
 
-**Track A (dual ledger) / A.1 (ElGamal encrypted accounts + Groth16)**. The prototype has been run end-to-end on a local network; see [tracks/track-a/variant-1/01-design.md](tracks/track-a/variant-1/01-design.md).
+**Track A (encrypted accounts) / A.1 (ElGamal + Groth16)**, in two compositions: with the public ledger, and privacy-only with the Wrapper port. The prototype has been run end-to-end on a local network; see [tracks/track-a/variant-1/01-design.md](tracks/track-a/variant-1/01-design.md).

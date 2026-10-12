@@ -12,11 +12,12 @@
 | 编号 | 标题 | 状态 |
 | --- | --- | --- |
 | [0001](0001-use-hardhat3-for-contracts.zh-cn.md) | 合约开发环境采用 Hardhat 3 | Accepted |
-| [0002](0002-track-variant-structure.zh-cn.md) | 协议家族按 Track / Variant 组织 | Accepted（第 1 条由 0007 修订） |
-| [0007](0007-track-definition.zh-cn.md) | 什么才算 Track：不可替代且外部可见 | Accepted |
+| [0002](0002-track-variant-structure.zh-cn.md) | 协议家族按 Track / Variant 组织 | Accepted（由 0007、0008 修订） |
+| [0007](0007-track-definition.zh-cn.md) | 什么才算 Track：不可替代且外部可见 | Accepted（由 0008 修订） |
+| [0008](0008-modules.zh-cn.md) | Track、Variant 与模块：公开账本是模块，不是 Track | Accepted（合约尚未重构） |
 | [0003](0003-erc20-surface-conventions.zh-cn.md) | ERC-20 表面约定：复用标准选择器与尾部 payload | Accepted |
 | [0006](0006-regulatory-committee.zh-cn.md) | 监管方改为门限委员会合约；密码内核改为普通 ElGamal | Accepted（§3 已落地；委员会原型 2026-09-29 落地） |
-| [0005](0005-family-wrapper.zh-cn.md) | 家族级 Wrapper 是工具，不取代 Track A | Accepted |
+| [0005](0005-family-wrapper.zh-cn.md) | 家族级 Wrapper 是工具，不取代 Track A | Accepted（用语由 0008 更新） |
 | [0004](0004-regulatory-access-principles.zh-cn.md) | 监管接入原则 | Accepted |
 
 ## A.1

@@ -2,7 +2,7 @@
 
 # 0005 家族级 Wrapper 是工具，不取代 Track A
 
-- 状态：Accepted
+- 状态：Accepted（用语由 [0008](0008-modules.zh-cn.md) 更新：Wrapper 是运行时模块，文中的「Track B」现在指「没有公开账本模块的代币」）
 - 日期：2026-09-27
 - 范围：家族
 

@@ -11,12 +11,12 @@
 | 03 | [方案全景](03-landscape.zh-cn.md) | 现有链上隐私方案调研与分类 |
 | 04 | [设计目标](04-design-goals.zh-cn.md) | 协议需要满足的性质与权衡 |
 | 05 | [威胁模型](05-threat-model.zh-cn.md) | 假设的攻击者能力、需要保护的信息、不在保护范围内的信息 |
-| 06 | [家族架构](06-family-architecture.zh-cn.md) | 家族级约定 / Track / Variant 三层结构与演进规则 |
+| 06 | [家族架构](06-family-architecture.zh-cn.md) | 家族的分层（约定 / Track / Variant / 模块）与演进规则 |
 | 07 | [家族级约定](07-family-conventions.zh-cn.md) | 规范性：选择器与 payload、type 注册表、句柄、授权、事件、密钥派生、监管接口、ERC-165 |
 | 08 | [路线图](08-roadmap.zh-cn.md) | 阶段计划与里程碑 |
-| — | [Tracks](tracks/README.zh-cn.md) | 协议家族的 Track / Variant 目录，主线 A.1 设计在此 |
+| — | [Tracks](tracks/README.zh-cn.md) | 协议家族的 Track / Variant 目录与已部署的组合，主线 A.1 设计在此 |
 | 09 | [开发指南](09-development.zh-cn.md) | 仓库、submodule、合约环境的使用方法 |
-| 10 | [家族工具：Wrapper](10-wrapper.zh-cn.md) | 通用 Wrapper：无公开账本代币（Track B）进 DeFi 的标准通道 |
+| 10 | [家族工具：Wrapper](10-wrapper.zh-cn.md) | 通用 Wrapper：没有公开账本模块的代币进 DeFi 的标准通道 |
 | 11 | [家族工具：监管委员会](11-regulatory-committee.zh-cn.md) | 门限监管密钥 + 链上成员 / 策略 / 查看审计；按项目部署的工具 |
 | — | [术语表](glossary.zh-cn.md) | 项目中使用的术语定义 |
 | — | [参考资料](references.zh-cn.md) | EIP、论文、代码库链接 |

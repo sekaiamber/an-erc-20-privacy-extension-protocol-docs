@@ -6,33 +6,43 @@ Status: `Draft`
 
 ## Layers
 
-The protocol family has three layers; each answers a question for a different audience:
+The protocol family has four layers. Each answers a different question:
 
-| Layer | Audience | Question answered | Carrier |
+| Layer | Question answered | What changing it costs | Carrier |
 | --- | --- | --- | --- |
-| **Family conventions** | All integrators and implementers | What a "privacy-extended ERC-20" looks like on-chain and how to call it | [07 Family conventions](07-family-conventions.md) |
-| **Track** | Integrators such as wallets, DEXes, explorers; also users and regulators where the route changes what they must assume | What cannot be changed without becoming a different system: the interface and ledger semantics, the state model, the trust base | `docs/tracks/track-x/README.md` |
-| **Variant** | End users and regulators | What is hidden, what is trusted, who is responsible for keys and proofs | `docs/tracks/track-x/variant-n/` |
+| **Family conventions** | What a "privacy-extended ERC-20" looks like on-chain and how to call it | Every Track is affected; an ADR with a migration note | [07 Family conventions](07-family-conventions.md) |
+| **Track** | Which state model and which trust base | Every family tool is adapted; a family ADR | `docs/tracks/track-x/README.md` |
+| **Variant** | Which set of circuits: the cryptographic core and what it hides | New verifiers, a new trusted setup, a new security review | `docs/tracks/track-x/variant-n/` |
+| **Module** | Which contract-level options this token carries, on unchanged circuits | A contract change only | Registered in [07 §13](07-family-conventions.md); implemented per Variant |
 
-A route is a Track only if it passes two tests ([ADR-0007](adr/0007-track-definition.md)):
+A route is a Track only if it passes two tests ([ADR-0007](adr/0007-track-definition.md), with the clause added by [ADR-0008](adr/0008-modules.md)):
 
-- **Not substitutable**: its defining property cannot be delivered inside an existing Track by adding a payload type, replacing a circuit, or adding a client-side convention.
+- **Not substitutable**: its defining property cannot be delivered inside an existing Track by adding a payload type, replacing a circuit, adding a client-side convention, or adding or leaving out a module.
 - **Externally visible**: it changes a premise that integrators, users or regulators must know in advance.
 
-What fails either test is a Variant (it changes the contract or the circuits) or a feature (no contract change). Tracks A and B differ in what integrators see: whether there is a public ledger, and what `balanceOf` / `transfer` mean. Variants under the same Track behave identically to integrators and differ only in their privacy guarantees and cryptographic core. Variants are self-contained and independent of one another (ADR-0002).
+What fails either test is a Variant (it changes the circuits), a module (it changes the contract only) or a feature (no contract change).
+
+Modules come in two kinds ([ADR-0008](adr/0008-modules.md)):
+
+- A **compile-time module** is inherited into the token contract. It is used for what reads or writes confidential state or changes how an existing function behaves. The public ledger is one.
+- A **runtime module** is an external contract plugged into a **port** of the token. It is used for what has its own state and needs nothing but the port. The family Wrapper is one.
+
+The base of every Variant is a privacy-only ledger. Whether a token also has a public ledger at its own address is a module, so two tokens of the same Track can differ in what `balanceOf` and a payload-less `transfer` do. Integrators learn this from the probe (07 §13), not from the Track letter. Variants are independent of one another; code is shared inside a Variant and through family runtime modules.
 
 ## Current family
 
 ```
-Track A  Dual ledger: public ledger (standard ERC-20) + confidential ledger
-  └─ A.1  twisted ElGamal encrypted accounts + Groth16, account = public key   ← mainline, prototype running
-Family tool  generic Wrapper (10-wrapper): issues wTOKEN for ledger-less tokens to reach DeFi   ← deployed (PEPWrapper)
-Family tool  Regulatory Committee (11): threshold regulator key, membership, policies, audit    ← in design (per project)
-Track B  Pure confidential: no public ledger
-  └─ B.1  A.1's confidential ledger without the public ledger, public mint / burn   ← prototype on BSC testnet (0.2.0)
+Track A  Encrypted accounts: one homomorphic-ciphertext balance per account, user-held keys, client-side proofs
+  └─ A.1  ElGamal on Baby Jubjub + Groth16, account = public key                ← mainline
+       ├─ with the public ledger            contract ConfidentialERC20A1, pep() A:1:0.4.0   ← prototype on BSC testnet
+       └─ privacy-only, with the Wrapper port   contract ConfidentialERC20B1, pep() B:1:0.2.0   ← prototype on BSC testnet
+Runtime module  generic Wrapper (10-wrapper): issues wTOKEN for tokens without the public ledger   ← deployed (PEPWrapper)
+Family tool     Regulatory Committee (11): threshold regulator key, membership, policies, audit    ← prototype
 ```
 
-## Typical structure of a Variant (A.1 as the example)
+The second composition still carries its former name, "Track B / B.1", in the contracts, the dApp and `docs/tracks/track-b/` until the contracts are restructured (ADR-0008, Transition). The letter B is assigned to no route.
+
+## Typical structure of a token (A.1 with the public-ledger module)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -57,11 +67,12 @@ Track B  Pure confidential: no public ledger
         └──────────────────────────────┘      └──────────────────────────────┘
 ```
 
-The family conventions govern the topmost edge (selector + payload) plus events, key derivation and the regulator interface; everything inside the box belongs to the Variant.
+The family conventions govern the topmost edge (selector + payload) plus events, key derivation and the regulator interface; everything inside the box belongs to the Variant. The left-hand box, the public ledger with `0x03` / `0x04`, is the public-ledger module; a privacy-only composition does not have it.
 
 ## Evolution rules
 
 - Adding a Track: only for a route that is actually going to be pursued; letters are not allocated in advance. It requires a family-level ADR stating how the route passes the two tests of ADR-0007 and what each family tool has to do to support it.
-- Adding a Variant: create a new directory under an existing Track with its own design, specification and evaluation table; no family-level ADR needed.
+- Adding a Variant: only for a new set of circuits. Create a new directory under an existing Track with its own design, specification and evaluation table; no family-level ADR needed.
+- Adding a module: register it in 07 §13 with its kind, its interface and, for a port, its limit; then implement it in each Variant that supports it. A module never changes a circuit, is never installable after deployment, and never runs in the token's storage (ADR-0008).
 - Changes to the family conventions affect every Track and must go through an ADR with a migration note.
 - Only the mainline Variant has an implementation (ADR-0002, item 5).

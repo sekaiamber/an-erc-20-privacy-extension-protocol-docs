@@ -10,7 +10,7 @@
 
 - 不新增转账选择器。机密操作复用 `transfer(address,uint256)` 与 `transferFrom(address,address,uint256)`。
 - payload 紧跟在 ABI 编码参数之后：`transfer` 从 `msg.data[68:]` 读，`transferFrom` 从 `msg.data[100:]` 读。
-- 无 payload 的调用是普通的公开账本操作（Track B 无公开账本时由其 Track 文档定义无 payload 的行为）。
+- 无 payload 的调用是普通的公开账本操作。没有公开账本模块（§13）的代币没有任何公开余额可动：`balanceOf` 返回 0，不带 payload 的 `transfer` 回退 `NoPublicLedger()`。
 
 ## 2. payload 头部
 
@@ -26,8 +26,8 @@ byte 2.. 由 type 决定的段
 | --- | --- | --- |
 | `0x01` | 机密转账 | 机密 → 机密 |
 | `0x02` | stealth 机密转账 | 机密 → 一次性机密 id |
-| `0x03` | 公开 → 机密 | 仅 Track A |
-| `0x04` | 机密 → 公开 | 仅 Track A |
+| `0x03` | 公开 → 机密 | 仅公开账本模块（§13） |
+| `0x04` | 机密 → 公开 | 仅公开账本模块（§13） |
 | `0x05`–`0x7F` | 保留 | 未来家族级类型 |
 | `0x80`–`0xFF` | Variant 私有 | 各 Variant 自定义，须在其规范中登记 |
 
@@ -58,7 +58,7 @@ handle = keccak256(payload) | (1 << 255)
 
 ## 7. 事件
 
-- 所有类型都发标准 `Transfer(from, to, x)`；`x` 为句柄或公开金额。Track A 中 `0x03` / `0x04` 由公开账本托管转移触发 `Transfer(from, this, x)` / `Transfer(this, to, x)`。
+- 所有类型都发标准 `Transfer(from, to, x)`；`x` 为句柄或公开金额。带公开账本模块时，`0x03` / `0x04` 由公开账本托管转移触发 `Transfer(from, this, x)` / `Transfer(this, to, x)`。
 - `0x03` / `0x04` 另发 `LedgerCrossing(from, to, type, amount)`。
 - 机密转账另发 Variant 定义的专用事件（A.1：`ConfidentialTransfer`），供收款方扫描与监管方解密。
 
@@ -96,8 +96,8 @@ interface IPEP {
 }
 ```
 
-- 合约通过 ERC-165 声明 `type(IPEP).interfaceId`；这是家族级唯一的接口 id。
-- 前端对任意地址先 `supportsInterface`，再读 `pep()` 解析 track / variant / version 并路由到对应页面。
+- 合约通过 ERC-165 声明 `type(IPEP).interfaceId`。模块各自增加自己的接口 id（§13）。
+- 前端对任意地址先 `supportsInterface`，再读 `pep()` 解析 track / variant / version 并路由到对应页面。页面提供哪些功能由模块决定（§13）。
 - 描述符是**自我声明**：家族是宽松的，链上没有注册表，也不校验合约行为是否与声明一致（与 ERC-20 一样）。填错描述符的后果由发布者承担。
 - `version` 跟随该 Variant 的设计文档版本；改电路或接口即升版本。
 
@@ -117,3 +117,50 @@ interface IPEP {
 | P4 交易关联 | … | |
 | P5 划转关联 | … | |
 | S1–S5 | 满足 / 不满足 | |
+
+## 13. 模块
+
+决策记录：[ADR-0008](adr/0008-modules.zh-cn.md)。模块是合约层的选配，原样复用 Variant 的电路。本节是家族的登记表；每个 Variant 实现它支持的模块，并写明不支持哪些。
+
+### 13.1 登记表
+
+| 模块 | 种类 | 接口 | 增加了什么 | 代币强制的限额 |
+| --- | --- | --- | --- | --- |
+| 公开账本 | 编译时 | 草案 | 代币地址上的标准 ERC-20 余额；payload 类型 `0x03` / `0x04`；`shieldedSupply()`；`LedgerCrossing` | 无 |
+| 角色铸造 | 编译时 | 草案 | `MINTER_ROLE` 按公开金额 `mint`：有公开账本时铸到公开账本，否则铸到机密账户，并附带按公开金额销毁 | 该 Variant 的供应上限 |
+| Wrapper 端口 | 端口加运行时模块 | `IPEPWrappable` | `wrapperMint`、`wrapperBurn`、`wrapper()`；由家族 Wrapper（[10](10-wrapper.zh-cn.md)）使用 | 记入量不得超过经该端口出去的数量（`wrappedOut`） |
+
+托管发行（锁定普通 ERC-20、发行隐私代币的金库）是保留名，尚未设计。
+
+标为「草案」的接口在合约重构时确定（ADR-0008「过渡」）。
+
+### 13.2 规则
+
+- **种类。** 编译时模块继承进代币合约。运行时模块是插在端口上的外部合约；端口本身是一个很小的编译时模块。
+- **顺序。** 编译时模块按固定顺序继承：内核、公开账本、发行、端口。
+- **供应。** 一种组合至少要有一个供应来源。
+- **只走端口。** 运行时模块通过普通调用到达，绝不在代币的存储里运行。
+- **不可安装。** 运行时模块在部署时定死，或只能设置一次。
+- **限额。** 每个端口都带一个由代币强制的限额；代币不依赖模块自己的检查。
+- **不设通用钩子。** 代币在转账前后不对外回调。
+- **不改电路。** 需要换电路的是 Variant。
+
+### 13.3 探针
+
+```solidity
+interface IPEPModules {
+    struct Module { bytes4 id; address at; }
+    /// `at == address(this)`：已编译进代币。其它非零地址：插在该端口上的运行时模块。
+    /// 零地址：端口存在，但没有插任何模块。
+    function pepModules() external view returns (Module[] memory);
+}
+```
+
+- `id` 是该模块接口的 ERC-165 接口标识；`supportsInterface(id)` 对它返回 true。
+- 这份清单与 `pep()` 一样是自我声明。
+- 集成方不得从 Track 字母推断代币有没有公开余额，要从探针读取。
+- 草案：已发布的两个合约都还没有实现 `IPEPModules`。目前检测 Wrapper 端口用的是 `supportsInterface(type(IPEPWrappable).interfaceId)`。
+
+### 13.4 没有公开账本模块的代币
+
+它的 ERC-20 表面见 [tracks/track-b/README.zh-cn.md](tracks/track-b/README.zh-cn.md)：`balanceOf` 恒为 0，不带 payload 的 `transfer` 回退，`totalSupply()` 等于已铸造减已销毁，铸造与销毁的金额公开。

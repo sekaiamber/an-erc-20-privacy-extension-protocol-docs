@@ -4,6 +4,8 @@ English | [中文](README.zh-cn.md)
 
 Status: `Prototype` — B.1 deployed on BSC testnet 2026-09-27 (started the same day, triggered by the question "can the shielded total be hidden?" — in Track A it cannot, see A.1 03-deployments and the threat model)
 
+> **Reclassified by [ADR-0008](../../adr/0008-modules.md) (2026-10-12).** "Track B" is no longer a Track. This directory describes the privacy-only composition of A.1: the same circuits, without the public-ledger module, with role issuance and the Wrapper port. The directory, the contract name and the `B:1:…` descriptor are kept until the contracts are restructured, and the text below still uses the old names.
+
 ## The integrator contract
 
 A Track B token has **no public ledger**. There is no address that "holds" tokens in the clear, so the question of how many tokens are in the confidential state does not exist: the only public number is `totalSupply`.

@@ -4,6 +4,8 @@ English | [中文](README.zh-cn.md)
 
 Status: `Draft`
 
+> **Reclassified by [ADR-0008](../../adr/0008-modules.md) (2026-10-12).** Track A is now defined as encrypted accounts. The dual ledger described below is one composition of A.1: the core with the public-ledger module. This document is rewritten when the contracts are restructured.
+
 ## Definition
 
 The token maintains two ledgers simultaneously:

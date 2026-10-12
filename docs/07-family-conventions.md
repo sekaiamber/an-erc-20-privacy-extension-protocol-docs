@@ -10,7 +10,7 @@ This document is the **normative** family-level convention. Track and Variant do
 
 - No new transfer selectors are added. Confidential operations reuse `transfer(address,uint256)` and `transferFrom(address,address,uint256)`.
 - The payload immediately follows the ABI-encoded arguments: `transfer` reads from `msg.data[68:]`, `transferFrom` reads from `msg.data[100:]`.
-- A call without a payload is an ordinary public-ledger operation (for Track B, which has no public ledger, the behavior without a payload is defined by its Track document).
+- A call without a payload is an ordinary public-ledger operation. A token without the public-ledger module (§13) has nothing public to move: `balanceOf` returns 0 and a payload-less `transfer` reverts `NoPublicLedger()`.
 
 ## 2. Payload header
 
@@ -26,8 +26,8 @@ byte 2.. segments determined by type
 | --- | --- | --- |
 | `0x01` | Confidential transfer | confidential → confidential |
 | `0x02` | Stealth confidential transfer | confidential → one-time confidential id |
-| `0x03` | Public → confidential | Track A only |
-| `0x04` | Confidential → public | Track A only |
+| `0x03` | Public → confidential | Public-ledger module only (§13) |
+| `0x04` | Confidential → public | Public-ledger module only (§13) |
 | `0x05`–`0x7F` | Reserved | future family-level types |
 | `0x80`–`0xFF` | Variant-private | defined by each Variant, must be registered in its specification |
 
@@ -58,7 +58,7 @@ Callers that cannot assemble calldata may first register with `prepare(from, to,
 
 ## 7. Events
 
-- Every type emits the standard `Transfer(from, to, x)`; `x` is a handle or a public amount. In Track A, `0x03` / `0x04` are triggered by the public-ledger custody transfer and emit `Transfer(from, this, x)` / `Transfer(this, to, x)`.
+- Every type emits the standard `Transfer(from, to, x)`; `x` is a handle or a public amount. With the public-ledger module, `0x03` / `0x04` are triggered by the public-ledger custody transfer and emit `Transfer(from, this, x)` / `Transfer(this, to, x)`.
 - `0x03` / `0x04` additionally emit `LedgerCrossing(from, to, type, amount)`.
 - Confidential transfers additionally emit a Variant-defined dedicated event (A.1: `ConfidentialTransfer`) for recipient scanning and regulator decryption.
 
@@ -96,8 +96,8 @@ interface IPEP {
 }
 ```
 
-- The contract declares `type(IPEP).interfaceId` via ERC-165; this is the only family-level interface id.
-- For any address, the frontend first calls `supportsInterface`, then reads `pep()` to parse track / variant / version and routes to the corresponding page.
+- The contract declares `type(IPEP).interfaceId` via ERC-165. Modules add their own interface ids (§13).
+- For any address, the frontend first calls `supportsInterface`, then reads `pep()` to parse track / variant / version and routes to the corresponding page. Which features the page offers follows from the modules (§13).
 - The descriptor is **self-declared**: the family is permissive, there is no on-chain registry, and no check that contract behavior matches the declaration (just like ERC-20). The consequences of a wrong descriptor are borne by the publisher.
 - `version` follows the version of that Variant's design document; changing a circuit or an interface bumps the version.
 
@@ -117,3 +117,50 @@ Each Variant self-assesses against P1–P5 and S1–S5 from [04 Design goals](04
 | P4 Transaction linkability | … | |
 | P5 Ledger-crossing linkability | … | |
 | S1–S5 | satisfied / not satisfied | |
+
+## 13. Modules
+
+Decision record: [ADR-0008](adr/0008-modules.md). A module is a contract-level option that reuses a Variant's circuits unchanged. This section is the family registry; each Variant implements the modules it supports and says which ones it does not.
+
+### 13.1 Registry
+
+| Module | Kind | Interface | Adds | Limit enforced by the token |
+| --- | --- | --- | --- | --- |
+| Public ledger | Compile-time | Draft | Standard ERC-20 balances at the token's address; payload types `0x03` / `0x04`; `shieldedSupply()`; `LedgerCrossing` | None |
+| Role issuance | Compile-time | Draft | `mint` by `MINTER_ROLE` with a public amount: into the public ledger when it is present, otherwise into a confidential account, together with a public-amount burn | The Variant's supply cap |
+| Wrapper port | Port and runtime module | `IPEPWrappable` | `wrapperMint`, `wrapperBurn`, `wrapper()`; used by the family Wrapper ([10](10-wrapper.md)) | Credits never exceed what left through the port (`wrappedOut`) |
+
+Custody issuance (a vault that locks a plain ERC-20 and issues the privacy token) is a reserved name. It is not designed.
+
+Interfaces marked "Draft" are fixed when the contracts are restructured (ADR-0008, Transition).
+
+### 13.2 Rules
+
+- **Kinds.** A compile-time module is inherited into the token contract. A runtime module is an external contract plugged into a port; the port is a small compile-time module.
+- **Order.** Compile-time modules are inherited in a fixed order: core, public ledger, issuance, ports.
+- **Supply.** A composition has at least one source of supply.
+- **Ports only.** A runtime module is reached with an ordinary call and never runs in the token's storage.
+- **No installing.** A runtime module is fixed at deployment or set once.
+- **Limits.** Every port carries a limit that the token enforces; the token does not rely on the module's own checks.
+- **No general hooks.** The token does not call out before or after a transfer.
+- **No circuit change.** Whatever needs a different circuit is a Variant.
+
+### 13.3 Probe
+
+```solidity
+interface IPEPModules {
+    struct Module { bytes4 id; address at; }
+    /// `at == address(this)`: compiled in. Another non-zero address: the runtime module plugged into
+    /// this port. Zero: the port exists and nothing is plugged in.
+    function pepModules() external view returns (Module[] memory);
+}
+```
+
+- `id` is the ERC-165 interface id of the module's interface; `supportsInterface(id)` returns true for it.
+- The list is self-declared, like `pep()`.
+- Integrators must not infer from the Track letter whether a token has public balances. They read it from the probe.
+- Draft: neither shipped contract implements `IPEPModules` yet. Today the Wrapper port is detected with `supportsInterface(type(IPEPWrappable).interfaceId)`.
+
+### 13.4 A token without the public-ledger module
+
+Its ERC-20 surface is described in [tracks/track-b/README.md](tracks/track-b/README.md): `balanceOf` is always 0, a payload-less `transfer` reverts, `totalSupply()` is minted minus burned, and mint and burn amounts are public.

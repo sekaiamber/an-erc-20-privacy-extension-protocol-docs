@@ -11,12 +11,12 @@ This directory contains all research and design documents of the "ERC-20 Privacy
 | 03 | [Landscape](03-landscape.md) | Survey and classification of existing on-chain privacy schemes |
 | 04 | [Design goals](04-design-goals.md) | Properties the protocol must satisfy and the trade-offs |
 | 05 | [Threat model](05-threat-model.md) | Assumed attacker capabilities, information to protect, information out of scope |
-| 06 | [Family architecture](06-family-architecture.md) | The three-layer structure of family conventions / Track / Variant and the evolution rules |
+| 06 | [Family architecture](06-family-architecture.md) | The layers of the family (conventions / Track / Variant / module) and the evolution rules |
 | 07 | [Family conventions](07-family-conventions.md) | Normative: selectors and payload, type registry, handles, authorization, events, key derivation, regulator interface, ERC-165 |
 | 08 | [Roadmap](08-roadmap.md) | Phase plan and milestones |
-| — | [Tracks](tracks/README.md) | Track / Variant directory of the protocol family; the mainline A.1 design lives here |
+| — | [Tracks](tracks/README.md) | Track / Variant directory of the protocol family and the deployed compositions; the mainline A.1 design lives here |
 | 09 | [Development guide](09-development.md) | How to use the repository, submodules and the contract environment |
-| 10 | [Family tool: Wrapper](10-wrapper.md) | The generic Wrapper: the standard DeFi path for tokens without a public ledger (Track B) |
+| 10 | [Family tool: Wrapper](10-wrapper.md) | The generic Wrapper: the standard DeFi path for tokens without the public-ledger module |
 | 11 | [Family tool: Regulatory Committee](11-regulatory-committee.md) | Threshold regulator key with on-chain membership, policies and view audit trail; per-project tool |
 | — | [Glossary](glossary.md) | Definitions of terms used in the project |
 | — | [References](references.md) | Links to EIPs, papers and code repositories |

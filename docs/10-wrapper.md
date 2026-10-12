@@ -6,9 +6,9 @@ Status: `Prototype` (2026-09-27). Decision record: [ADR-0005](adr/0005-family-wr
 
 ## 1. What it is
 
-A single, family-level contract that gives **privacy tokens without a public ledger** (Track B and any future non-ERC-20-shaped Variant) a standard ERC-20 face for DeFi. For each underlying token it issues a plain ERC-20 *wrapped token* (`wTOKEN`); wrapping moves value from the confidential ledger to the public wrapped token, unwrapping moves it back.
+A single, family-level contract that gives **privacy tokens without a public ledger** (any composition without the public-ledger module, and any future Variant that is not ERC-20-shaped) a standard ERC-20 face for DeFi. For each underlying token it issues a plain ERC-20 *wrapped token* (`wTOKEN`); wrapping moves value from the confidential ledger to the public wrapped token, unwrapping moves it back.
 
-It is a **tool, not a requirement**: Track A tokens carry their own public ledger and never use it; a Track B token that never needs DeFi never registers with it. The relationship is that of WETH to ETH.
+It is a **tool, not a requirement**: a token with the public-ledger module never uses it; a privacy-only token that never needs DeFi never registers with it. In the terms of [ADR-0008](adr/0008-modules.md) the Wrapper is a runtime module and `IPEPWrappable` is its port. The relationship is that of WETH to ETH.
 
 ## 2. Control inversion
 
@@ -75,16 +75,16 @@ A contract cannot own a confidential account: it holds no private key and cannot
 
 The wrapper is shared, so a bug in it is a bug in every token that registered it. Mitigations: no admin, no upgrade path, no external calls other than the two interface functions and its own `WrappedERC20`s, and a scope small enough to audit in an afternoon. A token that wants isolation can deploy its own instance of the same bytecode; the interface does not care.
 
-## 6. Relationship to the tracks
+## 6. Relationship to the public-ledger module
 
-| | Track A | Track B (+ wrapper) |
+| | With the public-ledger module | Privacy-only, with the Wrapper |
 | --- | --- | --- |
 | DeFi-facing asset | the token itself | `wTOKEN` from the wrapper |
 | Public ↔ confidential | built-in `0x03` / `0x04` | `unwrap` / `wrap` |
 | Privileged external party | none | the wrapper (mint) |
 | What stays hidden | confidential balances and amounts | same; the confidential aggregate is `underlying.totalSupply()` |
 
-The two are different integrator contracts, which is exactly the Track boundary (ADR-0002). Neither replaces the other.
+The two differ in what integrators see. Since ADR-0008 this is a choice of module inside one Variant, not a Track boundary. Neither replaces the other.
 
 ## 7. Open points
 

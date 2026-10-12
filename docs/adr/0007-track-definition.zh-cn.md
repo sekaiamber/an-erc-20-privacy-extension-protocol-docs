@@ -2,7 +2,7 @@
 
 # 0007 什么才算 Track：不可替代且外部可见
 
-- 状态：Accepted
+- 状态：Accepted（第 2、3 条由 [0008](0008-modules.zh-cn.md) 修订，第一项检验也在那里增加了一个分句）
 - 日期：2026-10-12
 - 范围：家族（修订 [ADR-0002](0002-track-variant-structure.zh-cn.md) 第 1 条）
 

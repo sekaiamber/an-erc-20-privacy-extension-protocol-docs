@@ -2,7 +2,7 @@ English | [中文](0002-track-variant-structure.zh-cn.md)
 
 # 0002 Organize the protocol family by Track / Variant
 
-- Status: Accepted (item 1 amended by [0007](0007-track-definition.md))
+- Status: Accepted (item 1 amended by [0007](0007-track-definition.md); items 1–4 amended by [0008](0008-modules.md); item 5 stands)
 - Date: 2026-09-23
 
 ## Context

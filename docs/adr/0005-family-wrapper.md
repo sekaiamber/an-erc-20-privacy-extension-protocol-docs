@@ -2,7 +2,7 @@ English | [中文](0005-family-wrapper.zh-cn.md)
 
 # 0005 A family-level Wrapper as a tool, not a replacement for Track A
 
-- Status: Accepted
+- Status: Accepted (terms updated by [0008](0008-modules.md): the Wrapper is a runtime module, and "Track B" now reads "a token without the public-ledger module")
 - Date: 2026-09-27
 - Scope: family
 

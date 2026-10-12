@@ -4,6 +4,8 @@ English | [中文](README.zh-cn.md)
 
 Version: `0.2.0`  Status: `Prototype` (deployed on BSC testnet 2026-09-27)
 
+> **Reclassified by [ADR-0008](../../../adr/0008-modules.md) (2026-10-12).** "B.1" is the privacy-only composition of A.1, not a separate Variant. The name, the directory and the `B:1:0.2.0` descriptor are kept until the contracts are restructured. Deployment records and review ids (`B1-F1` and so on) keep their names for good.
+
 | Document | Content |
 | --- | --- |
 | [01-design.md](01-design.md) | Design: what is inherited from A.1, what is removed, the ERC-20 surface, payload types, flows, circuits, evaluation, wrapper hooks, decisions |

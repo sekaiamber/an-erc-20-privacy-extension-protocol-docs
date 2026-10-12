@@ -28,6 +28,8 @@ Status: `Draft`
 - [x] Track B / B.1 design and prototype (2026-09-27, 0.1.0, BSC testnet) → `tracks/track-b/variant-1/`
 - [x] Family-level Wrapper design and prototype (2026-09-27) → `10-wrapper.md`, ADR-0005, `contracts/family/`
 - [ ] Regulatory Committee design (2026-09-27, draft) → `11-regulatory-committee.md`, ADR-0006; requires A.1 v0.4 / B.1 v0.2 memo amendment
+- [x] Family restructured into Track / Variant / module; the public ledger is a module and the former Track B is a composition of A.1 (2026-10-12) → ADR-0007, ADR-0008, `07-family-conventions.md` §13
+- [ ] Restructure the contracts and the dApp to ADR-0008: shared A.1 core with modules, `IPEPModules` probe, one version, redeploy both testnet tokens
 - [ ] Threat model review
 - [ ] `Review` versions of the family conventions and the A.1 design
 
