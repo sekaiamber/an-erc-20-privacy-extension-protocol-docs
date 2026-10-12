@@ -4,7 +4,7 @@ English | [中文](README.zh-cn.md)
 
 The protocol family is organized by **Track / Variant**:
 
-- **Track**: the interface contract and ledger topology as seen by integrators (wallets, DEXes, explorers). All Variants under the same Track behave identically to integrators.
+- **Track**: a route that cannot be delivered inside another Track by changing a payload type, a circuit or a client-side convention, and that changes what integrators, users or regulators must assume ([ADR-0007](../adr/0007-track-definition.md)). Tracks A and B differ in the interface contract and ledger topology seen by integrators (wallets, DEXes, explorers). All Variants under the same Track behave identically to integrators.
 - **Variant**: a concrete mechanism implementation under a Track, each self-contained and independent of the others. Each Variant has its own version number `a.b.c`.
 
 | Track | Mechanism | Variant | Status |

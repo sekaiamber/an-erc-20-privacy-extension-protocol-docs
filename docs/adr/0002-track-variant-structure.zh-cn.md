@@ -2,7 +2,7 @@
 
 # 0002 协议家族按 Track / Variant 组织
 
-- 状态：Accepted
+- 状态：Accepted（第 1 条由 [0007](0007-track-definition.zh-cn.md) 修订）
 - 日期：2026-09-23
 
 ## 背景

@@ -14,7 +14,7 @@ The question this project studies is:
 
 > Can we design an **extension protocol** that gives an ERC-20 token optional privacy capabilities while keeping it compatible with the standard interface?
 
-The answer is not a single protocol but a **protocol family**: Tracks are divided by the interface contract seen by integrators, Variants by privacy guarantees and cryptographic core; the routes coexist and evolve independently (see [06 Family Architecture](06-family-architecture.md)).
+The answer is not a single protocol but a **protocol family**: a Track is a route that no other Track can deliver and that changes what integrators, users or regulators must assume (Tracks A and B differ in the interface contract seen by integrators); Variants are divided by privacy guarantees and cryptographic core; the routes coexist and evolve independently (see [06 Family Architecture](06-family-architecture.md)).
 
 ## Goals
 

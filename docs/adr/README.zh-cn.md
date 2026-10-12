@@ -12,7 +12,8 @@
 | 编号 | 标题 | 状态 |
 | --- | --- | --- |
 | [0001](0001-use-hardhat3-for-contracts.zh-cn.md) | 合约开发环境采用 Hardhat 3 | Accepted |
-| [0002](0002-track-variant-structure.zh-cn.md) | 协议家族按 Track / Variant 组织 | Accepted |
+| [0002](0002-track-variant-structure.zh-cn.md) | 协议家族按 Track / Variant 组织 | Accepted（第 1 条由 0007 修订） |
+| [0007](0007-track-definition.zh-cn.md) | 什么才算 Track：不可替代且外部可见 | Accepted |
 | [0003](0003-erc20-surface-conventions.zh-cn.md) | ERC-20 表面约定：复用标准选择器与尾部 payload | Accepted |
 | [0006](0006-regulatory-committee.zh-cn.md) | 监管方改为门限委员会合约；密码内核改为普通 ElGamal | Accepted（§3 已落地；委员会原型 2026-09-29 落地） |
 | [0005](0005-family-wrapper.zh-cn.md) | 家族级 Wrapper 是工具，不取代 Track A | Accepted |

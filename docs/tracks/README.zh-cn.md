@@ -4,7 +4,7 @@
 
 协议家族按 **Track / Variant** 组织：
 
-- **Track**：集成方（钱包、DEX、浏览器）看到的接口契约与账本拓扑。同一 Track 下的所有 Variant 对集成方表现一致。
+- **Track**：一条无法在其它 Track 内靠改 payload 类型、电路或客户端约定做到，并且改变了集成方、用户或监管方必须知道的前提的路线（[ADR-0007](../adr/0007-track-definition.zh-cn.md)）。Track A 与 Track B 的差别是集成方（钱包、DEX、浏览器）看到的接口契约与账本拓扑。同一 Track 下的所有 Variant 对集成方表现一致。
 - **Variant**：Track 之下的一种具体机制实现，各自自包含，互不依赖。每个 Variant 独立版本号 `a.b.c`。
 
 | Track | 机制 | Variant | 状态 |
