@@ -2,7 +2,7 @@
 
 # 10 家族工具：通用 Wrapper
 
-状态：`Prototype`（2026-09-27）。决策记录：[ADR-0005](adr/0005-family-wrapper.zh-cn.md)。实现：`contracts/contracts/family/{IPEPWrappable,PEPWrapper,WrappedERC20}.sol`；已部署到 BSC testnet `0xcAF2c404a7EB33D3EE9f08AEB3Cf9a743c0Abe24`（0.1.1；0.1.0 实例作废）（见 [B.1 部署记录](tracks/track-b/variant-1/02-deployments.zh-cn.md)）。
+状态：`Prototype`（2026-09-27）。决策记录：[ADR-0005](adr/0005-family-wrapper.zh-cn.md)。实现：`contracts/contracts/family/{IPEPWrappable,PEPWrapper,WrappedERC20}.sol`；已部署到 BSC testnet `0xcAF2c404a7EB33D3EE9f08AEB3Cf9a743c0Abe24`（0.1.1；0.1.0 实例作废）（见[纯隐私组合的部署记录](tracks/track-a/variant-1-privacy-only/02-deployments.zh-cn.md)）。
 
 ## 1. 它是什么
 
@@ -83,6 +83,14 @@ Wrapper 是共享的，它的一个 bug 就是所有注册代币的 bug。缓解
 | 隐藏的内容 | 机密余额与金额 | 同；机密聚合量即 `底层.totalSupply()` |
 
 两者在集成方看到的东西上不同。自 ADR-0008 起，这是同一个 Variant 内的模块选择，不是 Track 的边界。互不取代。
+
+### 6.1 note 模型的代币（Track B）
+
+Wrapper 原样使用（[ADR-0009](adr/0009-track-b-notes.zh-cn.md)）。note 模型的代币没有账户 id，所以：
+
+- `wrap` 里的 `from` 是零地址。证明只绑定 `to` 和 `amount`。
+- `unwrap` 里的 `recipient` 是一整份创建 note 的 payload：一个公开输入金额等于 `amount` 的证明，加上它的承诺和 memo。
+- 限额不变：代币记入的数量永远不超过 `wrappedOut`。
 
 ## 7. 待决
 

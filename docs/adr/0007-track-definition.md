@@ -2,7 +2,7 @@ English | [中文](0007-track-definition.zh-cn.md)
 
 # 0007 What makes a Track: not substitutable and externally visible
 
-- Status: Accepted (items 2 and 3 amended by [0008](0008-modules.md), which also adds a clause to the first test)
+- Status: Accepted (items 2 and 3 amended by [0008](0008-modules.md), which also adds a clause to the first test; the note-model candidate was opened as Track B by [0009](0009-track-b-notes.md))
 - Date: 2026-10-12
 - Scope: Family (amends item 1 of [ADR-0002](0002-track-variant-structure.md))
 

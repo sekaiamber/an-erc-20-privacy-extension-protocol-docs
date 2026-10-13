@@ -37,6 +37,8 @@ byte 2.. 由 type 决定的段
 
 `to` 与 `from` 是 20 字节值，**其含义完全由 payload 类型决定**：无 payload 或 `0x03` 的 `from` 是公开账户；`0x01` / `0x02` / `0x04` 的 `from` 是机密 id；`0x01` / `0x03` 的 `to` 是机密 id。协议不判断一个值"是钱包还是 id"，不做兜底，发错类型的后果由发送方承担（ADR-0003 第 4 条）。
 
+Track B（note 模型）里没有 id。带 note 转账 payload 时，`from` 和 `to` 必须是代币自身的地址；销毁时 `to` 是零地址。见 [Track B 文档](tracks/track-b/README.zh-cn.md)。
+
 ## 4. 句柄
 
 机密转账（`0x01` / `0x02`）的 `amount` 槽位承载句柄：
@@ -61,6 +63,7 @@ handle = keccak256(payload) | (1 << 255)
 - 所有类型都发标准 `Transfer(from, to, x)`；`x` 为句柄或公开金额。带公开账本模块时，`0x03` / `0x04` 由公开账本托管转移触发 `Transfer(from, this, x)` / `Transfer(this, to, x)`。
 - `0x03` / `0x04` 另发 `LedgerCrossing(from, to, type, amount)`。
 - 机密转账另发 Variant 定义的专用事件（A.1：`ConfidentialTransfer`），供收款方扫描与监管方解密。
+- Track B：note 转账发出 `Transfer(token, token, handle)`，价值进入时发出 `Transfer(0x0, token, amount)`，价值离开时发出 `Transfer(token, 0x0, amount)`，其中 `token` 是代币自身的地址。专用事件没有任何能识别用户的索引字段。
 
 ## 8. 密钥派生
 
@@ -132,6 +135,8 @@ interface IPEP {
 
 托管发行（锁定普通 ERC-20、发行隐私代币的金库）是保留名，尚未设计。
 
+各 Variant 的支持情况：A.1 三个都实现了。B.1（仅设计）支持角色铸造和 Wrapper 端口，不支持公开账本。
+
 标为「草案」的接口在合约重构时确定（ADR-0008「过渡」）。
 
 ### 13.2 规则
@@ -163,4 +168,4 @@ interface IPEPModules {
 
 ### 13.4 没有公开账本模块的代币
 
-它的 ERC-20 表面见 [tracks/track-b/README.zh-cn.md](tracks/track-b/README.zh-cn.md)：`balanceOf` 恒为 0，不带 payload 的 `transfer` 回退，`totalSupply()` 等于已铸造减已销毁，铸造与销毁的金额公开。
+它的 ERC-20 表面见 [00-erc20-surface](tracks/track-a/variant-1-privacy-only/00-erc20-surface.zh-cn.md)：`balanceOf` 恒为 0，不带 payload 的 `transfer` 回退，`totalSupply()` 等于已铸造减已销毁，铸造与销毁的金额公开。这是 Track A 的情况。Track B 的代币在 `balanceOf` 和事件上不同，见 [Track B 文档](tracks/track-b/README.zh-cn.md)。

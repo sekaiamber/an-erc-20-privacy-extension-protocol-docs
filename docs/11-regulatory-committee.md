@@ -187,3 +187,4 @@ Reproduce with `npx hardhat run scripts/family/committee-e2e-bsc.ts --network bs
 - **Rogue-key bias in DKG.** The last dealer sees the others' commitments before dealing and can bias `groupKey`. Accepted for a regulator key; commit-then-reveal fixes it if needed.
 - **Third-party audit of partials.** Partials are encrypted to the requester, so only the requester can check them. Revealing `k·X_requester` for a disputed approval would let anyone verify it.
 - **Membership of the committee in `MINTER_ROLE`**: no. Issuance and oversight stay separate.
+- **Track B tokens.** The contract and the cryptography are unchanged: a note-model transaction also carries one `D` per regulator memo. The client must learn Track B's event to build the list of `D` points, and the `account` filter of `request` cannot be used, because no event of a note-model token names an account. A view of a Track B token always covers its whole block range ([ADR-0009](adr/0009-track-b-notes.md)).

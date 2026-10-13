@@ -8,17 +8,28 @@ The protocol family is organized by **Track / Variant / module** ([ADR-0008](../
 - **Variant**: one set of circuits under a Track, that is, a cryptographic core and what it hides. Variants are independent of one another. Each has its own version number `a.b.c`. A Variant number is the order of opening inside its Track; numbers do not correspond across Tracks.
 - **Module**: a contract-level option on a Variant that leaves the circuits unchanged, such as the public ledger or the Wrapper port. Modules are registered once for the family in [07 §13](../07-family-conventions.md). A token is a Variant plus a set of modules, and reports them through the probe.
 
-| Track | State model and trust base | Variant | Status |
+| Track | State model | Variant | Status |
 | --- | --- | --- | --- |
-| [A](track-a/README.md) | Encrypted accounts: one homomorphic-ciphertext balance per account, user-held keys, client-side proofs | [A.1](track-a/variant-1/README.md) ElGamal on Baby Jubjub + Groth16 | **Mainline**; two compositions on BSC testnet |
+| [A](track-a/README.md) | Encrypted accounts: one homomorphic-ciphertext balance per account | [A.1](track-a/variant-1/README.md) ElGamal on Baby Jubjub + Groth16 | **Mainline**; two compositions on BSC testnet |
+| [B](track-b/README.md) | Notes: a tree of commitments and a set of nullifiers, no accounts | [B.1](track-b/variant-1/README.md) Poseidon notes, one join-split circuit, Groth16 | Design only ([ADR-0009](../adr/0009-track-b-notes.md)) |
 
-Compositions of A.1 that are deployed:
+Both Tracks have the same trust base: user-held keys, client-side proofs, no external network.
+
+## Modules by Variant
+
+| Module | A.1 | B.1 (design) |
+| --- | --- | --- |
+| Public ledger | Yes | No |
+| Role issuance | Yes | Yes |
+| Wrapper port | Yes | Yes |
+
+## Deployed compositions
 
 | Composition | Public ledger | Role issuance | Wrapper port | Contract and descriptor today | Documents |
 | --- | --- | --- | --- | --- | --- |
-| With the public ledger | Yes | Yes, into the public ledger | No | `ConfidentialERC20A1`, `A:1:0.4.0` | [track-a/variant-1](track-a/variant-1/README.md) |
-| Privacy-only | No | Yes, into confidential accounts | Yes | `ConfidentialERC20B1`, `B:1:0.2.0` | [track-b/variant-1](track-b/variant-1/README.md) |
+| A.1 with the public ledger | Yes | Yes, into the public ledger | No | `ConfidentialERC20A1`, `A:1:0.4.0` | [track-a/variant-1](track-a/variant-1/README.md) |
+| A.1 privacy-only | No | Yes, into confidential accounts | Yes | `ConfidentialERC20B1`, `B:1:0.2.0` | [track-a/variant-1-privacy-only](track-a/variant-1-privacy-only/README.md) |
 
-The second composition was opened as "Track B / B.1". It keeps that name in the contracts, the dApp and its document directory until the contracts are restructured (ADR-0008, Transition). The letter B is assigned to no route.
+The second composition was opened as "Track B / B.1" and keeps that name in the contracts and the dApp, and that descriptor on chain, until the contracts are restructured (ADR-0008, Transition). It is not the Track B of the table above. No note-model token is deployed before that restructuring (ADR-0009, item 7).
 
-Discipline: only the mainline Variant has an implementation. Other Tracks / Variants are allowed only a one-page design sketch until the mainline runs end to end and produces gas figures.
+Discipline (ADR-0002, item 5): outside the mainline only a one-page sketch was allowed until the mainline ran end to end with gas figures. That condition has been met since A.1 0.4.0 (ADR-0009, Context).

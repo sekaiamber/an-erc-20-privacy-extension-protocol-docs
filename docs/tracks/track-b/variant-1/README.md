@@ -1,17 +1,13 @@
 English | [中文](README.zh-cn.md)
 
-# B.1: A.1's confidential ledger, without the public ledger
+# B.1: notes with one join-split circuit
 
-Version: `0.2.0`  Status: `Prototype` (deployed on BSC testnet 2026-09-27)
-
-> **Reclassified by [ADR-0008](../../../adr/0008-modules.md) (2026-10-12).** "B.1" is the privacy-only composition of A.1, not a separate Variant. The name, the directory and the `B:1:0.2.0` descriptor are kept until the contracts are restructured. Deployment records and review ids (`B1-F1` and so on) keep their names for good.
+Version: `0.1.0-draft`  Status: `Draft` (design only; nothing is implemented)
 
 | Document | Content |
 | --- | --- |
-| [01-design.md](01-design.md) | Design: what is inherited from A.1, what is removed, the ERC-20 surface, payload types, flows, circuits, evaluation, wrapper hooks, decisions |
-| [03-security-review.md](03-security-review.md) | Round-1 security self-review: B1-F1..F10, fixes shipped in 0.1.1 |
-| [02-deployments.md](02-deployments.md) | Deployment record (BSC testnet) with measured gas for mint / transfer / fold / burn / wrap / unwrap |
+| [01-design.md](01-design.md) | Design: notes, commitments and nullifiers, the tree, the join-split statement, the ERC-20 surface, memos, flows, client, scenarios, privacy evaluation, cost estimates, open decisions |
 
-## In one sentence
+Track: [B, notes](../README.md). Decision record: [ADR-0009](../../../adr/0009-track-b-notes.md).
 
-B.1 takes the A.1 confidential ledger verbatim (account = Baby Jubjub public key, twisted ElGamal balances, Groth16 proof-as-authorization, memos, regulator ciphertext, lazy fold and `0x80`) and deletes the public ledger: tokens are minted straight into confidential accounts with a public amount, move only as ciphertexts, and leave only by a public-amount burn. The only public aggregate is `totalSupply`.
+The name "B.1" was used until 2026-10-12 for what is now the privacy-only composition of A.1. Its documents, deployment records and review ids (`B1-F1` and so on) are in [track-a/variant-1-privacy-only](../../track-a/variant-1-privacy-only/README.md).

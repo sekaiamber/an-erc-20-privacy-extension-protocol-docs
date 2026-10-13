@@ -72,11 +72,11 @@ This project is concerned with the **"extending an existing ERC-20"** column, an
 | External solution category | Corresponding position in the family | Notes |
 | --- | --- | --- |
 | Category C encrypted accounts (Zether, Solana Confidential Transfer) | **Track A / A.1** (mainline) | Account model + homomorphic ciphertexts + ZK; on top of this, the project adds "account = public key, public key not on chain" and cryptographically enforced regulator ciphertexts |
-| Category A note-model shielded pools (Zcash Sapling, Railgun) | Track candidate, not opened | Payer, payee and the transfer graph hidden; addressing, wallet synchronisation and regulator reconstruction all differ from the account model |
+| Category A note-model shielded pools (Zcash Sapling, Railgun) | **Track B / B.1** (design only, [ADR-0009](adr/0009-track-b-notes.md)) | Payer, payee and the transfer graph hidden; addressing, wallet synchronisation and regulator reconstruction all differ from the account model. Unlike a pool, the token itself is the note ledger; a public ERC-20 form comes from the Wrapper |
 | Category C FHE (Zama, ERC-7984) | Track candidate, not opened | No user keys but depends on a threshold network; research only |
 | Category B stealth addresses (ERC-5564) | A feature, not a Track: the `0x02` stealth type of A.1 | Accounts are already decoupled from addresses; the payer only needs to derive a one-time public key. With public amounts it needs no token support at all |
 
-See ADR-0002, ADR-0007, ADR-0008, A1-0001 and A1-0002 for the rationale behind these choices. Whether a token has a public ledger at its own address is a module, not a row of this table (ADR-0008).
+See ADR-0002, ADR-0007, ADR-0008, ADR-0009, A1-0001 and A1-0002 for the rationale behind these choices. Whether a token has a public ledger at its own address is a module, not a row of this table (ADR-0008).
 
 ## Topic: Which Systems Have No pending (2026-09-26)
 

@@ -1,17 +1,13 @@
 [English](README.md) | 中文
 
-# B.1：A.1 的机密账本，去掉公开账本
+# B.1：note 模型，一个 join-split 电路
 
-版本：`0.2.0`　状态：`Prototype`（2026-09-27 部署到 BSC testnet）
-
-> **已由 [ADR-0008](../../../adr/0008-modules.zh-cn.md) 重新归类（2026-10-12）。** 「B.1」是 A.1 的纯隐私组合，不是独立的 Variant。在合约重构之前，名字、目录和 `B:1:0.2.0` 描述符保持不变。部署记录与评审编号（`B1-F1` 等）永久保留原名。
+版本：`0.1.0-draft`　状态：`Draft`（仅设计，没有任何实现）
 
 | 文档 | 内容 |
 | --- | --- |
-| [01-design.md](01-design.zh-cn.md) | 设计：从 A.1 继承什么、删掉什么、ERC-20 表面、payload 类型、流程、电路、评估、wrapper 钩子、决策 |
-| [03-security-review.md](03-security-review.zh-cn.md) | 第一轮安全自审：B1-F1..F10，修复随 0.1.1 发布 |
-| [02-deployments.md](02-deployments.zh-cn.md) | 部署记录（BSC testnet），含 mint / 转账 / 折叠 / 销毁 / wrap / unwrap 实测 gas |
+| [01-design.md](01-design.zh-cn.md) | 设计：note、承诺与作废符、树、join-split 命题、ERC-20 表面、memo、流程、客户端、情景、隐私评估、成本估计、待定决策 |
 
-## 一句话
+所属 Track：[B，note 模型](../README.zh-cn.md)。决策记录：[ADR-0009](../../../adr/0009-track-b-notes.zh-cn.md)。
 
-B.1 原样拿来 A.1 的机密账本（账户 = Baby Jubjub 公钥、twisted ElGamal 余额、Groth16 证明即授权、memo、监管密文、惰性折叠与 `0x80`），删掉公开账本：代币以公开金额直接铸造进机密账户，只以密文流转，只能以公开金额销毁离开。唯一公开的聚合量是 `totalSupply`。
+2026-10-12 之前，「B.1」这个名字指的是现在的 A.1 纯隐私组合。它的文档、部署记录和评审编号（`B1-F1` 等）在 [track-a/variant-1-privacy-only](../../track-a/variant-1-privacy-only/README.zh-cn.md)。

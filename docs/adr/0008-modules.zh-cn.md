@@ -2,7 +2,7 @@
 
 # 0008 Track、Variant 与模块：公开账本是模块，不是 Track
 
-- 状态：Accepted（结构已定；合约尚未重构，见「过渡」）
+- 状态：Accepted（结构已定；合约尚未重构，见「过渡」；「过渡」由 [0009](0009-track-b-notes.zh-cn.md) 更新）
 - 日期：2026-10-12
 - 范围：家族（修订 [ADR-0002](0002-track-variant-structure.zh-cn.md) 第 1–4 条、[ADR-0007](0007-track-definition.zh-cn.md) 第 2、3 条，以及 [ADR-0005](0005-family-wrapper.zh-cn.md) 的措辞）
 
@@ -101,6 +101,7 @@ Track A 与 Track B 是按一个问题分开的：代币有没有公开账本。
 
 - 合约重构之前，「B.1」仍然是第二个合约的名字，它的文档仍在 `docs/tracks/track-b/variant-1/` 下。部署记录与安全评审编号（`B1-F1` 等）永久保留原名。
 - 重构是单独的一步，需要 owner 另行同意：合约拆成共享内核加模块，统一为一个版本号，两个测试网代币以 `A:1:…` 重新部署，dApp 改为按模块路由，两个文档目录合并。完成之后字母 B 才空出来。
+- **2026-10-13 更新（[ADR-0009](0009-track-b-notes.zh-cn.md)）。** 字母 B 已在重构之前分配给 note 模型。第二个合约的文档移到了 `docs/tracks/track-a/variant-1-privacy-only/`。在重构之前，该合约保留原名和 `B:1:…` 描述符，在那之前也不会部署任何 note 模型的代币。
 
 ## 备选方案
 

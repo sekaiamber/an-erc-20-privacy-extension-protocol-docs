@@ -2,7 +2,7 @@ English | [中文](10-wrapper.zh-cn.md)
 
 # 10 Family tool: the generic Wrapper
 
-Status: `Prototype` (2026-09-27). Decision record: [ADR-0005](adr/0005-family-wrapper.md). Implementation: `contracts/contracts/family/{IPEPWrappable,PEPWrapper,WrappedERC20}.sol`; deployed on BSC testnet at `0xcAF2c404a7EB33D3EE9f08AEB3Cf9a743c0Abe24` (0.1.1; the 0.1.0 instance is deprecated) (see [B.1 deployments](tracks/track-b/variant-1/02-deployments.md)).
+Status: `Prototype` (2026-09-27). Decision record: [ADR-0005](adr/0005-family-wrapper.md). Implementation: `contracts/contracts/family/{IPEPWrappable,PEPWrapper,WrappedERC20}.sol`; deployed on BSC testnet at `0xcAF2c404a7EB33D3EE9f08AEB3Cf9a743c0Abe24` (0.1.1; the 0.1.0 instance is deprecated) (see the [deployments of the privacy-only composition](tracks/track-a/variant-1-privacy-only/02-deployments.md)).
 
 ## 1. What it is
 
@@ -85,6 +85,14 @@ The wrapper is shared, so a bug in it is a bug in every token that registered it
 | What stays hidden | confidential balances and amounts | same; the confidential aggregate is `underlying.totalSupply()` |
 
 The two differ in what integrators see. Since ADR-0008 this is a choice of module inside one Variant, not a Track boundary. Neither replaces the other.
+
+### 6.1 Note-model tokens (Track B)
+
+The Wrapper is used unchanged ([ADR-0009](adr/0009-track-b-notes.md)). A note-model token has no account ids, so:
+
+- In `wrap`, `from` is the zero address. The proof binds `to` and `amount` only.
+- In `unwrap`, `recipient` is a whole note-creating payload: a proof with a public input amount equal to `amount`, plus its commitments and memos.
+- The limit is the same: the token never credits more than `wrappedOut`.
 
 ## 7. Open points
 

@@ -37,6 +37,8 @@ byte 2.. segments determined by type
 
 `to` and `from` are 20-byte values whose **meaning is determined entirely by the payload type**: with no payload or with `0x03`, `from` is a public account; with `0x01` / `0x02` / `0x04`, `from` is a confidential id; with `0x01` / `0x03`, `to` is a confidential id. The protocol does not decide whether a value "is a wallet or an id" and provides no fallback; the consequences of sending the wrong type are borne by the sender (ADR-0003, item 4).
 
+In Track B (notes) there are no ids. With a note-transfer payload, `from` and `to` MUST be the token's own address; for a burn, `to` is the zero address. See the [Track B document](tracks/track-b/README.md).
+
 ## 4. Handles
 
 For confidential transfers (`0x01` / `0x02`) the `amount` slot carries a handle:
@@ -61,6 +63,7 @@ Callers that cannot assemble calldata may first register with `prepare(from, to,
 - Every type emits the standard `Transfer(from, to, x)`; `x` is a handle or a public amount. With the public-ledger module, `0x03` / `0x04` are triggered by the public-ledger custody transfer and emit `Transfer(from, this, x)` / `Transfer(this, to, x)`.
 - `0x03` / `0x04` additionally emit `LedgerCrossing(from, to, type, amount)`.
 - Confidential transfers additionally emit a Variant-defined dedicated event (A.1: `ConfidentialTransfer`) for recipient scanning and regulator decryption.
+- Track B: a note transfer emits `Transfer(token, token, handle)`, value entering emits `Transfer(0x0, token, amount)` and value leaving emits `Transfer(token, 0x0, amount)`, where `token` is the token's own address. The dedicated event has no indexed field that identifies a user.
 
 ## 8. Key derivation
 
@@ -132,6 +135,8 @@ Decision record: [ADR-0008](adr/0008-modules.md). A module is a contract-level o
 
 Custody issuance (a vault that locks a plain ERC-20 and issues the privacy token) is a reserved name. It is not designed.
 
+Support by Variant: A.1 implements all three. B.1 (design only) supports role issuance and the Wrapper port, and not the public ledger.
+
 Interfaces marked "Draft" are fixed when the contracts are restructured (ADR-0008, Transition).
 
 ### 13.2 Rules
@@ -163,4 +168,4 @@ interface IPEPModules {
 
 ### 13.4 A token without the public-ledger module
 
-Its ERC-20 surface is described in [tracks/track-b/README.md](tracks/track-b/README.md): `balanceOf` is always 0, a payload-less `transfer` reverts, `totalSupply()` is minted minus burned, and mint and burn amounts are public.
+Its ERC-20 surface is described in [00-erc20-surface](tracks/track-a/variant-1-privacy-only/00-erc20-surface.md): `balanceOf` is always 0, a payload-less `transfer` reverts, `totalSupply()` is minted minus burned, and mint and burn amounts are public. This holds for Track A. A Track B token differs in `balanceOf` and in its events; see the [Track B document](tracks/track-b/README.md).

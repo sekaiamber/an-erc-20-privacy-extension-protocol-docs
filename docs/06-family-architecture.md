@@ -32,15 +32,19 @@ The base of every Variant is a privacy-only ledger. Whether a token also has a p
 ## Current family
 
 ```
-Track A  Encrypted accounts: one homomorphic-ciphertext balance per account, user-held keys, client-side proofs
+Track A  Encrypted accounts: one homomorphic-ciphertext balance per account
   └─ A.1  ElGamal on Baby Jubjub + Groth16, account = public key                ← mainline
        ├─ with the public ledger            contract ConfidentialERC20A1, pep() A:1:0.4.0   ← prototype on BSC testnet
        └─ privacy-only, with the Wrapper port   contract ConfidentialERC20B1, pep() B:1:0.2.0   ← prototype on BSC testnet
+Track B  Notes: a tree of commitments and a set of nullifiers, no accounts
+  └─ B.1  Poseidon notes, one join-split circuit, Groth16                       ← design only (ADR-0009)
 Runtime module  generic Wrapper (10-wrapper): issues wTOKEN for tokens without the public ledger   ← deployed (PEPWrapper)
 Family tool     Regulatory Committee (11): threshold regulator key, membership, policies, audit    ← prototype
 ```
 
-The second composition still carries its former name, "Track B / B.1", in the contracts, the dApp and `docs/tracks/track-b/` until the contracts are restructured (ADR-0008, Transition). The letter B is assigned to no route.
+Both Tracks have the same trust base: user-held keys, client-side proofs, no external network.
+
+The privacy-only composition of A.1 was opened as "Track B / B.1". It keeps that name in the contracts and the dApp, and the `B:1:…` descriptor on chain, until the contracts are restructured (ADR-0008, Transition). No note-model token is deployed before that.
 
 ## Typical structure of a token (A.1 with the public-ledger module)
 
@@ -75,4 +79,4 @@ The family conventions govern the topmost edge (selector + payload) plus events,
 - Adding a Variant: only for a new set of circuits. Create a new directory under an existing Track with its own design, specification and evaluation table; no family-level ADR needed.
 - Adding a module: register it in 07 §13 with its kind, its interface and, for a port, its limit; then implement it in each Variant that supports it. A module never changes a circuit, is never installable after deployment, and never runs in the token's storage (ADR-0008).
 - Changes to the family conventions affect every Track and must go through an ADR with a migration note.
-- Only the mainline Variant has an implementation (ADR-0002, item 5).
+- Outside the mainline only a one-page sketch was allowed until the mainline ran end to end with gas figures (ADR-0002, item 5). That condition has been met since A.1 0.4.0.

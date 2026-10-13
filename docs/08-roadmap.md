@@ -25,11 +25,13 @@ Status: `Draft`
 - [x] Rewrite 01–05 in family terms; replace 06 / 07 with [Family architecture](06-family-architecture.md) and [Family conventions](07-family-conventions.md)
 - [x] First round of A.1 security self-review → `tracks/track-a/variant-1/02-security-review.md`
 - [x] A.1 0.3.0: `0x80` pure fold + `lastReceivedAtBlock` → ADR A1-0006
-- [x] Track B / B.1 design and prototype (2026-09-27, 0.1.0, BSC testnet) → `tracks/track-b/variant-1/`
+- [x] Privacy-only composition of A.1, opened as "Track B / B.1": design and prototype (2026-09-27, 0.1.0, BSC testnet) → `tracks/track-a/variant-1-privacy-only/`
 - [x] Family-level Wrapper design and prototype (2026-09-27) → `10-wrapper.md`, ADR-0005, `contracts/family/`
 - [ ] Regulatory Committee design (2026-09-27, draft) → `11-regulatory-committee.md`, ADR-0006; requires A.1 v0.4 / B.1 v0.2 memo amendment
 - [x] Family restructured into Track / Variant / module; the public ledger is a module and the former Track B is a composition of A.1 (2026-10-12) → ADR-0007, ADR-0008, `07-family-conventions.md` §13
 - [ ] Restructure the contracts and the dApp to ADR-0008: shared A.1 core with modules, `IPEPModules` probe, one version, redeploy both testnet tokens
+- [x] Track B opened for the note model; B.1 design, 0.1.0-draft (2026-10-13) → ADR-0009, `tracks/track-b/`
+- [ ] B.1: measure the on-chain Poseidon tree, then circuit, contract and client (after the ADR-0008 restructuring)
 - [ ] Threat model review
 - [ ] `Review` versions of the family conventions and the A.1 design
 

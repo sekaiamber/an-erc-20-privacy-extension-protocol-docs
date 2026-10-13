@@ -25,11 +25,13 @@
 - [x] 01–05 改写为家族口径；06 / 07 改为 [家族架构](06-family-architecture.zh-cn.md) 与 [家族级约定](07-family-conventions.zh-cn.md)
 - [x] A.1 第一轮安全自审 → `tracks/track-a/variant-1/02-security-review.md`
 - [x] A.1 0.3.0：`0x80` 纯折叠 + `lastReceivedAtBlock` → ADR A1-0006
-- [x] Track B / B.1 设计与原型（2026-09-27，0.1.0，BSC testnet）→ `tracks/track-b/variant-1/`
+- [x] A.1 的纯隐私组合（当初以「Track B / B.1」开设）：设计与原型（2026-09-27，0.1.0，BSC testnet）→ `tracks/track-a/variant-1-privacy-only/`
 - [x] 家族级 Wrapper 设计与原型（2026-09-27）→ `10-wrapper.md`、ADR-0005、`contracts/family/`
 - [ ] 监管委员会设计（2026-09-27，草案）→ `11-regulatory-committee.md`、ADR-0006；需要 A.1 v0.4 / B.1 v0.2 的 memo 修订
 - [x] 家族改为 Track / Variant / 模块三层；公开账本是模块，原 Track B 是 A.1 的一种组合（2026-10-12）→ ADR-0007、ADR-0008、`07-family-conventions.md` §13
 - [ ] 按 ADR-0008 重构合约与 dApp：A.1 共享内核加模块、`IPEPModules` 探针、统一版本号、重新部署两个测试网代币
+- [x] 为 note 模型开设 Track B；B.1 设计 0.1.0-draft（2026-10-13）→ ADR-0009、`tracks/track-b/`
+- [ ] B.1：先实测链上 Poseidon 树，再做电路、合约和客户端（在 ADR-0008 的重构之后）
 - [ ] 威胁模型评审
 - [ ] 家族级约定与 A.1 设计的 `Review` 版本
 

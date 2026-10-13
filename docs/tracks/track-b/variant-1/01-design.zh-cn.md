@@ -2,177 +2,273 @@
 
 # B.1 设计（0.1.0-draft）
 
-版本：`0.2.0-draft`　状态：`Draft`　日期：2026-09-28
+状态：`Draft`。本文内容都还没有实现。文中的约束数、证明时间和 gas 数字都是估计，不是实测。
 
-> 0.2.0：随 A.1 0.4.0 切换到普通 ElGamal（`pk = s·H`，共享 `D`、每方一个 `C_X`，memo 密钥来自 `r·pk_X`，无 `E`）；电路、payload 布局、事件字段与 A.1 0.4.0 一致。`pep()` = `B:1:0.2.0`。
-> 0.1.0：由 A.1 0.3.1 去掉公开账本推导而来。**已实现并于 2026-09-27 与家族 Wrapper 一起部署到 BSC testnet**；实测 gas 见 [02-deployments](02-deployments.zh-cn.md)。待决 B1-1~B1-5 按草案定案。
+所属 Track：[B，note 模型](../README.zh-cn.md)。由 [ADR-0009](../../../adr/0009-track-b-notes.zh-cn.md) 开设。
 
-## 0. B.1 为什么存在
+## 0. B.1 是什么
 
-双账本代币无法隐藏供应量中有多少处于机密状态：公开账本守恒，每次划转都是一次公开的余额变动（Track B README、A.1 03-deployments）。有些部署（闭环结算、会员积分、受监管工具）不需要 DeFi 可组合性，却需要隐藏这个总量。B.1 用相对 A.1 最小的改动回应这个需求，让 A.1 上已经验证过的一切（电路、安全自审、客户端库、监管流程）都能沿用。
+B.1 是 note 模型的第一个 Variant。价值存放在 **note** 里。创建一张 note，就是把它的承诺加进链上的一棵 Merkle 树；花掉一张 note，就是公开它的作废符。链上没有账户、没有 id、没有余额。
 
-## 1. 与 A.1 的关系
+能复用 A.1 的地方都复用：Baby Jubjub、Poseidon、Groth16、由钱包签名派生的密钥、在共享的 `D = r·H` 下加密的 memo，以及监管密钥接口。
 
 | | A.1 | B.1 |
 | --- | --- | --- |
-| 机密账户模型 | pk = s⁻¹·H，id = low160(Poseidon(pk))，pk 不上链 | **完全相同** |
-| 余额密文、available / pending / folded、nonce、foldedAtBlock、lastReceivedAtBlock、decryptable | 同 0.3.0 | **完全相同** |
-| `0x01` 转账电路（15 个打包公开输入）、memo、监管密文 | 同 0.3.0 | **完全相同，链上可直接复用同一个验证器合约** |
-| `0x80` 折叠电路 | 同 0.3.0 | **完全相同** |
-| `0x04` unshield 电路（7 个公开输入，金额公开） | 把托管释放到公开地址 | **原样复用为销毁证明**（`0x81`）：电路只证明「我拥有 ≥ amount 且这是扣款密文」，合约拿这个金额做什么是合约的事 |
-| 公开账本（`OpenZeppelin ERC20` 余额） | 有 | **删除** |
-| `0x03` shield | 公开 → 机密，任何人，无证明 | **改为 `mint(id, amount)`**，MINTER 角色，`totalSupply += amount` |
-| `0x04` unshield | 机密 → 公开地址 | **改为 `0x81` 销毁**：`transferFrom(id, address(0), amount)`，`totalSupply −= amount` |
-| `balanceOf` | 公开余额 | **恒为 0**（Track 决定 B-1） |
-| 无 payload 的 `transfer` / `transferFrom` | 公开 ERC-20 转账 | **revert `NoPublicLedger()`**（B-3） |
-| 托管地址 / `shieldedSupply()` | `balanceOf(this) == shieldedSupply()` | **不存在**；没有需要对账的东西 |
-| `prepare` / `cancel` | `0x01` 与 `0x04` | `0x01` 与 `0x81` |
-| 监管密钥、轮换、`regulatorKey()` 视图 | 同 0.3.0 | **完全相同** |
-| `pep()` | `"A:1:0.3.0"` | `"B:1:0.1.0"` |
+| 价值存在哪里 | 每个账户 id 一份密文余额 | note：树里的承诺 |
+| 链上的收款方 | 稳定的 id `Poseidon(pk)` | 没有 |
+| 链上的付款方 | 稳定的 id | 没有（提交交易的地址可见，见 §12） |
+| 收两次款 | 两笔转给同一个 id 的转账 | 两条互不相干的承诺 |
+| 花钱时有人打款进来 | 需要 `pending` 和折叠 | 互不影响：证明引用的是某个树根 |
+| 电路 | transfer、unshield、fold | 只有一个：join-split |
+| 钱包怎么找到自己的钱 | 读自己的账户槽和自己的事件 | 对该代币的每笔交易逐条试解密 |
+| 监管视图 | 按账户，用 id 过滤事件 | 一个区块区间内的全部交易 |
 
-所有标为「完全相同」的部分是复制，不是共享：Variant 保持自包含（ADR-0002）。Solidity 源码将是 `ConfidentialERC20A1` 删掉公开账本路径后的副本；电路则是逐字节相同的文件（A.1 已部署的链上验证器可以直接指向）。
+## 1. 设计原则
 
-## 2. ERC-20 表面
+1. **链上只存承诺和作废符，不存任何关于用户的东西。** 没有公钥，没有 id，没有按用户划分的存储槽。
+2. **只有一个电路。** 转账、铸造、销毁和经 Wrapper 的进出是同一个命题，只是公开金额不同。
+3. **每笔交易长得一样。** 不管实际有几个输入和输出，总是公开两个作废符和两条承诺。
+4. **证明即授权。** 花费由「知道所有者密钥」的证明授权，任何人都可以提交交易。
+5. **监管在电路里强制。** 如果监管 memo 没有如实写出真实的输入、输出的真实所有者和金额，这笔交易就证不出来。
+6. **证明不会过期。** 证明引用的是某个树根，而所有历史树根都一直有效。
 
-```solidity
-function totalSupply() external view returns (uint256);            // 铸造 − 销毁，公开
-function balanceOf(address) external pure returns (uint256);       // 恒为 0
-function transfer(address to, uint256 x) external returns (bool);  // 必须带 payload，见 §3
-function transferFrom(address from, address to, uint256 x) external returns (bool);
-function approve(address, uint256) external returns (bool);        // 无实际语义：不记录任何有用的东西
-function allowance(address, address) external view returns (uint256); // 恒为 0
-function mint(address id, uint256 amount) external;                // MINTER_ROLE
-function decimals() external pure returns (uint8);                 // 6
-```
+## 2. 密码学参数
 
-`transfer(to, x)` 没有公开的付款方，所以 B.1 只给它一种含义：**带 `0x01` payload 时拒绝**（`0x01` 需要 `from` = 机密 id，而 `transfer` 带不了），不带 payload 时 revert。实际上 B.1 的每个操作都走 `transferFrom`。保留这个选择器只是为了让代币在 ABI 意义上仍然*是*一个 ERC-20。
-
-## 3. payload 类型
-
-| type | 含义 | `from` | `to` | `x` | 证明 | 供应量 |
-| --- | --- | --- | --- | --- | --- | --- |
-| `0x01` | 机密 → 机密 | 机密 id | 机密 id | 句柄 | 是（A.1 转账电路） | 0 |
-| `0x80` | 折叠 | 机密 id | 同一 id | 句柄 | 是（A.1 折叠电路） | 0 |
-| `0x81` | **销毁**（B.1 私有） | 机密 id | `address(0)` | 公开金额 | 是（A.1 unshield 电路） | −x |
-| `0x03`、`0x04` | 仅 Track A | — | — | — | — | revert `TypeNotAllowedHere` |
-
-flags 沿用家族的（`includePending`、`decryptable`）。句柄沿用家族的（`keccak256(payload) | 2²⁵⁵`）。`0x01`、`0x80`、`0x81` 的 payload 字节布局分别与 A.1 的 `0x01`、`0x80`、`0x04` 完全一致。
-
-## 4. 状态
-
-```solidity
-struct Account { Ciphertext available; Ciphertext pending; Ciphertext folded;
-                 uint64 nonce; uint64 foldedAtBlock; uint64 lastReceivedAtBlock; bytes decryptable; }
-mapping(address id => Account) _accounts;
-mapping(address id => mapping(uint256 handle => Prepared)) _prepared;
-uint256 totalSupply;                      // 唯一公开的聚合量
-RegulatorKey[] _regulatorKeys; uint32 activeRegulatorKeyId;
-```
-
-不变量（编号延续 A.1）：
-
-| # | 不变量 |
-| --- | --- |
-| I1 | 所有 id 的 plaintext(available + pending − folded) 之和 == `totalSupply`（只有监管方或持有全部密钥的人能检查；链上无法检查） |
-| I2 | `totalSupply ≤ 2⁶⁴ − 1`，每个账户余额 < 2⁶⁴，每笔操作金额 < 2⁴⁸（A1-0005 不变） |
-| I3–I5 | 同 A.1（每份密文只有一个写者、pending / folded 单调、nonce 严格递增） |
-
-## 5. 流程
-
-### 5.1 铸造
-
-```
-require MINTER_ROLE; require id != 0; require amount < 2^48; require totalSupply + amount ≤ 2^64 − 1
-totalSupply += amount
-_accounts[id].pending += (amount·G, 0) ; lastReceivedAtBlock = block.number
-emit Transfer(address(0), id, amount); emit Minted(id, amount)
-```
-
-与 A.1 的 shield 相同，只是没有托管转移（约 −20k gas）。收款方从 `Minted` 事件（公开）得知金额，与 A.1 从 `LedgerCrossing` 得知完全一样。
-
-### 5.2 `0x01` 机密转账、`0x80` 折叠
-
-逐字与 A.1 §4.2 / §4.3 / §4.6 相同。
-
-### 5.3 `0x81` 销毁
-
-```
-require to == address(0); require amount < 2^48
-u = parseUnshield(payload)                          // 与 A.1 0x04 同一个解析器
-verify(unshieldVerifier, pub = [from | nonce<<160, this | chainId<<160, amount | signBits<<48, xs[4]])
-_applySpend(_accounts[from], (u.Camt, u.Dsender), u.decryptable, flags)
-totalSupply -= amount
-emit Transfer(from, address(0), amount); emit Burned(from, amount)
-```
-
-与 A.1 的 `0x04` 一样可中继、可 prepare。没有「收款方」：公开金额就此消失。
-
-## 6. 电路
-
-没有新电路。A.1 的 `transfer.circom`、`fold.circom`、`unshield.circom` 原样复用；一条链上已为 A.1 部署的验证器合约可以直接传给 B.1 的构造函数。公开输入绑定了 `contractAddr`，为 A.1 代币生成的证明不能重放到 B.1 代币上，反之亦然。
-
-## 7. 事件
-
-| 事件 | 字段 | 时机 |
+| 项 | 取值 | 说明 |
 | --- | --- | --- |
-| `Transfer` | `(from, to, x)` | 每个操作（家族 §7）；铸造 / 销毁使用零地址，这正是索引器对供应量变化的预期 |
-| `Minted` | `(id, amount)` | 铸造 |
-| `Burned` | `(id, amount)` | `0x81` |
-| `ConfidentialTransfer`、`ConfidentialTransferPrepared`、`OperationPrepared`、`PreparedExecuted`、`PreparedCancelled`、`Folded`、`RegulatorKeyRotated` | 同 A.1 | 同 A.1 |
+| 曲线、生成元 | Baby Jubjub；`H` 用于密钥和随机数 | 与 A.1 相同。不需要 `G`：这里没有同态密文 |
+| 哈希 | Poseidon | 每种用途带不同的域标签 |
+| 证明系统 | Groth16（circom + snarkjs） | 与 A.1 相同 |
+| 私钥 | `s ∈ Z_l`，按家族约定 §8 派生，purpose 为 `"B.1 key"` | 同一个钱包用不同的 `index` 派生多把密钥 |
+| 公钥 | `pk = s·H` | 永不上链 |
+| note | `(v, pk, ρ)`：金额、所有者公钥、随机域元素 | 由所有者的钱包保存 |
+| 承诺 | `cm = Poseidon(v, pk.x, pk.y, ρ)` | 链上关于一张 note 只存这一个值 |
+| 作废符 | `nf = Poseidon(s, ρ, leafIndex)` | 只有所有者算得出；每个树位置一个 |
+| 树 | 增量二叉 Merkle 树，Poseidon，深度 32 | 只增不减。共 2³² 个叶子；一笔交易追加两个 |
+| 树根 | 这棵树出现过的每一个树根都被接受 | §3.3 |
+| 金额位宽 | note 和公开金额都满足 `v < 2⁶⁴` | 由供应上限 `2⁶⁴ − 1` 保证 |
+| decimals | 6 | 与 A.1 相同 |
 
-`LedgerCrossing` 不存在（没有另一个账本）。
+## 3. note
 
-## 8. 视图
+### 3.1 收款码
 
-`confidentialAccountOf(id)`、`preparedOf`、`regulatorKey`、`regulatorKeyCount`、`pep()` 与 ERC-165 同 A.1。`shieldedSupply()` 删除。
+收款码就是公钥 `pk`，64 字节，由收款人在链下交给付款人。它是稳定的、可以重复使用的，因为它从不出现在链上：每次向它付款，都会用一个新的 `ρ` 生成一条承诺；同一把公钥名下的两条承诺，除了所有者和监管方，谁也关联不起来。
 
-## 9. 隐私目标评估（家族约定 §12）
+没有注册，也没有开户。
+
+### 3.2 承诺与作废符
+
+- 承诺隐藏了金额和所有者。`ρ` 让它每次都不一样。
+- 作废符里包含叶子位置。如果付款人用相同的 `(v, pk, ρ)` 创建了两张 note，它们位于不同位置，作废符不同，所以两张都能花。
+- 没有 `s` 就算不出一张 note 的作废符，所以没有人能看出一个公开的作废符对应哪一条承诺。
+
+### 3.3 树与树根
+
+- 一笔交易把它的两条承诺作为一对追加：先把这一对哈希一次，再向上哈希 31 次到树根。
+- 合约用 `mapping(uint256 => bool)` 记下每一个树根，证明针对其中任何一个都有效。旧树根下已经在树里的 note 现在仍然在树里，双花由作废符集合防止，所以旧树根是安全的。
+- 钱包使用最新的树根。使用旧树根会让观察者知道被花的 note 比那个树根更早。
+
+## 4. join-split 命题
+
+一笔交易最多花掉同一个所有者的两张 note，并创建两张 note。
+
+```
+v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
+```
+
+**公开输入**（逻辑列表；与 A.1 一样，标量打包成字，点只公开 `x` 和一个符号位）：`root, nf[2], cm[2], v_pub_in, v_pub_out, to, chainId, contract, regKeyId, pk_reg, D, memo_recv[2][3], memo_reg[5]`。打包后约 21 个域元素。
+
+**私有输入**：`s`；每个输入的 `(v, ρ, leafIndex, path)`；每个输出的 `(v, pk, ρ, ref)`；`r`。
+
+| # | 命题 | 说明 |
+| --- | --- | --- |
+| 1 | `pk_in == s·H` | 两个输入属于同一把密钥 |
+| 2 | 对每个输入：`cm_in = Poseidon(v, pk_in, ρ)` 位于 `root` 下的 `leafIndex`，**或者** `v == 0` | `v == 0` 的输入是占位输入，跳过成员检查 |
+| 3 | 对每个输入：`nf == Poseidon(s, ρ, leafIndex)` | 占位输入用随机的 `ρ`，它的作废符看起来和别的没有区别 |
+| 4 | 对每个输出：`cm == Poseidon(v, pk, ρ)`，且 `pk` 在曲线上 | 公钥不在素数阶子群里时，这张 note 谁也花不了；这是付款人的损失，和填错收款码一样 |
+| 5 | 每个 `v`、`v_pub_in`、`v_pub_out` 都小于 `2⁶⁴` | |
+| 6 | 上面的平衡等式 | |
+| 7 | `D == r·H` | 两个收款方和监管方共用 |
+| 8 | 对每个输出 `j`：`memo_recv[j] == Enc(r·pk_j; v_j ‖ ρ_j ‖ ref_j)` | `ref` 是付款人自由填写的字段，见 §6.1 |
+| 9 | `memo_reg == Enc(r·pk_reg; 输入 ‖ 输出)` | §6.2。真实输入在 memo 里的叶子位置等于第 2 条里用的位置；占位输入则是「无」标记 |
+| 10 | `to`、`chainId`、`contract`、`regKeyId` 与符号位的打包 | 把证明绑定到这个代币、这条链，以及出金时的公开收款地址 |
+
+估计规模：45,000 到 55,000 个约束，A.1 的 transfer 是 29,719 个。差距主要来自两条 Merkle 路径。
+
+## 5. ERC-20 表面
+
+家族约定 §1–§5 适用：标准选择器、尾部 payload、金额槽里放句柄。Track B 对它们的收窄见 [Track 文档](../README.zh-cn.md)。
+
+| 调用 | payload 类型 | 公开金额 | 含义 |
+| --- | --- | --- | --- |
+| `transferFrom(token, token, handle)` | `0x01` | 无 | note 之间转账 |
+| `transferFrom(token, 0x0, amount)` | `0x81` | `v_pub_out = amount`，`to = 0x0` | 销毁 |
+| `mint(amount, payload)` | 无 | `v_pub_in = amount` | 角色铸造；仅 `MINTER_ROLE` |
+| `wrapperBurn(0x0, to, amount, payload)` | 无 | `v_pub_out = amount`，绑定 `to` | Wrapper 端口：出到包装代币 |
+| `wrapperMint(recipient, amount)` | 无 | `v_pub_in = amount` | Wrapper 端口：`recipient` 就是整个 payload |
+| 不带 payload 的 `transfer(to, x)` | 无 | 无 | 回退 `NoPublicLedger()` |
+| `balanceOf(a)` | 无 | 无 | 代币自身地址返回 `totalSupply()`，其它地址返回 0 |
+| `approve`、`allowance` | 无 | 无 | 为接口完整而保留，不授权任何东西 |
+
+- `token` 指代币自身的地址。note 转账里 `from` 和 `to` 不携带任何信息，所以固定为它。标准事件于是读作池子内部的一次移动，不会被当成铸造或销毁。
+- 重放由作废符阻止：一份 payload 只能执行一次。
+- `prepare` / `cancel`（约定 §6）不在 0.1 范围内。
+
+### 5.1 模块
+
+| 模块 | B.1 0.1 |
+| --- | --- |
+| 角色铸造 | 支持：`mint` 与 `0x81` 销毁 |
+| Wrapper 端口 | 支持：`IPEPWrappable`，限额 `wrappedOut` |
+| 公开账本 | 不支持。以后可以在同一对 `v_pub_in` / `v_pub_out` 上加 |
+
+### 5.2 供应量
+
+`totalSupply()` 是池子里持有的数量：已铸造，减已销毁，减当前经 Wrapper 出去的数量。`issuedSupply() = totalSupply() + wrappedOut`，上限 `2⁶⁴ − 1` 针对的是它。这与 A.1 纯隐私组合的记账方式相同。
+
+## 6. memo
+
+两种 memo 都使用由共享秘密 `r·pk_X` 派生的 Poseidon 密钥流，以输出序号和字序号作为域标签。
+
+### 6.1 收款方 memo
+
+每个输出三个字：`v`、`ρ`、`ref`。
+
+- 收款方计算 `s·D`，解开 memo，重新计算承诺，与链上的承诺比较。相等就说明这张 note 是自己的。
+- `ref` 是付款备注，例如订单号。收款方看不到是谁付的款，所以商户需要它把付款和订单对上。电路只负责加密它，不约束它的取值。
+
+### 6.2 监管 memo
+
+五个字：两个输入的叶子位置（或「无」），以及每个输出的所有者公钥和金额。
+
+监管方据此重建全部 note 的表：所有者、金额、创建它的交易、花掉它的交易。某把公钥在任意时刻的余额，就是它名下未花 note 的总和。不需要任何人配合（ADR-0004 第 5 条）。
+
+- **往回查可以定点。** 解开一笔交易就能看到它的输入叶子位置，而创建某个叶子的交易是公开的。追查资金来源只需要解开那些交易。
+- **往后查不行。** 一张 note 后来被哪笔交易花掉是隐藏的，所以追查资金去向或计算余额，都需要解开区间内的每一笔交易。
+
+## 7. 流程
+
+### 7.1 铸造
+
+铸造方知道收款人的收款码。它构造一个 join-split：两个占位输入，`v_pub_in = amount`，一个输出给收款人，一个零金额输出，然后调用 `mint(amount, payload)`。
+
+金额虽然公开，仍然需要证明，因为监管方必须在新 note 创建的那一刻就知道它的所有者。
+
+### 7.2 转账
+
+付款人的钱包挑出自己的一张或两张 note，创建收款人的 note 和给自己的找零 note，生成证明；任何人都可以带着 payload 提交 `transferFrom(token, token, handle)`。合约检查树根，检查两个作废符都没出现过，验证证明，记下作废符，追加这一对承诺，记下新树根。
+
+### 7.3 销毁
+
+与转账相同，只是 `v_pub_out = amount`、`to = 0x0`。找零以 note 的形式返回。
+
+### 7.4 wrap 与 unwrap
+
+- **wrap**（note 换成包装 ERC-20）：`PEPWrapper.wrap(token, 0x0, to, amount, payload)`。证明绑定 `to` 和 `amount`。`wrappedOut` 增加。
+- **unwrap**（包装 ERC-20 换回 note）：`PEPWrapper.unwrap(token, recipient, amount)`，其中 `recipient` 是一份 `v_pub_in = amount` 的 join-split payload。代币检查 `amount ≤ wrappedOut`。
+
+Wrapper 合约原样使用，不需要改动。
+
+### 7.5 A.1 里会出的问题，这里不会出
+
+- **两笔交易同时发生。** 各自引用的树根都一直有效，谁也不会让对方作废，所以没有 `pending`，也没有折叠。
+- **同一张 note 花两次。** 第二笔交易发现作废符已经被记录，回退。
+
+## 8. 事件与视图
+
+| 事件 | 字段 | 何时发出 |
+| --- | --- | --- |
+| `Transfer` | `(token, token, handle)`；`(0x0, token, amount)`；`(token, 0x0, amount)` | note 转账；铸造与 unwrap；销毁与 wrap |
+| `NoteTransfer` | 第一个叶子位置、新树根、`nf[2]`、`cm[2]`、`regKeyId`、`D`、两份收款方 memo、监管 memo、`v_pub_in`、`v_pub_out`、`to` | 每一次操作 |
+| `Minted`、`Burned` | `amount` | 铸造、销毁 |
+| `RegulatorKeyRotated` | 与 A.1 相同 | 轮换 |
+
+`NoteTransfer` 没有任何能识别用户的索引字段。这正是目的所在，也是钱包无法过滤事件的原因（§9）。
+
+视图：`root()`、`isKnownRoot(root)`、`isSpent(nf)`、`leafCount()`、`totalSupply()`、`issuedSupply()`、`wrappedOut()`、约定 §9 的监管密钥视图、返回 `B:1:<version>` 的 `pep()`，以及模块探针。
+
+## 9. 客户端
+
+- **扫描。** 钱包按顺序读取该代币的每一条 `NoteTransfer`。每一条做一次标量乘 `s·D`，然后尝试两份收款方 memo。它没法向节点只要「自己的」事件。
+- **树。** 同一遍扫描让钱包拿到每一条承诺，据此维护树的前沿和自己 note 的路径。向服务器索要某个叶子的路径，会暴露正在花的是哪张 note。
+- **作废符。** 钱包算出自己 note 的作废符，一旦某个作废符出现在链上，就把对应的 note 标为已花。
+- **换设备。** 用钱包签名重新派生出同一把密钥，从代币的部署区块开始重新扫描。
+- **合并。** 持有很多小额 note 的钱包两张两张地合并。花掉 `N` 张 note 需要 `N − 1` 笔交易。
+
+## 10. 情景
+
+Alice 付款，Bob 是商户，Carol 和 Dave 是其他顾客。
+
+| 步骤 | 用户做什么 | 链上能看到什么 |
+| --- | --- | --- |
+| 开户 | Bob 在钱包里签一次名，得到收款码 | 什么都没有 |
+| 发行 | 发行方给 Alice 铸造 100 | 一笔 100 的铸造，两条新承诺。看不到给了谁 |
+| 付款 | Alice 付给 Bob 30，备注「订单 17」 | 两个作废符、两条承诺、几段 memo。看不到谁付、付给谁、付了多少 |
+| 收款 | Bob 的钱包扫描，发现一张 30 的 note，并读到「订单 17」 | 没有新增 |
+| 继续收款 | Carol 付 50，Dave 付 20 | 又两笔形状相同的交易。看不出收款人是同一个 |
+| 合并后付款 | Bob 把 30 和 50 合并，再用 80 和 20 付给供应商 90 | 两笔普通交易，彼此之间、与之前的收款之间都关联不上 |
+| 出金 | Bob 把 10 wrap 到自己的公开地址 | 一笔 10 出到该地址。看不出来自哪些收款 |
+| 监管 | 委员会批准查看某个区块区间 | 没有新增；申请人得到该区间内的所有者、金额和关联 |
+
+## 11. 隐私评估（家族约定 §12）
 
 | 目标 | 达成 | 说明 |
 | --- | --- | --- |
-| P1 金额隐藏 | 完全 | 同 A.1 |
-| P2 收款方 | 化名（稳定 id） | 同 A.1 |
-| P3 付款方 | 化名（稳定 id） | 同 A.1 |
-| P4 交易关联 | 否 | 稳定 id；stealth（`0x02`）与 A.1 一样留在 backlog |
-| P5 划转关联 | **不适用** | 没有划转；铸造 / 销毁按决定 B-2 公开 |
-| **机密聚合量** | **隐藏** | 唯一公开的数字是 `totalSupply`；没有任何地址、视图或事件泄露供应量如何分布 |
-| S1–S5 | 同 A.1 | 证明即授权、监管密文、无注册表、密钥只在浏览器、不为用户错误兜底 |
+| P1 金额隐藏 | 转账完全隐藏 | 铸造、销毁、wrap、unwrap 的金额公开 |
+| P2 收款方 | 隐藏 | 链上没有收款方标识 |
+| P3 付款方 | 账本上隐藏 | 提交交易并支付 gas 的地址可见（§12） |
+| P4 交易关联 | 账本上不可关联 | 残余的关联：提交地址、时间、使用旧树根 |
+| P5 划转关联 | 除金额和时间外不可关联 | 铸造 100 后很快出金 100，两者会被关联 |
+| S1 不能凭空增发 | 满足 | 平衡等式加范围检查 |
+| S2 不能双花 | 满足 | 作废符集合 |
+| S3 不能盗取 | 满足 | 花费需要 `s` |
+| S4 公开模式不受影响 | 不适用 | 代币地址上没有公开账本 |
+| S5 没有冻结角色 | 满足 | 没有冻结、没收或强制转移接口 |
 
-B.1 仍然暴露的：`totalSupply`、每次铸造与销毁（id、金额、区块）、id 之间的转账图（金额隐藏）、每个 id 的活动时间（`foldedAtBlock` / `lastReceivedAtBlock`，A1-0006 对 A.1 亦有说明）。
+## 12. 成本与限制
 
-## 10. Gas（按 A.1 0.3.0 实测估计）
+**一笔交易的 gas（估计）。** 每种操作的成本大致相同，因为它们验证的是同一个证明，都要追加一对承诺。
 
-| 操作 | A.1 实测 | B.1 估计 | 差异 |
-| --- | --- | --- | --- |
-| 铸造（新 id） | shield 214k | **实测 177k**（本地 194k） | 无 ERC20 `_update`、无托管 |
-| `0x01`（首次花费，includePending） | 716k | 716k | 相同 |
-| `0x80` 折叠（首次） | 464k | 464k | 相同 |
-| `0x81` 销毁（默认模式） | unshield 374k | **实测 362k** | 无向收款方的 `_update` |
-| `wrap`（某代币首次） | — | **实测 967k**（此后约 410k） | 销毁 + 创建 wCLS + wCLS 铸造 |
-| `unwrap` | — | **实测 125k** | wCLS 销毁 + 机密铸造 |
+| 组成 | 估计 | 依据 |
+| --- | --- | --- |
+| 基础费与 calldata，payload 约 1.1 KB | 45k | |
+| Groth16 验证，约 21 个公开输入 | 335k | A.1 在 14 个输入时实测 288k |
+| 链上 32 次 Poseidon 哈希 | 670k | 假设每次 21k；**本项目尚未实测** |
+| 树的存储 | 100k | |
+| 两个作废符和一个树根，都是新槽 | 66k | |
+| 事件 | 15k | |
+| **合计** | **约 120 万** | A.1 稳态转账实测 467k |
 
-## 11. 0.1 的范围
+链上的树是最大的一项，也是最没把握的一项。原型阶段第一件事就是测它。
 
-**包含**：§2–§8 的全部。**不包含**：stealth `0x02`、机密铸造（隐藏发行量）、任何公开账本或通往公开账本的桥、正式可信设置（暂时沿用 A.1 的开发 ptau）。
+**其它限制。**
 
-## 12. Wrapper 钩子（家族工具，[10-wrapper](../../../10-wrapper.zh-cn.md)）
-
-B.1 实现 `IPEPWrappable`，使 B.1 代币能经家族 wrapper 进 DeFi：
-
-| 接口 | B.1 实现 |
+| 限制 | 说明 |
 | --- | --- |
-| `wrapperMint(bytes recipient, amount)` | `recipient` = 20 字节机密 id；函数体同 `mint`（§5.1），但门禁改为 `msg.sender == wrapper()` 而非 `MINTER_ROLE`；发 `Transfer(0x0, id, amount)` 与 `Minted` |
-| `wrapperBurn(from, to, amount, payload)` | 即 `0x81` 销毁（§5.3），`to` = 将收到 `wTOKEN` 的公开地址；复用的 unshield 电路绑定 `to` 与 `amount`（F14）；门禁 `msg.sender == wrapper()`；发 `Transfer(id, 0x0, amount)` 与 `Burned` |
-| `wrapper()` | 构造时设置一次（或在未设置时由 `DEFAULT_ADMIN_ROLE` 设置）；0.1 不支持轮换 |
+| 证明时间 | 估计在 Node 里 2 到 4 秒，A.1 是 1.3 到 1.5 秒 |
+| 提交者可见 | Alice 自己提交付款，会暴露她的地址在那一刻做了一笔隐私交易。要隐藏需要代发服务和手续费机制，不在 0.1 范围内 |
+| 扫描量随代币增长，而不是随用户增长 | 每个钱包都要处理每一笔交易。交易多的代币需要索引服务 |
+| 监管视图无法收窄到一把公钥 | §6.2 |
+| 每笔交易两个输入 | 余额零碎时要先合并 |
+| 进出是公开的 | 铸造、销毁、wrap、unwrap 的金额和公开地址可见 |
 
-不经 wrapper 的直接 `0x81` 保持 `to == address(0)`。两条路径都减少 `totalSupply`。
+## 13. 0.1 的范围
 
-## 13. 待决
+包含：join-split 电路、角色铸造、Wrapper 端口、监管 memo、上面的事件与视图，以及一个在浏览器里扫描、保存 note 并生成证明的客户端。
 
-| # | 问题 | 草案答案 | 为何需要 owner 拍板 |
+不包含：公开账本模块、`prepare` / `cancel`、代发服务、独立的只读密钥、批量插入树、两个以上的输入。
+
+## 14. 待定决策
+
+每一项都有默认值，本文按默认值写。
+
+| # | 决策 | 默认 | 可能改变的理由 |
 | --- | --- | --- | --- |
-| B1-1 | 要不要保留 `0x81` 销毁？ | **保留（2026-09-27 已定）** | wrapper 的 `wrapperBurn` 就是这个操作；没有它 B.1 代币永远进不了 DeFi |
-| B1-2 | `mint` 是否接受一批 id，以隐藏*谁*被铸了多少？ | 0.1 不做 | 批量铸造仍通过事件暴露每个 id 的金额；要隐藏需要机密铸造（已排除） |
-| B1-3 | `approve` / `allowance`：保留为空操作还是 revert？ | 保留为空操作 | 有些钱包展示代币前会先调 `allowance`；在那里 revert 只有敌意没有收益 |
-| B1-4 | 合约代码：复制 A.1 删路径，还是继承 A.1 再覆盖？ | 复制 | ADR-0002（Variant 自包含）；继承会把公开账本的存储布局一并带进来 |
-| B1-5 | 复用 A.1 在 BSC testnet 已部署的验证器，还是 B.1 自己部署？ | 复用 | 字节码相同；证明本来就绑定代币地址 |
+| D1 | 树的深度 | 32 | 每一层约 21k gas。深度 24 能容纳 800 万笔交易，可省约 170k |
+| D2 | 接受哪些树根 | 所有历史树根 | 只保留最近若干个树根，每笔交易可省约 17k gas，但证明会过期 |
+| D3 | 电路数量 | 所有操作共用一个 | 给铸造单独做一个小电路，发行时生成证明会更快 |
+| D4 | `from` / `to` 与 `balanceOf` | 代币自身地址；`balanceOf(token) = totalSupply()` | A.1 的纯隐私组合对所有地址都返回 0 |
+| D5 | 付款备注 | 每个输出一个字段 | 也可以留给应用层 |
+| D6 | 铸造需要证明 | 需要 | 不要证明的话，监管方要等这张 note 被花掉才知道它的所有者 |
+| D7 | 在哪里更新树 | 链上，在交易内 | 用单独的证明批量插入可以省掉大部分 gas，代价是 note 要等批次处理后才能花，而且需要有人提交批次 |

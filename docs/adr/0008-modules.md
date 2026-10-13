@@ -2,7 +2,7 @@ English | [中文](0008-modules.zh-cn.md)
 
 # 0008 Track, Variant and module: the public ledger is a module, not a Track
 
-- Status: Accepted (structure decided; the contracts are not restructured yet, see Transition)
+- Status: Accepted (structure decided; the contracts are not restructured yet, see Transition; Transition updated by [0009](0009-track-b-notes.md))
 - Date: 2026-10-12
 - Scope: Family (amends items 1–4 of [ADR-0002](0002-track-variant-structure.md), items 2 and 3 of [ADR-0007](0007-track-definition.md) and the wording of [ADR-0005](0005-family-wrapper.md))
 
@@ -101,6 +101,7 @@ The documents describe the structure above from now on. The code does not yet.
 
 - Until the contracts are restructured, "B.1" remains the name of the second contract. Its documents stay under `docs/tracks/track-b/variant-1/`. Deployment records and security-review ids (`B1-F1` and so on) keep their names for good.
 - The restructuring is a separate step that needs the owner's go-ahead: a shared core with modules in the contracts, one version, both testnet tokens redeployed with `A:1:…`, the dApp routed by modules, and the two document directories merged. The letter B is free after it.
+- **Update 2026-10-13 ([ADR-0009](0009-track-b-notes.md)).** The letter B was assigned to the note model before the restructuring. The second contract's documents moved to `docs/tracks/track-a/variant-1-privacy-only/`. The contract keeps its name and its `B:1:…` descriptor until the restructuring, and no note-model token is deployed before it.
 
 ## Alternatives
 
