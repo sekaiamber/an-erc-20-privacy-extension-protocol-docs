@@ -1,8 +1,10 @@
 English | [中文](01-design.zh-cn.md)
 
-# A.1 Detailed Design
+# A.1 Detailed Design: the core
 
-Version: `0.4.0-draft`. Status: `Draft`. Date: 2026-09-28
+Version: `0.5.0-draft`. Status: `Draft`. Date: 2026-10-13
+
+> 0.5.0 (draft, **not implemented**): **restructured into a core and modules** ([ADR-0008](../../../adr/0008-modules.md), [04-modules](04-modules.md)). This document is the core; sections that belong to a module are marked. No circuit, payload layout or measured figure changes. The deployed contracts are still 0.4.0 (`A:1:0.4.0`) and the former B.1 0.2.0.
 
 > 0.4.0: **Crypto core switched to plain ElGamal** (ADR-0006 §3, A1-0002 revision): `pk = s·H`; a ciphertext is one shared `D = r·H` plus one `C_X = v·G + r·pk_X` per party; memo pads are derived from each party's shared secret `r·pk_X` (= `s_X·D`); the ECDH point `E` and scalar `e` are gone. Purpose: regulator-side decryption and memo opening become "share × public point", i.e. threshold-splittable (11-regulatory-committee). Side effects: transfer circuit 35,137 → 29,719 constraints, public inputs 15 → 14, payload 710 → 646 bytes, proving ≈ 2.1 s → 1.3 s, `0x01` gas 715k → 706k. `pep()` = `A:1:0.4.0`.
 > 0.3.1: **Security fix F14** — the public recipient `to` of `0x04` is packed into the proof (`w2 = amount | signBits<<48 | to<<64`); before, a relayer or front-runner could rewrite `to` and take the whole unshield. Circuit 16,622 → 17,358 constraints, still 7 public inputs. `pep()` = `A:1:0.3.1`.
@@ -14,9 +16,22 @@ Version: `0.4.0-draft`. Status: `Draft`. Date: 2026-09-28
 > 0.2.1: Written back from prototype measurements (public-input packing replaces SHA-256, shielded tokens escrowed at the contract address, gas measured).
 > Main changes in 0.2 relative to 0.1: confidential accounts decoupled from Ethereum addresses, public keys not on chain, registry and shield / unshield functions removed, payload type byte defines the transfer type, proof-as-authorization, `applyPending` removed (replaced by lazy fold on spend). All gas figures are estimates.
 
+## Core and modules
+
+Since 0.5.0 A.1 is a **core** plus optional **modules** ([ADR-0008](../../../adr/0008-modules.md)). This document specifies the core. It also keeps the flows of the public-ledger module, in the sections marked below, so that section numbers cited by the security review and the deployment records stay valid. The modules themselves, the supply accounting across them and the compositions are specified in [04-modules.md](04-modules.md).
+
+| Sections | Belong to |
+| --- | --- |
+| §1, §2.1, §2.2 (accounts, prepared entries, regulator keys), §2.3 I2–I5, §2.4, §3 (`0x01`, `0x80`, `prepare`), §4.2, §4.3, §4.6, §5, §8 | Core |
+| §2.2 (`shieldedSupply`, the ERC-20 ledger), §2.3 I1, §3 (payload-less calls, `0x03`, `0x04`), §4.1, §4.4, §4.5, `LedgerCrossing` in §6 | Public-ledger module |
+| `0x81`, `mint`, `mintConfidential`, `Minted`, `Burned` | Role-issuance module (04-modules §4.2) |
+| `wrapperMint`, `wrapperBurn` | Wrapper port (04-modules §4.3) |
+
+The core alone is a privacy-only ledger: without the public-ledger module `balanceOf` is 0 for every address and a payload-less `transfer` reverts.
+
 ## 0. Design Principles
 
-1. **Zero changes to the public ledger**: it is exactly OpenZeppelin ERC20; no failure in the confidential logic can affect it.
+1. **The core is a privacy-only ledger; everything public is a module.** With the public-ledger module, the public ledger is exactly OpenZeppelin ERC20 and no failure in the confidential logic can affect it.
 2. **The chain touches neither plaintext nor public keys**: the contract only verifies proofs and performs ciphertext addition. A confidential account's public key never appears on chain.
 3. **Each ciphertext has exactly one writer**: `available` is modified only by the owner's own proof; `pending` is written only by others and is folded on the owner's next spend. Proofs bind the state as seen by the writer, so concurrency cannot invalidate a proof.
 4. **Proof-as-authorization**: the authorization to spend a confidential balance is a zero-knowledge proof of "knowing the private key", not `msg.sender`. Anyone may submit the transaction on the owner's behalf.
@@ -52,7 +67,7 @@ A confidential account has no Ethereum address and no registration step. An acco
 - **Derivation**: `s = keccak256(sign_EIP712({name:"PEP", chainId, contract}, {purpose:"A.1 key", index}))  mod l`. The same wallet can derive multiple accounts using different values of `index`.
 - **Publication**: the account holder hands `pk` (64 bytes) to the payer off chain; `id` can be computed from `pk`. There is nowhere on chain where `pk` can be looked up.
 - **Creation**: the first transfer sent to `id` creates the storage slot. There is no "account opening".
-- **Association with a wallet**: appears only when moving between the public ledger and the confidential ledger (`0x03` / `0x04`), as a public edge `wallet → id` or `id → wallet`.
+- **Association with a wallet**: appears only where a public address meets an id: `0x03` / `0x04` with the public-ledger module, a wrap or unwrap through the Wrapper port, and a mint to an id. Each is a public edge between a wallet and an id.
 
 ### 2.2 Storage
 
@@ -72,21 +87,21 @@ struct ConfidentialAccount {
 
 mapping(address => ConfidentialAccount) internal _accounts;   // key = id
 mapping(address => mapping(uint256 => Prepared)) internal _prepared;   // fallback, see §3.4
-uint256 public shieldedSupply;
+uint256 public shieldedSupply;            // the confidential supply; exposed under this name by the public-ledger module (04-modules §3)
 
 struct RegulatorKey { Point pk; uint64 activatedAt; }
 RegulatorKey[] public regulatorKeys;      // append-only; index = keyId
 uint32 public activeRegulatorKeyId;
 ```
 
-Public ledger: OpenZeppelin `ERC20` as is, keyed by Ethereum address. The two ledgers share the same key space (20 bytes) but with different meanings; the protocol does not distinguish them, see principle 7.
+Public-ledger module: OpenZeppelin `ERC20` as is, keyed by Ethereum address. The two ledgers share the same key space (20 bytes) but with different meanings; the protocol does not distinguish them, see principle 7.
 
 ### 2.3 Global Invariants
 
 | No. | Statement |
 | --- | --- |
-| I1 | Shielded tokens are escrowed at the contract's own address: `balanceOf(address(this)) == shieldedSupply`, hence `totalSupply() == Σ public balances` (including the contract address) holds naturally for any indexer |
-| I2 | `totalSupply() ≤ 2⁶⁴ − 1` (in the smallest unit). Guarantees every confidential balance is `< 2⁶⁴`, so range proofs cannot be broken by accumulation overflow |
+| I1 | (Public-ledger module) Shielded tokens are escrowed at the contract's own address: `balanceOf(address(this)) == shieldedSupply`, hence `totalSupply() == Σ public balances` (including the contract address) holds naturally for any indexer |
+| I2 | `issuedSupply() ≤ 2⁶⁴ − 1` (in the smallest unit; `issuedSupply()` equals `totalSupply()` unless the Wrapper port is present, 04-modules §3). Guarantees every confidential balance is `< 2⁶⁴`, so range proofs cannot be broken by accumulation overflow |
 | I3 | For every `id`: `available + pending` decrypts to the true confidential balance |
 | I4 | `nonce` is strictly increasing |
 | I5 | `pending` only increases, and only by range-proven non-negative amounts or public amounts |
@@ -110,7 +125,7 @@ function prepare(bytes calldata payload) external;          // fallback: verify 
 function cancel(address from, uint256 handle) external;      // revoke an unexecuted registration, callable only by the registrant
 ```
 
-There is no `register`, `shield`, `unshield` or `applyPending`.
+There is no `register`, `shield`, `unshield` or `applyPending`. The payload-less forms and `0x03` / `0x04` exist only with the public-ledger module; without it they revert (04-modules §5).
 
 ### 3.2 payload
 
@@ -124,14 +139,15 @@ byte 2..    sections (determined by type and flags, fixed order)
 
 **type**
 
-| type | Name | `from` | `to` | `x` | Proof | shieldedSupply |
-| --- | --- | --- | --- | --- | --- | --- |
-| (no payload) | Public transfer | Public account | Public account | Plaintext amount | No | — |
-| `0x01` | Confidential transfer | Confidential id | Confidential id | Handle | Yes | — |
-| `0x02` | Stealth confidential transfer | Confidential id | One-time id | Handle | Yes | — |
-| `0x03` | Public → confidential | Public account | Confidential id | Plaintext amount | No | `+x` |
-| `0x04` | Confidential → public | Confidential id | Public account | Plaintext amount | Yes | `−x` |
-| `0x80` | Pure fold (A.1-private) | Confidential id | Same id | Handle | Yes (private-key knowledge only) | 0 |
+| type | Name | `from` | `to` | `x` | Proof | Confidential supply | Part |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| (no payload) | Public transfer | Public account | Public account | Plaintext amount | No | — | Public ledger |
+| `0x01` | Confidential transfer | Confidential id | Confidential id | Handle | Yes | — | Core |
+| `0x02` | Stealth confidential transfer | Confidential id | One-time id | Handle | Yes | — | Core (reserved) |
+| `0x03` | Public → confidential | Public account | Confidential id | Plaintext amount | No | `+x` | Public ledger |
+| `0x04` | Confidential → public | Confidential id | Public account | Plaintext amount | Yes | `−x` | Public ledger |
+| `0x80` | Pure fold (A.1-private) | Confidential id | Same id | Handle | Yes (private-key knowledge only) | 0 | Core |
+| `0x81` | Burn (A.1-private) | Confidential id | `0x0` | Plaintext amount | Yes (the `0x04` proof) | `−x` | Role issuance |
 
 `0x02` only reserves its number in 0.2, see §11.
 
@@ -188,7 +204,7 @@ If `nonce` has changed, execution fails and reverts; there is no automatic retry
 
 ## 4. Execution Flows
 
-### 4.1 `0x03` Public → Confidential
+### 4.1 `0x03` Public → Confidential (public-ledger module)
 
 ```
 _update(from, address(this), x)      // standard ERC-20 checks; escrow at the contract address, emits Transfer(from, this, x)
@@ -226,7 +242,7 @@ By default the proof binds only `available` (which only the owner can modify, so
 
 In both cases the contract's state-update formula is identical; the only difference is `pre` in the public inputs.
 
-### 4.4 `0x04` Confidential → Public
+### 4.4 `0x04` Confidential → Public (public-ledger module)
 
 ```
 acc = _accounts[from]
@@ -240,7 +256,7 @@ _update(address(this), to, x)        // emits Transfer(this, to, x)
 emit LedgerCrossing(from, to, 0x04, x)
 ```
 
-### 4.5 The Four Combinations at a Glance
+### 4.5 The Four Combinations at a Glance (with the public-ledger module)
 
 | Payer → Payee | Call | payload | Proof | Amount public |
 | --- | --- | --- | --- | --- |
@@ -296,9 +312,9 @@ Cost: one transaction of about 250k gas (the first fold costs about 450k due to 
 
 Measured constraint count: **29,719 non-linear constraints** (35,137 in 0.3.x; 30,356 for the unpacked version). Proving takes about 1.3~1.5 s in a Node environment.
 
-### 5.2 `0x04`
+### 5.2 Unshield circuit: `0x04`, `0x81`, `wrapperBurn`
 
-Drops 3, the last two items of 9, 10 and 11; 7 public inputs: `w0 = from | nonce<<160`, `w1 = contract | chainId<<160`, `w2 = amount | signBits<<48 | to<<64` (`to` = public recipient, bound since 0.3.1, see security review F14), `xs[4]`. Measured 17,358 constraints.
+This circuit is the public-amount exit behind `_debitPublic` (04-modules §2); `0x04`, the `0x81` burn and `wrapperBurn` all use it, with `to` as the public recipient, the zero address or the recipient of the wrapped token. Drops 3, the last two items of 9, 10 and 11; 7 public inputs: `w0 = from | nonce<<160`, `w1 = contract | chainId<<160`, `w2 = amount | signBits<<48 | to<<64` (`to` = public recipient, bound since 0.3.1, see security review F14), `xs[4]`. Measured 17,358 constraints.
 
 ### 5.3 `0x80`
 
@@ -310,7 +326,8 @@ Drops 3, the last two items of 9, 10 and 11; 7 public inputs: `w0 = from | nonce
 | --- | --- | --- |
 | `Transfer` | `(from, to, x)` | Standard; the top bit of `x` distinguishes handles from amounts |
 | `ConfidentialTransfer` | `(from, to, handle, regKeyId, D, C_recv, C_reg, memo_recv, memo_reg)` | Payee scanning, regulator decryption (`C_sender` is not emitted: the payer knows it) |
-| `LedgerCrossing` | `(from, to, type, amount)` | `0x03` / `0x04`; indexers maintain `shieldedSupply` |
+| `LedgerCrossing` | `(from, to, type, amount)` | Public-ledger module: `0x03` / `0x04`; indexers maintain `shieldedSupply` |
+| `Minted` / `Burned` | `(id, amount)` | Role-issuance module and the Wrapper port: a public amount credited to, or debited from, an id |
 | `Folded` | `(id, handle, nonce)` | `0x80`; `nonce` is the new value after the fold |
 | `Prepared` / `Cancelled` | `(from, handle)` | Fallback |
 | `RegulatorKeyRotated` | `(keyId, pk)` | |
@@ -320,12 +337,13 @@ The payee filters `ConfidentialTransfer` and `LedgerCrossing` by `to == own id`.
 ## 7. Views
 
 ```solidity
-function balanceOf(address) external view returns (uint256);            // public ledger
+function balanceOf(address) external view returns (uint256);            // public-ledger module; 0 for every address without it
 function confidentialAccountOf(address id) external view
     returns (Ciphertext available, Ciphertext pending, uint64 nonce, uint64 foldedAtBlock, uint64 lastReceivedAtBlock, bytes memory decryptable);
-function shieldedSupply() external view returns (uint256);
+function shieldedSupply() external view returns (uint256);              // public-ledger module
 function regulatorKey(uint32 id) external view returns (Point memory);
-function supportsInterface(bytes4) external view returns (bool);         // family / Track A / A.1
+function supportsInterface(bytes4) external view returns (bool);         // IPEP and the module interface ids
+function pepModules() external view returns (Module[] memory);          // module probe (07 §13.3), from 0.5.0
 ```
 
 ## 8. Client Flows
@@ -334,7 +352,7 @@ function supportsInterface(bytes4) external view returns (bool);         // fami
 
 **Payee**: listens for `ConfidentialTransfer(to = id)` → `k = s⁻¹·E` → decrypts the memo to get `(v, r)` → checks `C_amt == v·G + r·H` → local balance += v. Listens for `LedgerCrossing(to = id, 0x03)` → local balance += amount. No on-chain action is required.
 
-**Regulator**: iterates over `ConfidentialTransfer`, decrypts `memo_reg` by `regKeyId`, verifies the commitment; combined with `LedgerCrossing`, reconstructs the balance of any id at any point in time. No discrete logarithms, no cooperation from anyone, read-only. The mapping between ids and wallets can only be inferred from the `0x03` / `0x04` edges.
+**Regulator**: iterates over `ConfidentialTransfer`, decrypts `memo_reg` by `regKeyId`, verifies the commitment; combined with the public-amount events (`LedgerCrossing`, `Minted`, `Burned`), reconstructs the balance of any id at any point in time. No discrete logarithms, no cooperation from anyone, read-only. The mapping between ids and wallets can only be inferred from the `0x03` / `0x04` edges.
 
 **Memo fallback**: enforced by the circuit, so in theory it cannot be wrong; if the implementation has a bug, the payee can still solve a 48-bit discrete logarithm on `C_amt − s·D_recv = v·G` (a 2²⁴ table).
 
@@ -386,6 +404,8 @@ Environment: Hardhat 3 / solc 0.8.34 viaIR / Groth16 (snarkjs) / after public-in
 ## 10. Scope (0.2)
 
 **Included**: public ledger, the four `transfer` / `transferFrom` types (excluding `0x02`), `prepare` / `cancel`, regulator key registration and rotation, events and views, ERC-165, public-input packing.
+
+Since 0.5.0 the scope is stated per part: the core is everything in this document not marked as a module, and the modules are in [04-modules](04-modules.md).
 
 ## 11. Backlog
 

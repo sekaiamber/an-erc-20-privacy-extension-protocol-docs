@@ -15,13 +15,15 @@ The protocol family is organized by **Track / Variant / module** ([ADR-0008](../
 
 Both Tracks have the same trust base: user-held keys, client-side proofs, no external network.
 
-## Modules by Variant
+## Modules declared by each Variant version
 
-| Module | A.1 | B.1 (design) |
+| Module | A.1 0.5.0 (design) | B.1 0.1.0 (design) |
 | --- | --- | --- |
 | Public ledger | Yes | No |
 | Role issuance | Yes | Yes |
 | Wrapper port | Yes | Yes |
+
+The list is part of the version. A module registered later is not supported by these versions; supporting it takes a new version of the Variant (07 §13.2). The deployed contracts (0.4.0 and the former B.1 0.2.0) predate the module structure.
 
 ## Deployed compositions
 

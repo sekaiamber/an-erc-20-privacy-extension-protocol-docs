@@ -4,6 +4,8 @@ English | [中文](01-design.zh-cn.md)
 
 Version: `0.2.0-draft`  Status: `Draft`  Date: 2026-09-28
 
+> **Superseded as a specification (2026-10-13).** This is the design of the standalone contract `ConfidentialERC20B1` 0.2.0, written when it was called B.1 of a separate Track. From A.1 0.5.0 the same behaviour is specified as the core plus the role-issuance module and the Wrapper port, in [A.1 04-modules](../variant-1/04-modules.md). This document is kept as the record of what is deployed; "A.1" below means the composition with the public ledger.
+
 > 0.2.0: follows A.1 0.4.0 to plain ElGamal (`pk = s·H`, shared `D`, one `C_X` per party, memo keys from `r·pk_X`, no `E`); circuits, payload layouts and event fields match A.1 0.4.0. `pep()` = `B:1:0.2.0`.
 > 0.1.0: derived from A.1 0.3.1 by removing the public ledger. **Implemented and deployed on BSC testnet (2026-09-27)** together with the family Wrapper; measured gas in [02-deployments](02-deployments.md). Decisions B1-1..B1-5 settled as drafted.
 

@@ -52,6 +52,8 @@ Track A 与 Track B 是按一个问题分开的：代币有没有公开账本。
 
 5. **模块登记。** 模块在 [07 §13](../07-family-conventions.zh-cn.md) 里登记，全家族一份；实现由各 Variant 自己写。Variant 要写明它支持哪些模块；不支持的模块就是不实现，探针也不会报告。
 
+   **2026-10-13 更新（owner）。** 声明以版本为单位：每个 Variant 的每个版本都要声明一份封闭的、它所支持的模块清单。以后新登记的模块，已有版本的清单不变；要支持新模块，就得给该 Variant 出新版本。规则写在 [07 §13.2](../07-family-conventions.zh-cn.md)。
+
    | 模块 | 种类 | 增加了什么 | 现状 |
    | --- | --- | --- | --- |
    | 公开账本 | 编译时 | 代币地址上的标准 ERC-20 余额；`0x03` shield 与 `0x04` unshield；`shieldedSupply()` | 在 `ConfidentialERC20A1` 里 |

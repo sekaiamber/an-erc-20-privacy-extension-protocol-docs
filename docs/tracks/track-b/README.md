@@ -41,7 +41,7 @@ All value sits at the token's own address, so sums of `balanceOf` equal `totalSu
 
 ## Modules
 
-A Track B token is a Variant plus modules, like any token of the family ([07 §13](../../07-family-conventions.md)). Each Variant states which modules it supports.
+A Track B token is a Variant plus modules, like any token of the family ([07 §13](../../07-family-conventions.md)). Each version of each Variant declares which modules it supports.
 
 ## Family tools
 

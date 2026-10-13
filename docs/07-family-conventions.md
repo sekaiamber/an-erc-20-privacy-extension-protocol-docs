@@ -102,7 +102,7 @@ interface IPEP {
 - The contract declares `type(IPEP).interfaceId` via ERC-165. Modules add their own interface ids (§13).
 - For any address, the frontend first calls `supportsInterface`, then reads `pep()` to parse track / variant / version and routes to the corresponding page. Which features the page offers follows from the modules (§13).
 - The descriptor is **self-declared**: the family is permissive, there is no on-chain registry, and no check that contract behavior matches the declaration (just like ERC-20). The consequences of a wrong descriptor are borne by the publisher.
-- `version` follows the version of that Variant's design document; changing a circuit or an interface bumps the version.
+- `version` follows the version of that Variant's design document; changing a circuit, an interface or the list of supported modules (§13.2) bumps the version.
 
 ## 11. Numeric constraints
 
@@ -130,12 +130,19 @@ Decision record: [ADR-0008](adr/0008-modules.md). A module is a contract-level o
 | Module | Kind | Interface | Adds | Limit enforced by the token |
 | --- | --- | --- | --- | --- |
 | Public ledger | Compile-time | Draft | Standard ERC-20 balances at the token's address; payload types `0x03` / `0x04`; `shieldedSupply()`; `LedgerCrossing` | None |
-| Role issuance | Compile-time | Draft | `mint` by `MINTER_ROLE` with a public amount: into the public ledger when it is present, otherwise into a confidential account, together with a public-amount burn | The Variant's supply cap |
+| Role issuance | Compile-time | Draft | Issuance by a minter role with a public amount, and a public-amount burn by the holder. The functions are defined per Variant (A.1: [04-modules §4.2](tracks/track-a/variant-1/04-modules.md)) | The Variant's supply cap |
 | Wrapper port | Port and runtime module | `IPEPWrappable` | `wrapperMint`, `wrapperBurn`, `wrapper()`; used by the family Wrapper ([10](10-wrapper.md)) | Credits never exceed what left through the port (`wrappedOut`) |
 
 Custody issuance (a vault that locks a plain ERC-20 and issues the privacy token) is a reserved name. It is not designed.
 
-Support by Variant: A.1 implements all three. B.1 (design only) supports role issuance and the Wrapper port, and not the public ledger.
+The registry is append-only. Registering a new module changes nothing for existing Variant versions.
+
+**Declared support.** Every version of every Variant declares which modules it supports (§13.2):
+
+| Variant version | Public ledger | Role issuance | Wrapper port |
+| --- | --- | --- | --- |
+| A.1 0.5.0 (design) | Yes | Yes | Yes |
+| B.1 0.1.0 (design) | No | Yes | Yes |
 
 Interfaces marked "Draft" are fixed when the contracts are restructured (ADR-0008, Transition).
 
@@ -149,6 +156,7 @@ Interfaces marked "Draft" are fixed when the contracts are restructured (ADR-000
 - **Limits.** Every port carries a limit that the token enforces; the token does not rely on the module's own checks.
 - **No general hooks.** The token does not call out before or after a transfer.
 - **No circuit change.** Whatever needs a different circuit is a Variant.
+- **Declaration per version.** Each version of a Variant declares the list of modules it supports, in its design document and in the table of §13.1. The list is closed: a token of that version may use any subset of it and nothing else. When a module is registered later, an existing version does not support it. Supporting it takes a new version of the Variant, which bumps at least the minor number.
 
 ### 13.3 Probe
 
@@ -163,6 +171,7 @@ interface IPEPModules {
 
 - `id` is the ERC-165 interface id of the module's interface; `supportsInterface(id)` returns true for it.
 - The list is self-declared, like `pep()`.
+- `pep()` tells which Variant version a token is, and therefore which modules it could have; `pepModules()` tells which of them it has.
 - Integrators must not infer from the Track letter whether a token has public balances. They read it from the probe.
 - Draft: neither shipped contract implements `IPEPModules` yet. Today the Wrapper port is detected with `supportsInterface(type(IPEPWrappable).interfaceId)`.
 

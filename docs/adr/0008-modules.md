@@ -52,6 +52,8 @@ Putting the option into the numbering does not work either. As a Variant number 
 
 5. **Module registry.** Modules are registered in [07 §13](../07-family-conventions.md), once for the family. The implementation is written per Variant. A Variant states which modules it supports; an unsupported module is simply not implemented and the probe does not report it.
 
+   **Update 2026-10-13 (owner).** The declaration is per version: every version of every Variant declares the closed list of modules it supports. When a module is registered later, an existing version keeps its list; supporting the new module takes a new version of the Variant. The rule is in [07 §13.2](../07-family-conventions.md).
+
    | Module | Kind | Adds | Today |
    | --- | --- | --- | --- |
    | Public ledger | Compile-time | Standard ERC-20 balances at the token's address; `0x03` shield and `0x04` unshield; `shieldedSupply()` | In `ConfidentialERC20A1` |

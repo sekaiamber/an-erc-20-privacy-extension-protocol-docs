@@ -117,11 +117,13 @@ Family conventions §1–§5 apply: the standard selectors, a trailing payload, 
 
 ### 5.1 Modules
 
-| Module | B.1 0.1 |
+| Module | B.1 0.1.0 |
 | --- | --- |
 | Role issuance | Supported: `mint` and the `0x81` burn |
 | Wrapper port | Supported: `IPEPWrappable`, limit `wrappedOut` |
 | Public ledger | Not supported. It could be added later on the same `v_pub_in` / `v_pub_out` |
+
+This is the declared list of B.1 0.1.0 (07 §13.2). Supporting another module, the public ledger included, takes a new B.1 version.
 
 ### 5.2 Supply
 

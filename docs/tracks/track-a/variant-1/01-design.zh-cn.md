@@ -1,8 +1,10 @@
 [English](01-design.md) | 中文
 
-# A.1 细节设计
+# A.1 细节设计：内核
 
-版本：`0.4.0-draft`　状态：`Draft`　日期：2026-09-28
+版本：`0.5.0-draft`　状态：`Draft`　日期：2026-10-13
+
+> 0.5.0（草案，**尚未实现**）：**改为内核加模块的结构**（[ADR-0008](../../../adr/0008-modules.zh-cn.md)、[04-modules](04-modules.zh-cn.md)）。本文是内核；属于某个模块的小节都作了标注。电路、payload 布局和实测数字都不变。已部署的合约仍是 0.4.0（`A:1:0.4.0`）和原 B.1 0.2.0。
 
 > 0.4.0：**密码内核改为普通 ElGamal**（ADR-0006 §3、A1-0002 修订）：`pk = s·H`；密文为一个共享 `D = r·H` 加每方一个 `C_X = v·G + r·pk_X`；memo 密钥流由各方共享秘密 `r·pk_X`（= `s_X·D`）派生，删掉 ECDH 点 `E` 与 `e`。目的：监管侧解密与 memo 打开都成为「份额 × 公开点」，可门限拆分（11-regulatory-committee）。副作用：转账电路 35,137 → 29,719 约束，公开输入 15 → 14，payload 710 → 646 字节，证明约 2.1 s → 1.3 s，`0x01` gas 715k → 706k。`pep()` = `A:1:0.4.0`。
 > 0.3.1：**安全修复 F14**——`0x04` 的公开收款地址 `to` 打包进证明（`w2 = amount | signBits<<48 | to<<64`），此前中继者或抢跑者可改写 `to` 偷走整笔 unshield。电路 16,622 → 17,358 约束，公开输入仍为 7 个。`pep()` = `A:1:0.3.1`。
@@ -14,9 +16,22 @@
 > 0.2.1：按原型实测回写（公开输入打包替代 SHA-256、shield 代币托管在合约地址、Gas 实测）。
 > 0.2 相对 0.1 的主要变化：机密账户与以太坊地址解耦、公钥不上链、删除注册表与 shield / unshield 函数、payload 类型字节定义转账类型、证明即授权、删除 `applyPending`（改为花费时惰性折叠）。所有 Gas 数字为估算。
 
+## 内核与模块
+
+自 0.5.0 起，A.1 由一个**内核**加若干选配**模块**组成（[ADR-0008](../../../adr/0008-modules.zh-cn.md)）。本文是内核的规格。公开账本模块的流程也保留在本文里（见下表标出的小节），这样安全评审和部署记录引用的小节编号仍然有效。模块本身、跨模块的供应量记账以及各种组合，见 [04-modules.md](04-modules.zh-cn.md)。
+
+| 小节 | 属于 |
+| --- | --- |
+| §1、§2.1、§2.2（账户、登记项、监管密钥）、§2.3 的 I2–I5、§2.4、§3（`0x01`、`0x80`、`prepare`）、§4.2、§4.3、§4.6、§5、§8 | 内核 |
+| §2.2（`shieldedSupply`、ERC-20 账本）、§2.3 的 I1、§3（不带 payload 的调用、`0x03`、`0x04`）、§4.1、§4.4、§4.5、§6 里的 `LedgerCrossing` | 公开账本模块 |
+| `0x81`、`mint`、`mintConfidential`、`Minted`、`Burned` | 角色铸造模块（04-modules §4.2） |
+| `wrapperMint`、`wrapperBurn` | Wrapper 端口（04-modules §4.3） |
+
+只有内核时，它是一个纯隐私账本：没有公开账本模块，`balanceOf` 对所有地址返回 0，不带 payload 的 `transfer` 回退。
+
 ## 0. 设计原则
 
-1. **公开账本零改动**：就是 OpenZeppelin ERC20，机密逻辑的任何故障都不影响它。
+1. **内核是纯隐私账本，一切公开的东西都是模块。** 带公开账本模块时，公开账本就是 OpenZeppelin ERC20，机密逻辑的任何故障都不影响它。
 2. **链上不接触明文，也不接触公钥**：合约只验证证明、做密文加法。机密账户的公钥永远不出现在链上。
 3. **每份密文只有一个写者**：`available` 只被账户本人的证明修改，`pending` 只被他人写入、随本人的下一次花费折叠。证明绑定写者视角的状态，并发不会使证明失效。
 4. **证明即授权**：花费机密余额的授权是"知道私钥"的零知识证明，不是 `msg.sender`。任何人都可以代为提交交易。
@@ -52,7 +67,7 @@
 - **派生**：`s = keccak256(sign_EIP712({name:"PEP", chainId, contract}, {purpose:"A.1 key", index}))  mod l`。同一钱包可用不同 `index` 派生多个账户。
 - **发布**：账户持有人把 `pk`（64 字节）链下交给付款方；`id` 可由 `pk` 算出。链上没有任何地方可以查到 `pk`。
 - **创建**：第一笔发往 `id` 的转账创建存储槽。没有"开户"。
-- **与钱包的关联**：仅在公开账本与机密账本之间划转时（`0x03` / `0x04`）出现，形式为 `钱包 → id` 或 `id → 钱包` 的公开边。
+- **与钱包的关联**：只出现在公开地址与 id 相遇的地方：带公开账本模块时的 `0x03` / `0x04`，经 Wrapper 端口的 wrap 或 unwrap，以及向某个 id 铸造。每一处都是钱包与 id 之间的一条公开的边。
 
 ### 2.2 存储
 
@@ -72,21 +87,21 @@ struct ConfidentialAccount {
 
 mapping(address => ConfidentialAccount) internal _accounts;   // key = id
 mapping(address => mapping(uint256 => Prepared)) internal _prepared;   // 兜底，见 §3.4
-uint256 public shieldedSupply;
+uint256 public shieldedSupply;            // 机密供应量；由公开账本模块以这个名字暴露（04-modules §3）
 
 struct RegulatorKey { Point pk; uint64 activatedAt; }
 RegulatorKey[] public regulatorKeys;      // 只追加；index = keyId
 uint32 public activeRegulatorKeyId;
 ```
 
-公开账本：OpenZeppelin `ERC20` 原样，key 为以太坊地址。两个账本 key 空间相同（20 字节）但含义不同，协议不区分，见原则 7。
+公开账本模块：OpenZeppelin `ERC20` 原样，key 为以太坊地址。两个账本 key 空间相同（20 字节）但含义不同，协议不区分，见原则 7。
 
 ### 2.3 全局不变量
 
 | 编号 | 内容 |
 | --- | --- |
-| I1 | 屏蔽中的代币托管在合约自身地址：`balanceOf(address(this)) == shieldedSupply`，因此 `totalSupply() == Σ 公开余额`（含合约地址）对任何索引器天然成立 |
-| I2 | `totalSupply() ≤ 2⁶⁴ − 1`（最小单位）。保证任何机密余额 `< 2⁶⁴`，范围证明不会因累加溢出失效 |
+| I1 | （公开账本模块）屏蔽中的代币托管在合约自身地址：`balanceOf(address(this)) == shieldedSupply`，因此 `totalSupply() == Σ 公开余额`（含合约地址）对任何索引器天然成立 |
+| I2 | `issuedSupply() ≤ 2⁶⁴ − 1`（最小单位；没有 Wrapper 端口时 `issuedSupply()` 等于 `totalSupply()`，见 04-modules §3）。保证任何机密余额 `< 2⁶⁴`，范围证明不会因累加溢出失效 |
 | I3 | 每个 `id`：`available + pending` 解密后等于真实机密余额 |
 | I4 | `nonce` 严格递增 |
 | I5 | `pending` 只增加，且只加入范围证明过的非负金额或公开金额 |
@@ -110,7 +125,7 @@ function prepare(bytes calldata payload) external;          // 兜底：先验�
 function cancel(address from, uint256 handle) external;      // 撤销未执行的登记，仅登记者可调
 ```
 
-没有 `register`、`shield`、`unshield`、`applyPending`。
+没有 `register`、`shield`、`unshield`、`applyPending`。不带 payload 的调用形式以及 `0x03` / `0x04` 只在带公开账本模块时存在；没有该模块时它们回退（04-modules §5）。
 
 ### 3.2 payload
 
@@ -124,14 +139,15 @@ byte 2..    sections（按 type 与 flags 决定，顺序固定）
 
 **type**
 
-| type | 名称 | `from` | `to` | `x` | 证明 | shieldedSupply |
-| --- | --- | --- | --- | --- | --- | --- |
-| （无 payload） | 公开转账 | 公开账户 | 公开账户 | 明文金额 | 否 | — |
-| `0x01` | 机密转账 | 机密 id | 机密 id | 句柄 | 是 | — |
-| `0x02` | stealth 机密转账 | 机密 id | 一次性 id | 句柄 | 是 | — |
-| `0x03` | 公开 → 机密 | 公开账户 | 机密 id | 明文金额 | 否 | `+x` |
-| `0x04` | 机密 → 公开 | 机密 id | 公开账户 | 明文金额 | 是 | `−x` |
-| `0x80` | 纯折叠（A.1 私有） | 机密 id | 同一 id | 句柄 | 是（仅私钥知识） | 0 |
+| type | 名称 | `from` | `to` | `x` | 证明 | 机密供应量 | 所属部分 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| （无 payload） | 公开转账 | 公开账户 | 公开账户 | 明文金额 | 否 | — | 公开账本 |
+| `0x01` | 机密转账 | 机密 id | 机密 id | 句柄 | 是 | — | 内核 |
+| `0x02` | stealth 机密转账 | 机密 id | 一次性 id | 句柄 | 是 | — | 内核（保留） |
+| `0x03` | 公开 → 机密 | 公开账户 | 机密 id | 明文金额 | 否 | `+x` | 公开账本 |
+| `0x04` | 机密 → 公开 | 机密 id | 公开账户 | 明文金额 | 是 | `−x` | 公开账本 |
+| `0x80` | 纯折叠（A.1 私有） | 机密 id | 同一 id | 句柄 | 是（仅私钥知识） | 0 | 内核 |
+| `0x81` | 销毁（A.1 私有） | 机密 id | `0x0` | 明文金额 | 是（`0x04` 的证明） | `−x` | 角色铸造 |
 
 `0x02` 在 0.2 中仅保留编号，见 §11。
 
@@ -188,7 +204,7 @@ byte 2..    sections（按 type 与 flags 决定，顺序固定）
 
 ## 4. 执行流程
 
-### 4.1 `0x03` 公开 → 机密
+### 4.1 `0x03` 公开 → 机密（公开账本模块）
 
 ```
 _update(from, address(this), x)      // 标准 ERC-20 检查；托管到合约地址，发出 Transfer(from, this, x)
@@ -226,7 +242,7 @@ emit ConfidentialTransfer(from, to, handle, regKeyId, D, C_recv, C_reg, memo_rec
 
 两种情况下合约的状态更新公式相同，区别只在公开输入中的 `pre`。
 
-### 4.4 `0x04` 机密 → 公开
+### 4.4 `0x04` 机密 → 公开（公开账本模块）
 
 ```
 acc = _accounts[from]
@@ -240,7 +256,7 @@ _update(address(this), to, x)        // 发出 Transfer(this, to, x)
 emit LedgerCrossing(from, to, 0x04, x)
 ```
 
-### 4.5 四种组合一览
+### 4.5 四种组合一览（带公开账本模块）
 
 | 付款 → 收款 | 调用 | payload | 证明 | 金额公开 |
 | --- | --- | --- | --- | --- |
@@ -296,9 +312,9 @@ emit Folded(from, handle, acc.nonce)
 
 约束量实测：**29,719 个非线性约束**（0.3.x 为 35,137；未打包版本 30,356）。Node 环境证明约 1.3~1.5 s。
 
-### 5.2 `0x04`
+### 5.2 unshield 电路：`0x04`、`0x81`、`wrapperBurn`
 
-去掉 3、9 的后两项、10、11；公开输入 7 个：`w0 = from | nonce<<160`，`w1 = contract | chainId<<160`，`w2 = amount | signBits<<48 | to<<64`（`to` 为公开收款地址，0.3.1 起绑定，见安全自审 F14），`xs[4]`。实测 17,358 个约束。
+这个电路是 `_debitPublic`（04-modules §2）背后的「按公开金额扣出」；`0x04`、`0x81` 销毁和 `wrapperBurn` 都用它，`to` 分别是公开收款地址、零地址、包装代币的接收地址。去掉 3、9 的后两项、10、11；公开输入 7 个：`w0 = from | nonce<<160`，`w1 = contract | chainId<<160`，`w2 = amount | signBits<<48 | to<<64`（`to` 为公开收款地址，0.3.1 起绑定，见安全自审 F14），`xs[4]`。实测 17,358 个约束。
 
 ### 5.3 `0x80`
 
@@ -310,7 +326,8 @@ emit Folded(from, handle, acc.nonce)
 | --- | --- | --- |
 | `Transfer` | `(from, to, x)` | 标准；`x` 最高位区分句柄与金额 |
 | `ConfidentialTransfer` | `(from, to, handle, regKeyId, D, C_recv, C_reg, memo_recv, memo_reg)` | 收款方扫描、监管解密（`C_sender` 不发出：付款方自己知道） |
-| `LedgerCrossing` | `(from, to, type, amount)` | `0x03` / `0x04`，索引器维护 `shieldedSupply` |
+| `LedgerCrossing` | `(from, to, type, amount)` | 公开账本模块：`0x03` / `0x04`，索引器维护 `shieldedSupply` |
+| `Minted` / `Burned` | `(id, amount)` | 角色铸造模块与 Wrapper 端口：按公开金额记入某个 id，或从某个 id 扣出 |
 | `Folded` | `(id, handle, nonce)` | `0x80`，`nonce` 为折叠后的新值 |
 | `Prepared` / `Cancelled` | `(from, handle)` | 兜底 |
 | `RegulatorKeyRotated` | `(keyId, pk)` | |
@@ -320,12 +337,13 @@ emit Folded(from, handle, acc.nonce)
 ## 7. 视图
 
 ```solidity
-function balanceOf(address) external view returns (uint256);            // 公开账本
+function balanceOf(address) external view returns (uint256);            // 公开账本模块；没有该模块时所有地址都返回 0
 function confidentialAccountOf(address id) external view
     returns (Ciphertext available, Ciphertext pending, uint64 nonce, uint64 foldedAtBlock, uint64 lastReceivedAtBlock, bytes memory decryptable);
-function shieldedSupply() external view returns (uint256);
+function shieldedSupply() external view returns (uint256);              // 公开账本模块
 function regulatorKey(uint32 id) external view returns (Point memory);
-function supportsInterface(bytes4) external view returns (bool);         // 家族 / Track A / A.1
+function supportsInterface(bytes4) external view returns (bool);         // IPEP 与各模块的接口标识
+function pepModules() external view returns (Module[] memory);          // 模块探针（07 §13.3），0.5.0 起
 ```
 
 ## 8. 客户端流程
@@ -334,7 +352,7 @@ function supportsInterface(bytes4) external view returns (bool);         // 家�
 
 **收款方**：监听 `ConfidentialTransfer(to = id)` → `k = s⁻¹·E` → 解 memo 得 `(v, r)` → 校验 `C_amt == v·G + r·H` → 本地余额 += v。监听 `LedgerCrossing(to = id, 0x03)` → 本地余额 += amount。不需要任何链上动作。
 
-**监管方**：遍历 `ConfidentialTransfer`，按 `regKeyId` 解 `memo_reg`，校验承诺；结合 `LedgerCrossing` 重建任意 id 任意时刻的余额。不解离散对数，不需要任何人配合，只读。id 与钱包的对应关系仅能从 `0x03` / `0x04` 的边推断。
+**监管方**：遍历 `ConfidentialTransfer`，按 `regKeyId` 解 `memo_reg`，校验承诺；结合按公开金额变动的事件（`LedgerCrossing`、`Minted`、`Burned`）重建任意 id 任意时刻的余额。不解离散对数，不需要任何人配合，只读。id 与钱包的对应关系仅能从 `0x03` / `0x04` 的边推断。
 
 **memo 兜底**：由电路强制，理论上不会错；若实现有 bug，收款方仍可对 `C_amt − s·D_recv = v·G` 做 48 位离散对数（2²⁴ 表）。
 
@@ -386,6 +404,8 @@ function supportsInterface(bytes4) external view returns (bool);         // 家�
 ## 10. 范围（0.2）
 
 **包含**：公开账本、`transfer` / `transferFrom` 四种类型（`0x02` 除外）、`prepare` / `cancel`、监管密钥登记与轮换、事件与视图、ERC-165、公开输入打包。
+
+自 0.5.0 起，范围按部分来说明：本文里没有标为模块的内容都属于内核，模块见 [04-modules](04-modules.zh-cn.md)。
 
 ## 11. Backlog
 

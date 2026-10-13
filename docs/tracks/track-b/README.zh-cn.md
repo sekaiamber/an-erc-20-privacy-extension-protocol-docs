@@ -41,7 +41,7 @@
 
 ## 模块
 
-与家族里的任何代币一样，一个 Track B 代币是一个 Variant 加若干模块（[07 §13](../../07-family-conventions.zh-cn.md)）。每个 Variant 写明它支持哪些模块。
+与家族里的任何代币一样，一个 Track B 代币是一个 Variant 加若干模块（[07 §13](../../07-family-conventions.zh-cn.md)）。每个 Variant 的每个版本都声明它支持哪些模块。
 
 ## 家族工具
 

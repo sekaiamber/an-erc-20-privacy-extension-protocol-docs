@@ -102,7 +102,7 @@ interface IPEP {
 - 合约通过 ERC-165 声明 `type(IPEP).interfaceId`。模块各自增加自己的接口 id（§13）。
 - 前端对任意地址先 `supportsInterface`，再读 `pep()` 解析 track / variant / version 并路由到对应页面。页面提供哪些功能由模块决定（§13）。
 - 描述符是**自我声明**：家族是宽松的，链上没有注册表，也不校验合约行为是否与声明一致（与 ERC-20 一样）。填错描述符的后果由发布者承担。
-- `version` 跟随该 Variant 的设计文档版本；改电路或接口即升版本。
+- `version` 跟随该 Variant 的设计文档版本；改电路、改接口或改变所支持的模块清单（§13.2）都要升版本。
 
 ## 11. 数值约束
 
@@ -130,12 +130,19 @@ interface IPEP {
 | 模块 | 种类 | 接口 | 增加了什么 | 代币强制的限额 |
 | --- | --- | --- | --- | --- |
 | 公开账本 | 编译时 | 草案 | 代币地址上的标准 ERC-20 余额；payload 类型 `0x03` / `0x04`；`shieldedSupply()`；`LedgerCrossing` | 无 |
-| 角色铸造 | 编译时 | 草案 | `MINTER_ROLE` 按公开金额 `mint`：有公开账本时铸到公开账本，否则铸到机密账户，并附带按公开金额销毁 | 该 Variant 的供应上限 |
+| 角色铸造 | 编译时 | 草案 | 由铸造角色按公开金额发行，由持有人按公开金额销毁。具体函数由各 Variant 定义（A.1：[04-modules §4.2](tracks/track-a/variant-1/04-modules.zh-cn.md)） | 该 Variant 的供应上限 |
 | Wrapper 端口 | 端口加运行时模块 | `IPEPWrappable` | `wrapperMint`、`wrapperBurn`、`wrapper()`；由家族 Wrapper（[10](10-wrapper.zh-cn.md)）使用 | 记入量不得超过经该端口出去的数量（`wrappedOut`） |
 
 托管发行（锁定普通 ERC-20、发行隐私代币的金库）是保留名，尚未设计。
 
-各 Variant 的支持情况：A.1 三个都实现了。B.1（仅设计）支持角色铸造和 Wrapper 端口，不支持公开账本。
+登记表只增不减。新登记一个模块，对已有的 Variant 版本没有任何影响。
+
+**支持声明。** 每个 Variant 的每个版本都要声明自己支持哪些模块（§13.2）：
+
+| Variant 版本 | 公开账本 | 角色铸造 | Wrapper 端口 |
+| --- | --- | --- | --- |
+| A.1 0.5.0（设计） | 支持 | 支持 | 支持 |
+| B.1 0.1.0（设计） | 不支持 | 支持 | 支持 |
 
 标为「草案」的接口在合约重构时确定（ADR-0008「过渡」）。
 
@@ -149,6 +156,7 @@ interface IPEP {
 - **限额。** 每个端口都带一个由代币强制的限额；代币不依赖模块自己的检查。
 - **不设通用钩子。** 代币在转账前后不对外回调。
 - **不改电路。** 需要换电路的是 Variant。
+- **按版本声明。** Variant 的每个版本都要在自己的设计文档和 §13.1 的表里声明它支持的模块清单。这份清单是封闭的：该版本的代币可以使用其中任意几个，但不能使用清单之外的。以后新登记的模块，已有的版本不支持；要支持它，就得给这个 Variant 出一个新版本，至少升次版本号。
 
 ### 13.3 探针
 
@@ -163,6 +171,7 @@ interface IPEPModules {
 
 - `id` 是该模块接口的 ERC-165 接口标识；`supportsInterface(id)` 对它返回 true。
 - 这份清单与 `pep()` 一样是自我声明。
+- `pep()` 说明代币是哪个 Variant 的哪个版本，也就说明了它可能带哪些模块；`pepModules()` 说明它实际带了哪些。
 - 集成方不得从 Track 字母推断代币有没有公开余额，要从探针读取。
 - 草案：已发布的两个合约都还没有实现 `IPEPModules`。目前检测 Wrapper 端口用的是 `supportsInterface(type(IPEPWrappable).interfaceId)`。
 

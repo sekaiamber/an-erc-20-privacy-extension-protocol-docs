@@ -77,6 +77,6 @@ The family conventions govern the topmost edge (selector + payload) plus events,
 
 - Adding a Track: only for a route that is actually going to be pursued; letters are not allocated in advance. It requires a family-level ADR stating how the route passes the two tests of ADR-0007 and what each family tool has to do to support it.
 - Adding a Variant: only for a new set of circuits. Create a new directory under an existing Track with its own design, specification and evaluation table; no family-level ADR needed.
-- Adding a module: register it in 07 §13 with its kind, its interface and, for a port, its limit; then implement it in each Variant that supports it. A module never changes a circuit, is never installable after deployment, and never runs in the token's storage (ADR-0008).
+- Adding a module: register it in 07 §13 with its kind, its interface and, for a port, its limit; then implement it in each Variant that supports it. A module never changes a circuit, is never installable after deployment, and never runs in the token's storage (ADR-0008). Each version of a Variant declares the modules it supports; an existing version does not gain a module registered later, and supporting it takes a new version of that Variant.
 - Changes to the family conventions affect every Track and must go through an ADR with a migration note.
 - Outside the mainline only a one-page sketch was allowed until the mainline ran end to end with gas figures (ADR-0002, item 5). That condition has been met since A.1 0.4.0.
