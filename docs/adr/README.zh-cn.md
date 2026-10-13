@@ -21,6 +21,7 @@
 | [0006](0006-regulatory-committee.zh-cn.md) | 监管方改为门限委员会合约；密码内核改为普通 ElGamal | Accepted（§3 已落地；委员会原型 2026-09-29 落地） |
 | [0005](0005-family-wrapper.zh-cn.md) | 家族级 Wrapper 是工具，不取代 Track A | Accepted（用语由 0008 更新） |
 | [0004](0004-regulatory-access-principles.zh-cn.md) | 监管接入原则 | Accepted |
+| [0011](0011-project-name-casata.zh-cn.md) | 项目定名 Casata；缩写 PEP 停用 | Proposed |
 
 ## A.1
 

@@ -21,6 +21,7 @@ Records the important and hard-to-reverse technical decisions in the project. On
 | [0006](0006-regulatory-committee.md) | Regulator as a threshold committee contract; crypto core switched to plain ElGamal | Accepted (§3 shipped; committee prototyped 2026-09-29) |
 | [0005](0005-family-wrapper.md) | A family-level Wrapper as a tool, not a replacement for Track A | Accepted (terms updated by 0008) |
 | [0004](0004-regulatory-access-principles.md) | Regulatory access principles | Accepted |
+| [0011](0011-project-name-casata.md) | The project is named Casata; the acronym PEP is retired | Proposed |
 
 ## A.1
 

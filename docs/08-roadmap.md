@@ -42,6 +42,7 @@ Status: `Draft`
 - [x] B.1: dApp page `/tracks/b/1` (2026-10-13): key, history walk, notes, proofs in the browser; client library checked against the circuit offline
 - [x] B.1 deployed on BSC testnet (2026-10-13); all five operations run on chain → `tracks/track-b/variant-1/02-deployments.md`
 - [ ] ADR-0010 (accepted 2026-10-13): reword 07 §1, §5, §6, §7 and §13.1; new versions of A.1 and B.1 (`mint` by the transfer rule, fold as its own function, `approve` reverting without the public ledger, no `prepare` / `cancel`); dApp; redeploy
+- [ ] ADR-0011 (proposed 2026-10-13): the project is named Casata (long form Casata Segreta), the guide Cicerone; `pep()` / `IPEP*` / `PEPWrapper` and the EIP-712 domain are renamed in the same Variant versions as ADR-0010
 - [ ] B.1: browser pass of the dApp page; B.1 decoder for the regulator view; deploy form in the dApp
 - [ ] Threat model review
 - [ ] `Review` versions of the family conventions and the A.1 design
