@@ -2,7 +2,7 @@
 
 # B.1 设计（0.1.0-draft）
 
-状态：`Draft`。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`）。dApp 里已有它的页面（`/tracks/b/1`）。还没有部署，所以这个页面还没有对着真实代币用过。gas、约束数和证明时间都是本地实测（§12）。
+状态：`Draft`。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`）。已部署到 BSC testnet（[02-deployments](02-deployments.zh-cn.md)，2026-10-13）。dApp 里已有它的页面（`/tracks/b/1`），但还没有在浏览器里对着这个代币实际用过。gas、约束数和证明时间都是本地实测（§12）。
 
 所属 Track：[B，note 模型](../README.zh-cn.md)。由 [ADR-0009](../../../adr/0009-track-b-notes.zh-cn.md) 开设。
 
@@ -295,7 +295,7 @@ Alice 付款，Bob 是商户，Carol 和 Dave 是其他顾客。
 
 - A.1 的转账稳态是 467k，账户首次花费是 706k。
 - 一笔转账的 1,370k 里，承诺树占 943k。其余 427k 是 21 个公开输入的 Groth16 验证、两个新的作废符存储槽、calldata、事件，以及指向上一次操作的链接。
-- 对一棵全新的树做第一次操作要多花约 44 万（第一次铸造是 1,830k）。某个代币第一次 wrap 时还要部署它的包装 ERC-20（1,998k）。
+- 对一棵全新的树做第一次操作要多花约 45.5 万（第一次铸造是 1,830k）。某个代币第一次 wrap 时还要部署它的包装 ERC-20（1,998k）。
 - 换成手工优化的 Poseidon，承诺树是 696k，一次操作约 112 万。这个没有做（§14 D8）。
 - 深度 32 时，一次操作要多花约 30 万。
 - 运行时字节码：`B1NoteToken` 15,104 字节，验证器 4,454 字节（上限 24,576）。

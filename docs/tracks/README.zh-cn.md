@@ -11,7 +11,7 @@
 | Track | 状态模型 | Variant | 状态 |
 | --- | --- | --- | --- |
 | [A](track-a/README.zh-cn.md) | 加密账户：每个账户一份同态密文余额 | [A.1](track-a/variant-1/README.zh-cn.md) Baby Jubjub 上的 ElGamal + Groth16 | **主线**；0.5.0，两种组合已上 BSC testnet |
-| [B](track-b/README.zh-cn.md) | note 模型：一棵承诺树和一个作废符集合，没有账户 | [B.1](track-b/variant-1/README.zh-cn.md) Poseidon note，一个 join-split 电路，Groth16 | 合约与电路已在本地实现，尚未部署（[ADR-0009](../adr/0009-track-b-notes.zh-cn.md)） |
+| [B](track-b/README.zh-cn.md) | note 模型：一棵承诺树和一个作废符集合，没有账户 | [B.1](track-b/variant-1/README.zh-cn.md) Poseidon note，一个 join-split 电路，Groth16 | 已部署到 BSC testnet，0.1.0（[ADR-0009](../adr/0009-track-b-notes.zh-cn.md)） |
 
 两个 Track 的信任基础相同：用户持有密钥，证明在客户端生成，不依赖外部网络。
 
@@ -23,7 +23,7 @@
 | 角色铸造 | 支持 | 支持 |
 | Wrapper 端口 | 支持 | 支持 |
 
-这份清单是版本的一部分。以后登记的模块，这些版本都不支持；要支持就得给该 Variant 出新版本（07 §13.2）。A.1 0.5.0 已实现并部署；B.1 0.1.0 已在本地实现并通过测试，尚未部署。
+这份清单是版本的一部分。以后登记的模块，这些版本都不支持；要支持就得给该 Variant 出新版本（07 §13.2）。这两个版本都已实现并部署到 BSC testnet。
 
 ## 已部署的组合
 
@@ -31,8 +31,9 @@
 | --- | --- | --- | --- | --- | --- |
 | A.1 带公开账本 | 有 | 有，铸到公开账本 | 无 | `A1LedgerToken`，`A:1:0.5.0` | [track-a/variant-1](track-a/variant-1/README.zh-cn.md) |
 | A.1 纯隐私 | 无 | 有，铸到机密账户 | 有 | `A1PrivateToken`，`A:1:0.5.0` | [track-a/variant-1](track-a/variant-1/README.zh-cn.md) |
+| B.1 | 无 | 有，铸成 note | 有 | `B1NoteToken`，`B:1:0.1.0` | [track-b/variant-1](track-b/variant-1/README.zh-cn.md) |
 
-地址见 [A.1 部署记录](track-a/variant-1/03-deployments.zh-cn.md)。两个代币自报的描述符相同，靠 `pepModules()` 区分。
+地址见 [A.1 部署记录](track-a/variant-1/03-deployments.zh-cn.md)和 [B.1 部署记录](track-b/variant-1/02-deployments.zh-cn.md)。A.1 的两个代币自报的描述符相同，靠 `pepModules()` 区分。
 
 第二种组合当初是作为「Track B / B.1」开设的，在 2026-10-13 之前一直以这个名字发布，描述符为 `B:1:0.2.0`。那段时间的记录在 [track-a/variant-1-privacy-only](track-a/variant-1-privacy-only/README.zh-cn.md)。它不是上表里的 Track B。
 

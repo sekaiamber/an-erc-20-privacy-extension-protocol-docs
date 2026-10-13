@@ -37,7 +37,7 @@ Track A  Encrypted accounts: one homomorphic-ciphertext balance per account
        ├─ with the public ledger            contract A1LedgerToken,  pep() A:1:0.5.0   ← prototype on BSC testnet
        └─ privacy-only, with the Wrapper port   contract A1PrivateToken, pep() A:1:0.5.0   ← prototype on BSC testnet
 Track B  Notes: a tree of commitments and a set of nullifiers, no accounts
-  └─ B.1  Poseidon notes, one join-split circuit, Groth16                       ← implemented locally, not deployed (ADR-0009)
+  └─ B.1  Poseidon notes, one join-split circuit, Groth16                       ← deployed on BSC testnet, `B:1:0.1.0` (ADR-0009)
 Runtime module  generic Wrapper (10-wrapper): issues wTOKEN for tokens without the public ledger   ← deployed (PEPWrapper)
 Family tool     Regulatory Committee (11): threshold regulator key, membership, policies, audit    ← prototype
 ```

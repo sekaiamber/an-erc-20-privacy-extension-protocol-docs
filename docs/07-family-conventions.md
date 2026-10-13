@@ -141,8 +141,8 @@ The registry is append-only. Registering a new module changes nothing for existi
 
 | Variant version | Public ledger | Role issuance | Wrapper port |
 | --- | --- | --- | --- |
-| A.1 0.5.0 (design) | Yes | Yes | Yes |
-| B.1 0.1.0 (implemented, not deployed) | No | Yes | Yes |
+| A.1 0.5.0 | Yes | Yes | Yes |
+| B.1 0.1.0 | No | Yes | Yes |
 
 The interfaces are in `contracts/contracts/family/`.
 

@@ -2,7 +2,7 @@ English | [中文](01-design.zh-cn.md)
 
 # B.1 design (0.1.0-draft)
 
-Status: `Draft`. The contracts and the circuit are implemented and tested locally (`contracts/contracts/track-b/variant-1/`, `contracts/circuits/track-b/variant-1/join_split.circom`). The dApp has a page for it (`/tracks/b/1`). Nothing is deployed, so the page has not been used against a live token. Gas, constraint count and proving time are measured locally (§12).
+Status: `Draft`. The contracts and the circuit are implemented and tested locally (`contracts/contracts/track-b/variant-1/`, `contracts/circuits/track-b/variant-1/join_split.circom`). It is deployed on BSC testnet ([02-deployments](02-deployments.md), 2026-10-13). The dApp has a page for it (`/tracks/b/1`), which has not yet been exercised in a browser against the live token. Gas, constraint count and proving time are measured locally (§12).
 
 Track: [B, notes](../README.md). Opened by [ADR-0009](../../../adr/0009-track-b-notes.md).
 
@@ -295,7 +295,7 @@ Alice pays, Bob is a merchant, Carol and Dave are other customers.
 
 - An A.1 transfer costs 467k in steady state and 706k on an account's first spend.
 - Of the 1,370k of a transfer, the tree is 943k. The other 427k is the Groth16 verification with 21 public inputs, two new nullifier slots, calldata, events and the link to the previous operation.
-- The first operation on a fresh tree costs about 440k more (1,830k for the first mint). The first wrap of a token also deploys its wrapped ERC-20 (1,998k).
+- The first operation on a fresh tree costs about 455k more (1,830k for the first mint). The first wrap of a token also deploys its wrapped ERC-20 (1,998k).
 - With a hand-optimised Poseidon the tree would cost 696k and an operation about 1.12M. That is not built (§14 D8).
 - At depth 32 an operation would cost about 300k more.
 - Runtime bytecode: `B1NoteToken` 15,104 bytes, the verifier 4,454 bytes (limit 24,576).

@@ -2,11 +2,12 @@
 
 # B.1：note 模型，一个 join-split 电路
 
-版本：`0.1.0-draft`　状态：`Draft`（合约、电路和 dApp 页面已实现；本地测试通过，尚未部署）
+版本：`0.1.0-draft`　状态：`Draft`（合约、电路和 dApp 页面已实现；2026-10-13 已部署到 BSC testnet）
 
 | 文档 | 内容 |
 | --- | --- |
-| [01-design.md](01-design.zh-cn.md) | 设计：note、承诺与作废符、树、join-split 命题、ERC-20 表面、memo、流程、客户端、情景、隐私评估、成本估计、待定决策 |
+| [01-design.md](01-design.zh-cn.md) | 设计：note、承诺与作废符、树、join-split 命题、ERC-20 表面、memo、流程、客户端、情景、隐私评估、成本、待定决策 |
+| [02-deployments.md](02-deployments.zh-cn.md) | 部署记录：BSC testnet 上的地址，以及每种操作在链上实测的 gas |
 
 所属 Track：[B，note 模型](../README.zh-cn.md)。决策记录：[ADR-0009](../../../adr/0009-track-b-notes.zh-cn.md)。
 

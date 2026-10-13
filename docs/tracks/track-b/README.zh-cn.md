@@ -2,7 +2,7 @@
 
 # Track B：note 模型
 
-状态：`Draft`。由 [ADR-0009](../../adr/0009-track-b-notes.zh-cn.md) 于 2026-10-13 开设。B.1 的合约和电路已在本地实现并通过测试。dApp 里已有它的页面。还没有部署。
+状态：`Draft`。由 [ADR-0009](../../adr/0009-track-b-notes.zh-cn.md) 于 2026-10-13 开设。B.1 的合约和电路已在本地实现并通过测试。B.1 已部署到 BSC testnet，dApp 里有它的页面。
 
 > 2026-10-12 之前，「Track B」指的是没有公开账本的代币。它现在是 A.1 的一种组合（[ADR-0008](../../adr/0008-modules.zh-cn.md)），文档在 [track-a/variant-1-privacy-only](../track-a/variant-1-privacy-only/README.zh-cn.md)。已部署的、自报 `B:1:0.2.0` 的合约属于那种组合，不属于本 Track。
 
@@ -55,4 +55,4 @@
 
 | Variant | 内核 | 付款方 / 收款方 | 金额 | 监管 | 状态 |
 | --- | --- | --- | --- | --- | --- |
-| [B.1](variant-1/README.zh-cn.md) | Poseidon 承诺与作废符，一个 join-split 电路（两进两出），Groth16 | 隐藏 | 隐藏 | 每笔交易都有 memo，在电路里强制 | 0.1.0-draft；合约与电路已在本地实现 |
+| [B.1](variant-1/README.zh-cn.md) | Poseidon 承诺与作废符，一个 join-split 电路（两进两出），Groth16 | 隐藏 | 隐藏 | 每笔交易都有 memo，在电路里强制 | 0.1.0-draft；已部署到 BSC testnet |

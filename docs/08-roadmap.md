@@ -40,7 +40,8 @@ Status: `Draft`
 - [x] B.1: join-split circuit (2026-10-13): 55,343 constraints, about 2.9 s to prove in Node; the on-chain Poseidon is fixed by the Variant (D8)
 - [x] B.1: token contract `B1NoteToken` with role issuance and the Wrapper port (2026-10-13): about 1.37M gas per operation, measured locally
 - [x] B.1: dApp page `/tracks/b/1` (2026-10-13): key, history walk, notes, proofs in the browser; client library checked against the circuit offline
-- [ ] B.1: deployment on BSC testnet, then a browser pass of the page; B.1 decoder for the regulator view; deploy form in the dApp
+- [x] B.1 deployed on BSC testnet (2026-10-13); all five operations run on chain → `tracks/track-b/variant-1/02-deployments.md`
+- [ ] B.1: browser pass of the dApp page; B.1 decoder for the regulator view; deploy form in the dApp
 - [ ] Threat model review
 - [ ] `Review` versions of the family conventions and the A.1 design
 
