@@ -2,7 +2,7 @@ English | [中文](0011-project-name-casata.zh-cn.md)
 
 # 0011 The project is named Casata; the acronym PEP is retired
 
-- Status: Proposed
+- Status: Accepted (2026-10-13; not implemented yet: documents, contracts and the dApp keep the old names until the work listed under Consequences is done)
 - Date: 2026-10-13
 - Scope: Family (names only; no behaviour changes. Implemented together with [ADR-0010](0010-erc20-surface-tradeoffs.md))
 
