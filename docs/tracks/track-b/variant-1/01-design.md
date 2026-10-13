@@ -2,7 +2,7 @@ English | [中文](01-design.zh-cn.md)
 
 # B.1 design (0.1.0-draft)
 
-Status: `Draft`. Only the commitment tree is implemented (`contracts/contracts/track-b/variant-1/NoteTree.sol`), in order to measure it. Constraint counts, proving times and gas figures in this document are estimates, except the tree figures in §12, which are measured locally.
+Status: `Draft`. The commitment tree and the join-split circuit are implemented (`contracts/contracts/track-b/variant-1/NoteTree.sol`, `contracts/circuits/track-b/variant-1/join_split.circom`); the token contract and the client are not. The tree's gas, the constraint count and the proving time are measured locally. The other gas figures are estimates.
 
 Track: [B, notes](../README.md). Opened by [ADR-0009](../../../adr/0009-track-b-notes.md).
 
@@ -37,7 +37,7 @@ It reuses A.1's toolbox where it can: Baby Jubjub, Poseidon, Groth16, keys deriv
 | Item | Value | Notes |
 | --- | --- | --- |
 | Curve, generators | Baby Jubjub; `H` for keys and randomness | As A.1. `G` is not needed: there are no homomorphic ciphertexts |
-| Hash | Poseidon | Every use carries a distinct domain tag |
+| Hash | Poseidon | Uses are kept apart by the number of inputs or by a constant (§4.1). On chain: the contract circomlibjs generates (§14 D8) |
 | Proof system | Groth16 (circom + snarkjs) | As A.1 |
 | Private key | `s ∈ Z_l`, derived per family conventions §8 with purpose `"B.1 key"` | The same wallet derives several keys with `index` |
 | Public key | `pk = s·H` | Never on chain |
@@ -77,13 +77,13 @@ One transaction spends up to two notes of the same owner and creates two notes.
 v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 ```
 
-**Public inputs** (logical list; scalars are packed into words and points expose `x` plus a sign bit, as in A.1): `root, nf[2], cm[2], v_pub_in, v_pub_out, to, chainId, contract, regKeyId, pk_reg, D, memo_recv[2][3], memo_reg[5]`. About 21 field elements after packing.
+**Public inputs** (logical list; scalars are packed into words and points expose `x` plus a sign bit, as in A.1): `root, nf[2], cm[2], v_pub_in, v_pub_out, to, chainId, contract, regKeyId, pk_reg, D, memo_recv[2][3], memo_reg[5]`. 21 field elements after packing (§4.1).
 
 **Private inputs**: `s`; for each input `(v, ρ, leafIndex, path)`; for each output `(v, pk, ρ, ref)`; `r`.
 
 | # | Statement | Notes |
 | --- | --- | --- |
-| 1 | `pk_in == s·H` | One key owns both inputs |
+| 1 | `pk_in == s·H` and `s < l` | One key owns both inputs. `l` is the order of the subgroup. Without the bound, `s` and `s + l` would be two keys for one note, with two different nullifiers, and the note could be spent twice |
 | 2 | For each input: `cm_in = Poseidon(v, pk_in, ρ)` is at `leafIndex` under `root`, **or** `v == 0` | An input with `v == 0` is a dummy and skips the membership check |
 | 3 | For each input: `nf == Poseidon(s, ρ, leafIndex)` | Dummies use a random `ρ`, so their nullifiers look like any other |
 | 4 | For each output: `cm == Poseidon(v, pk, ρ)` and `pk` is on the curve | A key outside the prime-order subgroup yields a note nobody can spend; that is the payer's loss, as with any wrong receiving code |
@@ -94,7 +94,34 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 | 9 | `memo_reg == Enc(r·pk_reg; inputs ‖ outputs)` | §6.2. For a real input the leaf index in the memo equals the one used in 2; for a dummy it is the "none" marker |
 | 10 | Packing of `to`, `chainId`, `contract`, `regKeyId` and the sign bits | Binds the proof to this token, this chain and, for an exit, the public recipient |
 
-Estimated size: 45,000 to 55,000 constraints, against 29,719 for A.1's transfer. The two Merkle paths account for most of the difference.
+Measured size at depth 24: 55,343 constraints, of which 35,429 are non-linear, against 29,719 for A.1's transfer. The first estimate was 45,000 to 55,000 at depth 32.
+
+### 4.1 Public inputs and hash uses
+
+The verifier takes 21 field elements, in this order:
+
+| # | Input | Content |
+| --- | --- | --- |
+| 0 | `root` | |
+| 1–2 | `nf[2]` | |
+| 3–4 | `cm[2]` | |
+| 5 | `w0` | `to` (160 bits), then `chainId` (64 bits) |
+| 6 | `w1` | `contract` (160 bits), `regKeyId` (32 bits), then the sign bits of `pk_reg` and `D` |
+| 7 | `w2` | `v_pub_in` (64 bits), then `v_pub_out` (64 bits) |
+| 8–9 | `xs[2]` | `x` of `pk_reg` and of `D` |
+| 10–15 | `memo_recv[2][3]` | §6.1 |
+| 16–20 | `memo_reg[5]` | §6.2 |
+
+Hash uses:
+
+| Use | Function | Inputs |
+| --- | --- | --- |
+| Tree node | Poseidon, 2 inputs | left, right. The empty leaf is 0 |
+| Memo key and pads | Poseidon, 2 inputs | §6 |
+| Nullifier | Poseidon, 3 inputs | `s, ρ, leafIndex` |
+| Commitment | Poseidon, 4 inputs | `v, pk.x, pk.y, ρ` |
+
+Poseidon with a different number of inputs is a different function. Tree nodes and memo pads share the 2-input function: a pad is never published and its second input is a small constant, while the children of a tree node are hash outputs.
 
 ## 5. ERC-20 surface
 
@@ -131,7 +158,7 @@ This is the declared list of B.1 0.1.0 (07 §13.2). Supporting another module, t
 
 ## 6. Memos
 
-Both memos use a Poseidon keystream derived from the shared secret `r·pk_X`, with the output index and the word index as domain tags.
+Both memos use a Poseidon keystream derived from the shared secret `r·pk_X`, with the output index and the word index as domain tags: `key = Poseidon(shared.x, shared.y)`, `pad[w] = Poseidon(key, 16·party + w)`, and word `w` is encrypted as `m + pad[w]` in the field. `party` is 0 or 1 for the two outputs and 2 for the regulator, so two memos under the same shared secret (both outputs to one key) never reuse a pad.
 
 ### 6.1 Recipient memo
 
@@ -143,6 +170,12 @@ Three words per output: `v`, `ρ`, `ref`.
 ### 6.2 Regulator memo
 
 Five words: the two input leaf indices (or "none"), and for each output the owner key and the amount.
+
+| Word | Content |
+| --- | --- |
+| 0 | `in₀ + in₁·2³²`, where `inᵢ` is `leafIndex + 1` for a real input and 0 for a dummy |
+| 1, 3 | `pk.x` of output 0 and of output 1 |
+| 2, 4 | `v + sign(pk.y)·2⁶⁴` of output 0 and of output 1 |
 
 From these the regulator rebuilds a table of all notes: owner, amount, the transaction that created it and the transaction that spent it. The balance of a key at any time is the sum of its unspent notes. No one's cooperation is needed (ADR-0004, item 5).
 
@@ -241,7 +274,7 @@ Alice pays, Bob is a merchant, Carol and Dave are other customers.
 | 32 | 2 billion | 1,243k | 912k |
 
 - Each level costs about 37k gas with the Poseidon contract that circomlibjs generates and about 27k with a hand-optimised one.
-- The first append to a fresh tree costs about 550k more, once, for the frontier's first writes.
+- The first append to a fresh tree costs more, once, for the frontier's first writes: about 420k more at depth 24 and 550k at depth 32.
 - The hand-optimised figures were taken with the prebuilt bytecode of the `poseidon-solidity` library behind an adapter that adds one call per hash, so a direct integration is somewhat cheaper. That library states it is unaudited, its runtime is 23,478 bytes (the limit is 24,576), and it does not fit the limit when compiled with this project's settings. It was installed for the measurement only and is not a dependency.
 
 *Whole transaction at depth 24, the depth of 0.1.*
@@ -260,7 +293,7 @@ At depth 32 the totals are about 1.66M and 1.33M. The first estimate of this sec
 
 | Limit | Explanation |
 | --- | --- |
-| Proving time | Estimated 2 to 4 s in Node, against 1.3 to 1.5 s for A.1 |
+| Proving time | Measured about 2.9 s in Node for witness and proof together (2026-10-13, development setup), against 1.3 to 1.5 s for A.1. The proving key is 25.8 MB (A.1 transfer: 15.0 MB) |
 | The submitter is visible | Alice submitting her own payment shows that her address made a private transaction at that moment. Hiding it needs a relayer and a fee mechanism, outside 0.1 |
 | Scanning grows with the token, not with the user | Every wallet processes every transaction. A busy token will need an indexing service |
 | Regulator views cannot be narrowed to one key | §6.2 |
@@ -275,7 +308,7 @@ Not in: the public-ledger module, `prepare` / `cancel`, a relayer, a separate vi
 
 ## 14. Open decisions
 
-Each has a default, which this document uses. D1 and D7 were decided by the owner on 2026-10-13.
+Each has a default, which this document uses. D1, D7 and D8 were decided by the owner on 2026-10-13.
 
 | # | Decision | Default | Why it might change |
 | --- | --- | --- | --- |
@@ -286,4 +319,4 @@ Each has a default, which this document uses. D1 and D7 were decided by the owne
 | D5 | Payment reference | One field per output | Could be left to applications |
 | D6 | Mint needs a proof | Yes | Without it the regulator would not know the owner of a minted note until it is spent |
 | D7 | Where the tree is updated | On chain, in the transaction (decided for 0.1) | The tree is 60% to 70% of the transaction's gas. Batched insertion under a separate proof would remove most of it, at the price of notes that are spendable only after the batch and of someone who posts batches |
-| D8 | Poseidon on chain | The circomlibjs bytecode in the prototype; whether a deployer may choose the implementation is open | The bytecode circomlibjs generates is the reference implementation of the circuit's hash and costs about 10k more per level. A hand-optimised implementation saves about 250k per transaction at depth 24 but is unaudited third-party code close to the size limit |
+| D8 | Poseidon on chain | The bytecode circomlibjs generates (decided) | It is the reference implementation of the circuit's hash and costs about 10k more per level. A hand-optimised implementation saves about 250k per transaction at depth 24 but is unaudited third-party code close to the size limit. The hash contract is part of the Variant (ADR-0008, item 3): adopting another one is a new version of B.1 or a new Variant, not a choice at deployment |

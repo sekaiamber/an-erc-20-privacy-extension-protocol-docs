@@ -135,7 +135,7 @@ Decision record: [ADR-0008](adr/0008-modules.md). A module is a contract-level o
 
 Custody issuance (a vault that locks a plain ERC-20 and issues the privacy token) is a reserved name. It is not designed.
 
-The registry is append-only. Registering a new module changes nothing for existing Variant versions.
+The registry is append-only. Registering a new module changes nothing for existing Variant versions. A module may make sense in one Track only; it is registered here all the same, and only the Variants of that Track declare it.
 
 **Declared support.** Every version of every Variant declares which modules it supports (§13.2):
 
@@ -155,7 +155,7 @@ The interfaces are in `contracts/contracts/family/`.
 - **No installing.** A runtime module is fixed at deployment or set once.
 - **Limits.** Every port carries a limit that the token enforces; the token does not rely on the module's own checks.
 - **No general hooks.** The token does not call out before or after a transfer.
-- **No circuit change.** Whatever needs a different circuit is a Variant.
+- **No circuit change.** Whatever needs a different circuit is a Variant. So is whatever replaces a contract the circuits depend on: a verifier, the on-chain hash, a lookup table.
 - **Declaration per version.** Each version of a Variant declares the list of modules it supports, in its design document and in the table of §13.1. The list is closed: a token of that version may use any subset of it and nothing else. When a module is registered later, an existing version does not support it. Supporting it takes a new version of the Variant, which bumps at least the minor number.
 
 ### 13.3 Probe

@@ -43,6 +43,8 @@ Putting the option into the numbering does not work either. As a Variant number 
 
    Anything that needs a circuit change is a Variant, not a module. The regulator ciphertext is enforced inside the transfer circuit, so "with or without a regulator" is not a module. Who holds the regulator key (one party or a committee) is a deployment parameter.
 
+   The contracts a Variant's circuits depend on (the verifiers, an on-chain hash such as Poseidon, lookup tables) are part of the Variant. They are not modules and are not chosen at deployment: each version of a Variant names one implementation of each. Replacing one is a new version of that Variant, or a new Variant when both are to exist side by side. Unlike a port, such a contract has no limit the token could enforce: a false hash or verifier breaks every guarantee. (Added 2026-10-13.)
+
 4. **Rules for runtime modules.**
 
    - **Ports only.** A runtime module is reached with an ordinary call and never runs in the token's storage.
@@ -115,6 +117,7 @@ The documents describe the structure above from now on. The code does not yet.
 - **Compile-time modules only.** Rejected: large state that only needs a port (the registry of wrapped tokens) would sit in the token, and the Wrapper would be rewritten for every Variant.
 - **Modules that run in the token's storage.** Rejected: one faulty module could rewrite every confidential balance.
 - **Modules installable after deployment.** Rejected: see item 4.
+- **A further category, "component", for interchangeable implementations of one function** (two Poseidon contracts, for example), chosen at deployment. Rejected by the owner on 2026-10-13: the choice touches the cryptographic base, and the family already has more concepts than its implementation needs. Such a choice belongs to the Variant (item 3).
 
 ## Consequences
 

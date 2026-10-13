@@ -37,7 +37,8 @@
 - [x] 为 note 模型开设 Track B；B.1 设计 0.1.0-draft（2026-10-13）→ ADR-0009、`tracks/track-b/`
 - [x] B.1：链上 Poseidon 树已在本地实测（2026-10-13）：深度 24 时每笔交易 696k 到 943k gas → `tracks/track-b/variant-1/01-design.md` §12
 - [x] B.1：树深 24，在链上、交易内更新（D1、D7；2026-10-13）
-- [ ] B.1：join-split 电路，然后合约和客户端；确定链上 Poseidon 的实现怎么选（D8）
+- [x] B.1：join-split 电路（2026-10-13）：55,343 个约束，在 Node 里证明约 2.9 秒；链上的 Poseidon 由 Variant 固定（D8）
+- [ ] B.1：代币合约，然后客户端
 - [ ] 威胁模型评审
 - [ ] 家族级约定与 A.1 设计的 `Review` 版本
 
