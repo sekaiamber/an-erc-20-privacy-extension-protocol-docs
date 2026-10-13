@@ -11,7 +11,7 @@
 | Track | 状态模型 | Variant | 状态 |
 | --- | --- | --- | --- |
 | [A](track-a/README.zh-cn.md) | 加密账户：每个账户一份同态密文余额 | [A.1](track-a/variant-1/README.zh-cn.md) Baby Jubjub 上的 ElGamal + Groth16 | **主线**；0.5.0，两种组合已上 BSC testnet |
-| [B](track-b/README.zh-cn.md) | note 模型：一棵承诺树和一个作废符集合，没有账户 | [B.1](track-b/variant-1/README.zh-cn.md) Poseidon note，一个 join-split 电路，Groth16 | 仅设计（[ADR-0009](../adr/0009-track-b-notes.zh-cn.md)） |
+| [B](track-b/README.zh-cn.md) | note 模型：一棵承诺树和一个作废符集合，没有账户 | [B.1](track-b/variant-1/README.zh-cn.md) Poseidon note，一个 join-split 电路，Groth16 | 合约与电路已在本地实现，尚未部署（[ADR-0009](../adr/0009-track-b-notes.zh-cn.md)） |
 
 两个 Track 的信任基础相同：用户持有密钥，证明在客户端生成，不依赖外部网络。
 
@@ -23,7 +23,7 @@
 | 角色铸造 | 支持 | 支持 |
 | Wrapper 端口 | 支持 | 支持 |
 
-这份清单是版本的一部分。以后登记的模块，这些版本都不支持；要支持就得给该 Variant 出新版本（07 §13.2）。A.1 0.5.0 已实现并部署；B.1 0.1.0 只有设计。
+这份清单是版本的一部分。以后登记的模块，这些版本都不支持；要支持就得给该 Variant 出新版本（07 §13.2）。A.1 0.5.0 已实现并部署；B.1 0.1.0 已在本地实现并通过测试，尚未部署。
 
 ## 已部署的组合
 

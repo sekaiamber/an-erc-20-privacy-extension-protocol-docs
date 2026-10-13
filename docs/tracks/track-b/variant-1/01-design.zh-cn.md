@@ -2,7 +2,7 @@
 
 # B.1 设计（0.1.0-draft）
 
-状态：`Draft`。承诺树和 join-split 电路已经实现（`contracts/contracts/track-b/variant-1/NoteTree.sol`、`contracts/circuits/track-b/variant-1/join_split.circom`）；代币合约和客户端还没有。承诺树的 gas、约束数和证明时间是本地实测，其余 gas 数字是估计。
+状态：`Draft`。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`）。还没有部署，dApp 里也还没有它的客户端。gas、约束数和证明时间都是本地实测（§12）。
 
 所属 Track：[B，note 模型](../README.zh-cn.md)。由 [ADR-0009](../../../adr/0009-track-b-notes.zh-cn.md) 开设。
 
@@ -131,9 +131,9 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 | --- | --- | --- | --- |
 | `transferFrom(token, token, handle)` | `0x01` | 无 | note 之间转账 |
 | `transferFrom(token, 0x0, amount)` | `0x81` | `v_pub_out = amount`，`to = 0x0` | 销毁 |
-| `mint(amount, payload)` | 无 | `v_pub_in = amount` | 角色铸造；仅 `MINTER_ROLE` |
-| `wrapperBurn(0x0, to, amount, payload)` | 无 | `v_pub_out = amount`，绑定 `to` | Wrapper 端口：出到包装代币 |
-| `wrapperMint(recipient, amount)` | 无 | `v_pub_in = amount` | Wrapper 端口：`recipient` 就是整个 payload |
+| `mintConfidential(token, amount)` | `0x82` | `v_pub_in = amount` | 角色铸造；仅 `MINTER_ROLE` |
+| `wrapperBurn(0x0, to, amount, payload)` | `0x81` | `v_pub_out = amount`，绑定 `to` | Wrapper 端口：出到包装代币 |
+| `wrapperMint(recipient, amount)` | `0x82` | `v_pub_in = amount` | Wrapper 端口：`recipient` 就是整个 payload |
 | 不带 payload 的 `transfer(to, x)` | 无 | 无 | 回退 `NoPublicLedger()` |
 | `balanceOf(a)` | 无 | 无 | 代币自身地址返回 `totalSupply()`，其它地址返回 0 |
 | `approve`、`allowance` | 无 | 无 | 为接口完整而保留，不授权任何东西 |
@@ -141,12 +141,15 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 - `token` 指代币自身的地址。note 转账里 `from` 和 `to` 不携带任何信息，所以固定为它。标准事件于是读作池子内部的一次移动，不会被当成铸造或销毁。
 - 重放由作废符阻止：一份 payload 只能执行一次。
 - `prepare` / `cancel`（约定 §6）不在 0.1 范围内。
+- `mintConfidential` 就是家族角色铸造接口里的那个函数，join-split 作为尾部 payload 附在后面。这里没有账户可指，所以第一个参数必须是代币自身的地址。
+- **payload。** 所有操作共用一种布局，838 字节：类型（1）、flags（1，必须为 0）、`root`（32）、`nf[2]`（64）、`cm[2]`（64）、`D`（64）、`memo_recv`（192）、`memo_reg`（160）、`regKeyId`（4）、证明（256）。公开金额和 `to` 是调用的参数，由证明绑定。
+- **payload 类型。** `0x01` 是 note 转账；`0x81` 是公开金额流出（销毁、wrap）；`0x82` 是公开金额流入（铸造、unwrap）。证明不绑定类型。销毁和 wrap 靠 `to` 区分：销毁时为零地址，wrap 时不为零。
 
 ### 5.1 模块
 
 | 模块 | B.1 0.1.0 |
 | --- | --- |
-| 角色铸造 | 支持：`mint` 与 `0x81` 销毁 |
+| 角色铸造 | 支持：`mintConfidential` 与 `0x81` 销毁 |
 | Wrapper 端口 | 支持：`IPEPWrappable`，限额 `wrappedOut` |
 | 公开账本 | 不支持。以后可以在同一对 `v_pub_in` / `v_pub_out` 上加 |
 
@@ -186,7 +189,7 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 
 ### 7.1 铸造
 
-铸造方知道收款人的收款码。它构造一个 join-split：两个占位输入，`v_pub_in = amount`，一个输出给收款人，一个零金额输出，然后调用 `mint(amount, payload)`。
+铸造方知道收款人的收款码。它构造一个 join-split：两个占位输入，`v_pub_in = amount`，一个输出给收款人，一个零金额输出，然后调用 `mintConfidential(token, amount)`，把 payload 附在后面。
 
 金额虽然公开，仍然需要证明，因为监管方必须在新 note 创建的那一刻就知道它的所有者。
 
@@ -217,11 +220,12 @@ Wrapper 合约原样使用，不需要改动。
 | `Transfer` | `(token, token, handle)`；`(0x0, token, amount)`；`(token, 0x0, amount)` | note 转账；铸造与 unwrap；销毁与 wrap |
 | `NoteTransfer` | 第一个叶子位置、新树根、`nf[2]`、`cm[2]`、`regKeyId`、`D`、两份收款方 memo、监管 memo、`v_pub_in`、`v_pub_out`、`to` | 每一次操作 |
 | `Minted`、`Burned` | `amount` | 铸造、销毁 |
+| `WrapperMinted`、`WrapperBurned` | `amount`；`to` 与 `amount` | unwrap、wrap |
 | `RegulatorKeyRotated` | 与 A.1 相同 | 轮换 |
 
 `NoteTransfer` 没有任何能识别用户的索引字段。这正是目的所在，也是钱包无法过滤事件的原因（§9）。
 
-视图：`root()`、`isKnownRoot(root)`、`isSpent(nf)`、`leafCount()`、`totalSupply()`、`issuedSupply()`、`wrappedOut()`、约定 §9 的监管密钥视图、返回 `B:1:<version>` 的 `pep()`，以及模块探针。
+视图：`root()`、`isKnownRoot(root)`、`isSpent(nf)`、`leafCount()`、`totalSupply()`、`issuedSupply()`、`wrappedOut()`、约定 §9 的监管密钥视图、返回 `B:1:<version>` 的 `pep()`、模块探针，以及 `TREE_DEPTH()`、`hasher()`、`verifier()`。
 
 ## 9. 客户端
 
@@ -263,7 +267,7 @@ Alice 付款，Bob 是商户，Carol 和 Dave 是其他顾客。
 
 ## 12. 成本与限制
 
-**一笔交易的 gas。** 每种操作的成本大致相同，因为它们验证的是同一个证明，都要追加一对承诺。承诺树是实测的，其余是估计。
+**一笔交易的 gas。** 每种操作的成本大致相同，因为它们验证的是同一个证明，都要追加一对承诺。
 
 *追加一对承诺，本地实测（2026-10-13，`contracts/test/track-b/variant-1/NoteTree.ts`）。* 数字包含一笔交易 21k 的基础费，以及树根、树根标记、叶子计数这三次存储写入。
 
@@ -277,17 +281,22 @@ Alice 付款，Bob 是商户，Carol 和 Dave 是其他顾客。
 - 对一棵全新的树做第一次追加要多花一些，只有一次，花在前沿的首次写入上：深度 24 时约多 42 万，深度 32 时约多 55 万。
 - 手工优化那一列用的是 `poseidon-solidity` 库自带的预编译字节码，外面套了一层适配合约，每次哈希多一次调用，所以直接集成会再便宜一些。这个库自己声明未经审计，运行时字节码 23,478 字节（上限 24,576），按本项目的编译设置编出来会超过上限。它只是为这次实测临时安装的，没有加入依赖。
 
-*深度 24（0.1 采用的深度）时的整笔交易。*
+*完整操作，本地实测（2026-10-13，`contracts/test/track-b/variant-1/B1NoteToken.ts`）：深度 24，circomlibjs 的 Poseidon。*
 
-| 组成 | circomlibjs 的 Poseidon | 手工优化的 Poseidon | 依据 |
-| --- | --- | --- | --- |
-| 承诺树，含基础费 | 943k | 696k | 实测 |
-| Groth16 验证，约 21 个公开输入 | 335k | 335k | 估计；A.1 在 14 个输入时实测 288k |
-| 两个作废符，都是新槽 | 44k | 44k | 估计 |
-| payload 的 calldata 与事件 | 40k | 40k | 估计 |
-| **合计** | **约 136 万** | **约 112 万** | A.1 转账：稳态 467k，账户首次花费 706k |
+| 操作 | gas |
+| --- | --- |
+| 铸造 | 1,371k |
+| note 转账 | 1,367k |
+| 销毁 | 1,372k |
+| wrap，经家族 Wrapper | 1,400k |
+| unwrap，经家族 Wrapper | 1,411k |
 
-深度 32 时合计约为 166 万和 133 万。本节最初的估计是深度 32 时 120 万；它假设每次哈希 21k、树的存储 100k。
+- A.1 的转账稳态是 467k，账户首次花费是 706k。
+- 一笔转账的 1,367k 里，承诺树占 943k。其余 424k 是 21 个公开输入的 Groth16 验证、两个新的作废符存储槽、calldata 和事件。
+- 对一棵全新的树做第一次操作要多花约 44 万（第一次铸造是 1,809k）。某个代币第一次 wrap 时还要部署它的包装 ERC-20（1,994k）。
+- 换成手工优化的 Poseidon，承诺树是 696k，一次操作约 112 万。这个没有做（§14 D8）。
+- 深度 32 时，一次操作要多花约 30 万。
+- 运行时字节码：`B1NoteToken` 15,104 字节，验证器 4,454 字节（上限 24,576）。
 
 **其它限制。**
 

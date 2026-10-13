@@ -38,7 +38,8 @@ Status: `Draft`
 - [x] B.1: on-chain Poseidon tree measured locally (2026-10-13): 696k to 943k gas per transaction at depth 24 → `tracks/track-b/variant-1/01-design.md` §12
 - [x] B.1: tree depth 24, updated on chain in the transaction (D1, D7; 2026-10-13)
 - [x] B.1: join-split circuit (2026-10-13): 55,343 constraints, about 2.9 s to prove in Node; the on-chain Poseidon is fixed by the Variant (D8)
-- [ ] B.1: token contract, then client
+- [x] B.1: token contract `B1NoteToken` with role issuance and the Wrapper port (2026-10-13): about 1.37M gas per operation, measured locally
+- [ ] B.1: client in the dApp; deployment on BSC testnet
 - [ ] Threat model review
 - [ ] `Review` versions of the family conventions and the A.1 design
 

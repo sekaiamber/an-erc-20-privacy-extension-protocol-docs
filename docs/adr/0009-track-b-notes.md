@@ -2,7 +2,7 @@ English | [中文](0009-track-b-notes.zh-cn.md)
 
 # 0009 Open Track B: the note model
 
-- Status: Accepted (design only; the precondition of item 7 was met on 2026-10-13: the restructuring of [ADR-0008](0008-modules.md) is done and the dApp no longer routes `B:1`)
+- Status: Accepted (contracts and circuit implemented locally on 2026-10-13, not deployed; the precondition of item 7 was met on 2026-10-13: the restructuring of [ADR-0008](0008-modules.md) is done and the dApp no longer routes `B:1`)
 - Date: 2026-10-13
 - Scope: Family (opens a Track under item 4 of [ADR-0007](0007-track-definition.md); updates the Transition of ADR-0008)
 
@@ -65,11 +65,11 @@ English | [中文](0009-track-b-notes.zh-cn.md)
 
 ## Accepted costs
 
-These are estimates from the B.1 design, not measurements, except the tree part of the gas figure and the proving time.
+Gas and proving time are measured locally (2026-10-13). The other rows are properties of the design.
 
-| Cost | Estimate |
+| Cost | Size |
 | --- | --- |
-| Gas per transaction | 1.12M to 1.36M at tree depth 24, the depth chosen on 2026-10-13, against 467k for an A.1 transfer in steady state. The tree part is measured (2026-10-13) and is 60% to 70% of the total |
+| Gas per transaction | About 1.37M at tree depth 24, the depth chosen on 2026-10-13, against 467k for an A.1 transfer in steady state. The tree is about 70% of it |
 | Proving | About 2.9 s in Node (measured, 2026-10-13), against 1.3 to 1.5 s |
 | Wallet synchronisation | Every wallet processes every transaction of the token |
 | Regulator views | A whole block range; tracing backwards is targeted, tracing forwards is not |

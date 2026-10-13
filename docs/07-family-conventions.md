@@ -130,7 +130,7 @@ Decision record: [ADR-0008](adr/0008-modules.md). A module is a contract-level o
 | Module | Kind | Interface | Adds | Limit enforced by the token |
 | --- | --- | --- | --- | --- |
 | Public ledger | Compile-time | `IPEPPublicLedger` | Standard ERC-20 balances at the token's address; payload types `0x03` / `0x04`; `shieldedSupply()`; `LedgerCrossing` | None |
-| Role issuance | Compile-time | `IPEPRoleIssuance` | Issuance by a minter role with a public amount, and a public-amount burn by the holder. The functions are defined per Variant (A.1: [04-modules §4.2](tracks/track-a/variant-1/04-modules.md)) | The Variant's supply cap |
+| Role issuance | Compile-time | `IPEPRoleIssuance` | Issuance by a minter role with a public amount, and a public-amount burn by the holder. The functions are defined per Variant (A.1: [04-modules §4.2](tracks/track-a/variant-1/04-modules.md); B.1: [01-design §5](tracks/track-b/variant-1/01-design.md)) | The Variant's supply cap |
 | Wrapper port | Port and runtime module | `IPEPWrappable` | `wrapperMint`, `wrapperBurn`, `wrapper()`; used by the family Wrapper ([10](10-wrapper.md)) | Credits never exceed what left through the port (`wrappedOut`) |
 
 Custody issuance (a vault that locks a plain ERC-20 and issues the privacy token) is a reserved name. It is not designed.
@@ -142,7 +142,7 @@ The registry is append-only. Registering a new module changes nothing for existi
 | Variant version | Public ledger | Role issuance | Wrapper port |
 | --- | --- | --- | --- |
 | A.1 0.5.0 (design) | Yes | Yes | Yes |
-| B.1 0.1.0 (design) | No | Yes | Yes |
+| B.1 0.1.0 (implemented, not deployed) | No | Yes | Yes |
 
 The interfaces are in `contracts/contracts/family/`.
 

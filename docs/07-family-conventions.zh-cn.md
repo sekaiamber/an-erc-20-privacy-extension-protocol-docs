@@ -130,7 +130,7 @@ interface IPEP {
 | 模块 | 种类 | 接口 | 增加了什么 | 代币强制的限额 |
 | --- | --- | --- | --- | --- |
 | 公开账本 | 编译时 | `IPEPPublicLedger` | 代币地址上的标准 ERC-20 余额；payload 类型 `0x03` / `0x04`；`shieldedSupply()`；`LedgerCrossing` | 无 |
-| 角色铸造 | 编译时 | `IPEPRoleIssuance` | 由铸造角色按公开金额发行，由持有人按公开金额销毁。具体函数由各 Variant 定义（A.1：[04-modules §4.2](tracks/track-a/variant-1/04-modules.zh-cn.md)） | 该 Variant 的供应上限 |
+| 角色铸造 | 编译时 | `IPEPRoleIssuance` | 由铸造角色按公开金额发行，由持有人按公开金额销毁。具体函数由各 Variant 定义（A.1：[04-modules §4.2](tracks/track-a/variant-1/04-modules.zh-cn.md)；B.1：[01-design §5](tracks/track-b/variant-1/01-design.zh-cn.md)） | 该 Variant 的供应上限 |
 | Wrapper 端口 | 端口加运行时模块 | `IPEPWrappable` | `wrapperMint`、`wrapperBurn`、`wrapper()`；由家族 Wrapper（[10](10-wrapper.zh-cn.md)）使用 | 记入量不得超过经该端口出去的数量（`wrappedOut`） |
 
 托管发行（锁定普通 ERC-20、发行隐私代币的金库）是保留名，尚未设计。
@@ -142,7 +142,7 @@ interface IPEP {
 | Variant 版本 | 公开账本 | 角色铸造 | Wrapper 端口 |
 | --- | --- | --- | --- |
 | A.1 0.5.0（设计） | 支持 | 支持 | 支持 |
-| B.1 0.1.0（设计） | 不支持 | 支持 | 支持 |
+| B.1 0.1.0（已实现，未部署） | 不支持 | 支持 | 支持 |
 
 这些接口在 `contracts/contracts/family/` 下。
 

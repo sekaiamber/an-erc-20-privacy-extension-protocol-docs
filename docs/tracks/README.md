@@ -11,7 +11,7 @@ The protocol family is organized by **Track / Variant / module** ([ADR-0008](../
 | Track | State model | Variant | Status |
 | --- | --- | --- | --- |
 | [A](track-a/README.md) | Encrypted accounts: one homomorphic-ciphertext balance per account | [A.1](track-a/variant-1/README.md) ElGamal on Baby Jubjub + Groth16 | **Mainline**; 0.5.0, two compositions on BSC testnet |
-| [B](track-b/README.md) | Notes: a tree of commitments and a set of nullifiers, no accounts | [B.1](track-b/variant-1/README.md) Poseidon notes, one join-split circuit, Groth16 | Design only ([ADR-0009](../adr/0009-track-b-notes.md)) |
+| [B](track-b/README.md) | Notes: a tree of commitments and a set of nullifiers, no accounts | [B.1](track-b/variant-1/README.md) Poseidon notes, one join-split circuit, Groth16 | Contracts and circuit implemented locally, not deployed ([ADR-0009](../adr/0009-track-b-notes.md)) |
 
 Both Tracks have the same trust base: user-held keys, client-side proofs, no external network.
 
@@ -23,7 +23,7 @@ Both Tracks have the same trust base: user-held keys, client-side proofs, no ext
 | Role issuance | Yes | Yes |
 | Wrapper port | Yes | Yes |
 
-The list is part of the version. A module registered later is not supported by these versions; supporting it takes a new version of the Variant (07 §13.2). A.1 0.5.0 is implemented and deployed; B.1 0.1.0 is a design.
+The list is part of the version. A module registered later is not supported by these versions; supporting it takes a new version of the Variant (07 §13.2). A.1 0.5.0 is implemented and deployed; B.1 0.1.0 is implemented and tested locally, and not deployed.
 
 ## Deployed compositions
 

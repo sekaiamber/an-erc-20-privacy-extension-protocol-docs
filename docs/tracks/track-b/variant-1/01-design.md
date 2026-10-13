@@ -2,7 +2,7 @@ English | [中文](01-design.zh-cn.md)
 
 # B.1 design (0.1.0-draft)
 
-Status: `Draft`. The commitment tree and the join-split circuit are implemented (`contracts/contracts/track-b/variant-1/NoteTree.sol`, `contracts/circuits/track-b/variant-1/join_split.circom`); the token contract and the client are not. The tree's gas, the constraint count and the proving time are measured locally. The other gas figures are estimates.
+Status: `Draft`. The contracts and the circuit are implemented and tested locally (`contracts/contracts/track-b/variant-1/`, `contracts/circuits/track-b/variant-1/join_split.circom`). Nothing is deployed, and the dApp has no client for it yet. Gas, constraint count and proving time are measured locally (§12).
 
 Track: [B, notes](../README.md). Opened by [ADR-0009](../../../adr/0009-track-b-notes.md).
 
@@ -131,9 +131,9 @@ Family conventions §1–§5 apply: the standard selectors, a trailing payload, 
 | --- | --- | --- | --- |
 | `transferFrom(token, token, handle)` | `0x01` | none | Transfer between notes |
 | `transferFrom(token, 0x0, amount)` | `0x81` | `v_pub_out = amount`, `to = 0x0` | Burn |
-| `mint(amount, payload)` | n/a | `v_pub_in = amount` | Role issuance; `MINTER_ROLE` only |
-| `wrapperBurn(0x0, to, amount, payload)` | n/a | `v_pub_out = amount`, `to` bound | Wrapper port: exit to the wrapped token |
-| `wrapperMint(recipient, amount)` | n/a | `v_pub_in = amount` | Wrapper port: `recipient` is the whole payload |
+| `mintConfidential(token, amount)` | `0x82` | `v_pub_in = amount` | Role issuance; `MINTER_ROLE` only |
+| `wrapperBurn(0x0, to, amount, payload)` | `0x81` | `v_pub_out = amount`, `to` bound | Wrapper port: exit to the wrapped token |
+| `wrapperMint(recipient, amount)` | `0x82` | `v_pub_in = amount` | Wrapper port: `recipient` is the whole payload |
 | `transfer(to, x)` without payload | n/a | n/a | Reverts `NoPublicLedger()` |
 | `balanceOf(a)` | n/a | n/a | `totalSupply()` for the token's own address, 0 otherwise |
 | `approve`, `allowance` | n/a | n/a | Kept for interface completeness; they authorise nothing |
@@ -141,12 +141,15 @@ Family conventions §1–§5 apply: the standard selectors, a trailing payload, 
 - `token` stands for the token's own address. `from` and `to` carry no information in a note transfer, so they are fixed to it. The standard event then reads as a movement inside the pool and does not look like a mint or a burn.
 - Replay is stopped by the nullifiers: a payload can be executed once.
 - `prepare` / `cancel` (conventions §6) are not part of 0.1.
+- `mintConfidential` is the function of the family's role-issuance interface, with the join-split as a trailing payload. There is no account to name, so its first argument must be the token's own address.
+- **Payload.** One layout for every operation, 838 bytes: type (1), flags (1, must be 0), `root` (32), `nf[2]` (64), `cm[2]` (64), `D` (64), `memo_recv` (192), `memo_reg` (160), `regKeyId` (4), proof (256). The public amounts and `to` are arguments of the call, and the proof binds them.
+- **Payload types.** `0x01` note transfer; `0x81` a public amount out (burn, wrap); `0x82` a public amount in (mint, unwrap). The proof does not bind the type. A burn and a wrap are kept apart by `to`, which is zero for a burn and non-zero for a wrap.
 
 ### 5.1 Modules
 
 | Module | B.1 0.1.0 |
 | --- | --- |
-| Role issuance | Supported: `mint` and the `0x81` burn |
+| Role issuance | Supported: `mintConfidential` and the `0x81` burn |
 | Wrapper port | Supported: `IPEPWrappable`, limit `wrappedOut` |
 | Public ledger | Not supported. It could be added later on the same `v_pub_in` / `v_pub_out` |
 
@@ -186,7 +189,7 @@ From these the regulator rebuilds a table of all notes: owner, amount, the trans
 
 ### 7.1 Mint
 
-The minter knows the recipient's receiving code. It builds a join-split with two dummy inputs, `v_pub_in = amount`, one output to the recipient and one zero-value output, and calls `mint(amount, payload)`.
+The minter knows the recipient's receiving code. It builds a join-split with two dummy inputs, `v_pub_in = amount`, one output to the recipient and one zero-value output, and calls `mintConfidential(token, amount)` with the payload appended.
 
 A proof is required although the amount is public, because the regulator must learn the owner of the new note at the moment it is created.
 
@@ -217,11 +220,12 @@ The Wrapper contract is used unchanged.
 | `Transfer` | `(token, token, handle)`; `(0x0, token, amount)`; `(token, 0x0, amount)` | Note transfer; mint and unwrap; burn and wrap |
 | `NoteTransfer` | first leaf index, new root, `nf[2]`, `cm[2]`, `regKeyId`, `D`, the two recipient memos, the regulator memo, `v_pub_in`, `v_pub_out`, `to` | Every operation |
 | `Minted`, `Burned` | `amount` | Mint, burn |
+| `WrapperMinted`, `WrapperBurned` | `amount`; `to` and `amount` | Unwrap, wrap |
 | `RegulatorKeyRotated` | As A.1 | Rotation |
 
 `NoteTransfer` has no indexed field that identifies a user. That is the point, and it is also why wallets cannot filter (§9).
 
-Views: `root()`, `isKnownRoot(root)`, `isSpent(nf)`, `leafCount()`, `totalSupply()`, `issuedSupply()`, `wrappedOut()`, the regulator key views of conventions §9, `pep()` returning `B:1:<version>`, and the module probe.
+Views: `root()`, `isKnownRoot(root)`, `isSpent(nf)`, `leafCount()`, `totalSupply()`, `issuedSupply()`, `wrappedOut()`, the regulator key views of conventions §9, `pep()` returning `B:1:<version>`, the module probe, and `TREE_DEPTH()`, `hasher()`, `verifier()`.
 
 ## 9. Client
 
@@ -263,7 +267,7 @@ Alice pays, Bob is a merchant, Carol and Dave are other customers.
 
 ## 12. Costs and limits
 
-**Gas for one transaction.** Every operation costs about the same, because all of them verify the same proof and append a pair. The tree is measured; the rest is estimated.
+**Gas for one transaction.** Every operation costs about the same, because all of them verify the same proof and append a pair.
 
 *Appending one pair, measured locally (2026-10-13, `contracts/test/track-b/variant-1/NoteTree.ts`).* The figures include the 21k base cost of a transaction and the three storage writes for the root, the root flag and the leaf count.
 
@@ -277,17 +281,22 @@ Alice pays, Bob is a merchant, Carol and Dave are other customers.
 - The first append to a fresh tree costs more, once, for the frontier's first writes: about 420k more at depth 24 and 550k at depth 32.
 - The hand-optimised figures were taken with the prebuilt bytecode of the `poseidon-solidity` library behind an adapter that adds one call per hash, so a direct integration is somewhat cheaper. That library states it is unaudited, its runtime is 23,478 bytes (the limit is 24,576), and it does not fit the limit when compiled with this project's settings. It was installed for the measurement only and is not a dependency.
 
-*Whole transaction at depth 24, the depth of 0.1.*
+*Whole operations, measured locally (2026-10-13, `contracts/test/track-b/variant-1/B1NoteToken.ts`): depth 24, circomlibjs Poseidon.*
 
-| Component | circomlibjs Poseidon | Hand-optimised Poseidon | Basis |
-| --- | --- | --- | --- |
-| Tree, including the base cost | 943k | 696k | Measured |
-| Groth16 verification, about 21 public inputs | 335k | 335k | Estimate; A.1 measures 288k with 14 inputs |
-| Two nullifiers, new slots | 44k | 44k | Estimate |
-| Payload calldata and events | 40k | 40k | Estimate |
-| **Total** | **about 1.36M** | **about 1.12M** | A.1 transfer: 467k steady state, 706k on an account's first spend |
+| Operation | Gas |
+| --- | --- |
+| Mint | 1,371k |
+| Note transfer | 1,367k |
+| Burn | 1,372k |
+| Wrap, through the family Wrapper | 1,400k |
+| Unwrap, through the family Wrapper | 1,411k |
 
-At depth 32 the totals are about 1.66M and 1.33M. The first estimate of this section was 1.2M at depth 32; it assumed 21k per hash and 100k for the tree's storage.
+- An A.1 transfer costs 467k in steady state and 706k on an account's first spend.
+- Of the 1,367k of a transfer, the tree is 943k. The other 424k is the Groth16 verification with 21 public inputs, two new nullifier slots, calldata and events.
+- The first operation on a fresh tree costs about 440k more (1,809k for the first mint). The first wrap of a token also deploys its wrapped ERC-20 (1,994k).
+- With a hand-optimised Poseidon the tree would cost 696k and an operation about 1.12M. That is not built (§14 D8).
+- At depth 32 an operation would cost about 300k more.
+- Runtime bytecode: `B1NoteToken` 15,104 bytes, the verifier 4,454 bytes (limit 24,576).
 
 **Other limits.**
 
