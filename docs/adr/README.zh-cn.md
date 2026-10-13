@@ -17,6 +17,7 @@
 | [0008](0008-modules.zh-cn.md) | Track、Variant 与模块：公开账本是模块，不是 Track | Accepted（2026-10-13 已实现） |
 | [0009](0009-track-b-notes.zh-cn.md) | 开设 Track B：note 模型 | Accepted（仅设计；前提已满足） |
 | [0003](0003-erc20-surface-conventions.zh-cn.md) | ERC-20 表面约定：复用标准选择器与尾部 payload | Accepted |
+| [0010](0010-erc20-surface-tradeoffs.zh-cn.md) | ERC-20 兼容逐项取舍；转账仍是共用的动词 | Proposed（草案；将修订 0003） |
 | [0006](0006-regulatory-committee.zh-cn.md) | 监管方改为门限委员会合约；密码内核改为普通 ElGamal | Accepted（§3 已落地；委员会原型 2026-09-29 落地） |
 | [0005](0005-family-wrapper.zh-cn.md) | 家族级 Wrapper 是工具，不取代 Track A | Accepted（用语由 0008 更新） |
 | [0004](0004-regulatory-access-principles.zh-cn.md) | 监管接入原则 | Accepted |
