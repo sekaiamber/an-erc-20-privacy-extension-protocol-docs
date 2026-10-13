@@ -6,7 +6,7 @@
 
 本文是 A.1 按 [ADR-0008](../../../adr/0008-modules.zh-cn.md) 调整后的结构：一个内核加三个模块。
 
-**实现状态（2026-10-13）。** 合约仓库已按本文实现为 `A1LedgerToken` 与 `A1PrivateToken`；全部测试通过，每项实测操作的 gas 与原来的独立合约相差都在 300 以内。两种组合都已部署到 BSC testnet（[03-deployments](03-deployments.zh-cn.md)），dApp 也已面向它们。还没做的：新代币在链上还没有执行过任何操作，dApp 的页面也还没有在浏览器里实际点过。改变了什么见 §9。
+**实现状态（2026-10-13）。** 合约仓库已按本文实现为 `A1LedgerToken` 与 `A1PrivateToken`；全部测试通过，每项实测操作的 gas 与原来的独立合约相差都在 300 以内。两种组合都已部署到 BSC testnet（[03-deployments](03-deployments.zh-cn.md)），dApp 也已面向它们。两个代币都已在链上完整跑过一遍；链上 gas 与本地数字一致，原来就有的操作也与 0.4.0 的部署一致。还没做的：带公开账本的代币上的 `mintConfidential` 和 `0x81` 销毁只在本地跑过，dApp 的页面也还没有在浏览器里实际点过。改变了什么见 §9。
 
 内核的规格在 [01-design](01-design.zh-cn.md)。电路不变。
 

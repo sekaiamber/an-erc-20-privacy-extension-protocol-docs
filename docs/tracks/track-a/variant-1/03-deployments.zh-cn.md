@@ -31,7 +31,32 @@
 
 管理员、铸造角色和监管管理员都是部署钱包。监管密钥与 0.4.0 那次部署相同，key id 为 0。
 
-**0.5.0 还没做的**：这两个代币在链上还没有执行过任何操作，所以没有它们的链上 gas 实测。在本地与独立合约的对比实测见 [04-modules §10](04-modules.zh-cn.md)。
+### 链上实测，`A1PrivateToken`（contracts `scripts/track-a/variant-1/e2e-private-bsc.ts`，2026-10-13）
+
+| 操作 | gas | 交易 |
+| --- | --- | --- |
+| `mintConfidential` 1000 CLS 到一个全新的 id | 196,372 | [0x203a…7e83](https://testnet.bscscan.com/tx/0x203a7aa03de25e696f71a22c34f32bc9b0cd22447df3f435da9bb4ed640b7e83) |
+| `0x01` 250 CLS（双方都是首次） | 705,873 | [0x5578…2c62](https://testnet.bscscan.com/tx/0x5578642b080f4b831e35dc7ec8f2181cd668fd4ede8f1b81e766dd2b279d2c62) |
+| `0x80` 折叠（收款方的首次操作） | 463,769 | [0x815f…f1dd](https://testnet.bscscan.com/tx/0x815f0f0c45d562778cc6bfb3781bc93a63995b2ea71709e08b03c39bcb04f1dd) |
+| `0x81` 直接销毁 50 CLS | 362,553 | [0x42f4…5157](https://testnet.bscscan.com/tx/0x42f4256990565ff4b2ea4d17ce5344349bd7f140906f88ed33109841209a5157) |
+| `wrap` 300 CLS（首次 wrap：含创建 wCLS 合约） | 989,584 | [0x781e…7d8d](https://testnet.bscscan.com/tx/0x781e524d8ae5e1bd53a3c3067f6fc4adc08a74c06a7d4003790bcf492e487d8d) |
+| wCLS `transfer`（普通 ERC-20） | 26,570 | 未记录 |
+| `unwrap` 100 wCLS 到一个机密 id | 129,703 | [0x2945…052d](https://testnet.bscscan.com/tx/0x2945f2daceadfe82d8debfe5c04c7088e541d53ad2f16ec6bb2fd7310fb2052d) |
+
+证明时间（Node）：transfer 1.53 秒，fold 0.39 秒，销毁与 wrap 1.0 到 1.2 秒。每个解密出的余额都与预期明文一致。跑完之后，`totalSupply()` 750 加 wCLS 的 `totalSupply()` 200，等于已发行 1000 减已销毁 50。这次运行创建的包装代币是 wCLS，地址 `0xBC980A0ab8aF1bEf495e55b4106A55A5F9f28eBB`。
+
+### 链上实测，`A1LedgerToken`（dApp 客户端库，`dapp/scripts/e2e-bsc.mts`，2026-10-13）
+
+| 操作 | gas | 0.4.0 链上实测 | 交易 |
+| --- | --- | --- | --- |
+| `0x03` shield 100 TEST（收款方首次收款） | 214,568 | 214,534 | [0x8f2a…f1b5](https://testnet.bscscan.com/tx/0x8f2a586749ab874a190956fa033aaac027d6961f45576abbeba438195cc2f1b5) |
+| `0x01` 机密转账 12.5 TEST（双方都是首次） | 705,880 | 705,970 | [0xc81f…9eb9](https://testnet.bscscan.com/tx/0xc81f1e9366d49b4ef9d3eb15f542e33442fb16fc83676ca94c52d7252f139eb9) |
+| `0x80` 纯折叠（收款方的首次操作，代发） | 463,882 | 463,871 | [0x6cee…3dcf](https://testnet.bscscan.com/tx/0x6cee7217d3e99758c473e35e886e50ddfbe55a2de577e5fc43b7f357d07e3dcf) |
+| `0x04` unshield 5 TEST（折叠后的默认模式，代发） | 373,871 | 373,589 | [0xc281…6712](https://testnet.bscscan.com/tx/0xc281cb7b4e18e7d70c1db866665a93e0b8cdb0f45cd941c5de3c4d799a9c6712) |
+
+证明时间（Node）：transfer 1.77 秒，fold 0.44 秒，unshield 1.39 秒。收款方的 memo 解出 12.5，与密文一致；跑完之后钱包的公开余额减少 95，`shieldedSupply()` 为 95。
+
+**没有在链上跑过的**：`A1LedgerToken` 上的 `mintConfidential` 和 `0x81` 销毁，这两项是这种组合新增的，目前只有本地测试覆盖（04-modules §10）。
 
 相对 0.4.0 和原 B.1 0.2.0：两个独立合约变成了一个内核加若干模块（[04-modules §9](04-modules.zh-cn.md)）。**下面的 0.4.0 代币以及原 B.1 0.2.0 代币，dApp 已不再打开。** 它们仍留在链上。
 

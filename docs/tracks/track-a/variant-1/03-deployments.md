@@ -31,7 +31,32 @@ Read back from the chain after deployment:
 
 Admin, minter and regulator admin: the deployer wallet. Regulator key: the same key id 0 as the 0.4.0 deployment.
 
-**Not done yet for 0.5.0**: no operation has been run against these two tokens on chain, so there are no on-chain gas measurements for them. Local measurements against the standalone contracts are in [04-modules §10](04-modules.md).
+### On-chain measurements, `A1PrivateToken` (contracts `scripts/track-a/variant-1/e2e-private-bsc.ts`, 2026-10-13)
+
+| Operation | gas | Transaction |
+| --- | --- | --- |
+| `mintConfidential` 1000 CLS to a fresh id | 196,372 | [0x203a…7e83](https://testnet.bscscan.com/tx/0x203a7aa03de25e696f71a22c34f32bc9b0cd22447df3f435da9bb4ed640b7e83) |
+| `0x01` 250 CLS (both parties' first) | 705,873 | [0x5578…2c62](https://testnet.bscscan.com/tx/0x5578642b080f4b831e35dc7ec8f2181cd668fd4ede8f1b81e766dd2b279d2c62) |
+| `0x80` fold (recipient's first operation) | 463,769 | [0x815f…f1dd](https://testnet.bscscan.com/tx/0x815f0f0c45d562778cc6bfb3781bc93a63995b2ea71709e08b03c39bcb04f1dd) |
+| `0x81` direct burn 50 CLS | 362,553 | [0x42f4…5157](https://testnet.bscscan.com/tx/0x42f4256990565ff4b2ea4d17ce5344349bd7f140906f88ed33109841209a5157) |
+| `wrap` 300 CLS (first wrap: includes creating the wCLS contract) | 989,584 | [0x781e…7d8d](https://testnet.bscscan.com/tx/0x781e524d8ae5e1bd53a3c3067f6fc4adc08a74c06a7d4003790bcf492e487d8d) |
+| wCLS `transfer` (plain ERC-20) | 26,570 | not recorded |
+| `unwrap` 100 wCLS into a confidential id | 129,703 | [0x2945…052d](https://testnet.bscscan.com/tx/0x2945f2daceadfe82d8debfe5c04c7088e541d53ad2f16ec6bb2fd7310fb2052d) |
+
+Proving (Node): transfer 1.53 s, fold 0.39 s, burn and wrap 1.0 to 1.2 s. Every decrypted balance matched the expected plaintext. After the run, `totalSupply()` 750 plus wCLS `totalSupply()` 200 equals issued 1000 minus burned 50. The wrapped token created by this run is wCLS at `0xBC980A0ab8aF1bEf495e55b4106A55A5F9f28eBB`.
+
+### On-chain measurements, `A1LedgerToken` (dApp client library, `dapp/scripts/e2e-bsc.mts`, 2026-10-13)
+
+| Operation | gas | 0.4.0 on chain | Transaction |
+| --- | --- | --- | --- |
+| `0x03` shield 100 TEST (recipient's first receipt) | 214,568 | 214,534 | [0x8f2a…f1b5](https://testnet.bscscan.com/tx/0x8f2a586749ab874a190956fa033aaac027d6961f45576abbeba438195cc2f1b5) |
+| `0x01` confidential transfer 12.5 TEST (both parties' first) | 705,880 | 705,970 | [0xc81f…9eb9](https://testnet.bscscan.com/tx/0xc81f1e9366d49b4ef9d3eb15f542e33442fb16fc83676ca94c52d7252f139eb9) |
+| `0x80` pure fold (recipient's first operation, relayed) | 463,882 | 463,871 | [0x6cee…3dcf](https://testnet.bscscan.com/tx/0x6cee7217d3e99758c473e35e886e50ddfbe55a2de577e5fc43b7f357d07e3dcf) |
+| `0x04` unshield 5 TEST (default mode after the fold, relayed) | 373,871 | 373,589 | [0xc281…6712](https://testnet.bscscan.com/tx/0xc281cb7b4e18e7d70c1db866665a93e0b8cdb0f45cd941c5de3c4d799a9c6712) |
+
+Proving (Node): transfer 1.77 s, fold 0.44 s, unshield 1.39 s. The recipient's memo opened to 12.5 and matched the ciphertext; after the run the wallet's public balance is down by 95 and `shieldedSupply()` is 95.
+
+**Not run on chain**: `mintConfidential` and the `0x81` burn on `A1LedgerToken`, which are new to this composition. They are covered by the local tests only (04-modules §10).
 
 Change from 0.4.0 and from the former B.1 0.2.0: the two standalone contracts became one core plus modules ([04-modules §9](04-modules.md)). **The 0.4.0 token below and the former B.1 0.2.0 token are no longer opened by the dApp.** They remain on chain.
 

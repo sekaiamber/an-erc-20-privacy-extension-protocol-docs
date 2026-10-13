@@ -6,7 +6,7 @@ Version: `0.5.0`. Status: `Draft`. Date: 2026-10-13
 
 This document is the structure of A.1 under [ADR-0008](../../../adr/0008-modules.md): one core and three modules.
 
-**Status of the implementation (2026-10-13).** The contracts repository implements it as `A1LedgerToken` and `A1PrivateToken`; all tests pass, and gas is within 300 of the standalone contracts on every measured operation. Both compositions are deployed on BSC testnet ([03-deployments](03-deployments.md)) and the dApp targets them. Not done yet: no operation has been run against the new tokens on chain, and the dApp pages have not been exercised in a browser. §9 lists what changed.
+**Status of the implementation (2026-10-13).** The contracts repository implements it as `A1LedgerToken` and `A1PrivateToken`; all tests pass, and gas is within 300 of the standalone contracts on every measured operation. Both compositions are deployed on BSC testnet ([03-deployments](03-deployments.md)) and the dApp targets them. Both tokens have been run end to end on chain; on-chain gas matches the local figures and, for the operations that existed before, the 0.4.0 deployment. Not done yet: `mintConfidential` and the `0x81` burn on the token with the public ledger have only been run locally, and the dApp pages have not been exercised in a browser. §9 lists what changed.
 
 The core is specified in [01-design](01-design.md). No circuit changes.
 
