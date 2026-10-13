@@ -35,7 +35,9 @@
 - [x] A.1 0.5.0：两个代币都已在链上完整跑通（2026-10-13）→ `tracks/track-a/variant-1/03-deployments.md`
 - [ ] A.1 0.5.0：在浏览器里实际点一遍 dApp 页面；给带公开账本的代币页面加上 `mintConfidential` 和 `0x81` 销毁
 - [x] 为 note 模型开设 Track B；B.1 设计 0.1.0-draft（2026-10-13）→ ADR-0009、`tracks/track-b/`
-- [ ] B.1：先实测链上 Poseidon 树，再做电路、合约和客户端（在 ADR-0008 的重构之后）
+- [x] B.1：链上 Poseidon 树已在本地实测（2026-10-13）：深度 24 时每笔交易 696k 到 943k gas → `tracks/track-b/variant-1/01-design.md` §12
+- [x] B.1：树深 24，在链上、交易内更新（D1、D7；2026-10-13）
+- [ ] B.1：join-split 电路，然后合约和客户端；确定链上 Poseidon 的实现怎么选（D8）
 - [ ] 威胁模型评审
 - [ ] 家族级约定与 A.1 设计的 `Review` 版本
 

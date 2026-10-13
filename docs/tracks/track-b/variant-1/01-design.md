@@ -2,7 +2,7 @@ English | [中文](01-design.zh-cn.md)
 
 # B.1 design (0.1.0-draft)
 
-Status: `Draft`. Nothing here is implemented. Constraint counts, proving times and gas figures in this document are estimates, not measurements.
+Status: `Draft`. Only the commitment tree is implemented (`contracts/contracts/track-b/variant-1/NoteTree.sol`), in order to measure it. Constraint counts, proving times and gas figures in this document are estimates, except the tree figures in §12, which are measured locally.
 
 Track: [B, notes](../README.md). Opened by [ADR-0009](../../../adr/0009-track-b-notes.md).
 
@@ -44,7 +44,7 @@ It reuses A.1's toolbox where it can: Baby Jubjub, Poseidon, Groth16, keys deriv
 | Note | `(v, pk, ρ)`: amount, owner key, random field element | Kept by the owner's wallet |
 | Commitment | `cm = Poseidon(v, pk.x, pk.y, ρ)` | The only thing stored about a note |
 | Nullifier | `nf = Poseidon(s, ρ, leafIndex)` | Computable only by the owner; one per tree position |
-| Tree | Incremental binary Merkle tree, Poseidon, depth 32 | Append-only. 2³² leaves; a transaction appends two |
+| Tree | Incremental binary Merkle tree, Poseidon, depth 24 | Append-only. 2²⁴ leaves; a transaction appends two, so the tree holds about 8 million transactions (§14 D1) |
 | Roots | Every root the tree has ever had is accepted | §3.3 |
 | Amount width | `v < 2⁶⁴` for notes and public amounts | Guaranteed by the supply cap `2⁶⁴ − 1` |
 | decimals | 6 | As A.1 |
@@ -230,19 +230,31 @@ Alice pays, Bob is a merchant, Carol and Dave are other customers.
 
 ## 12. Costs and limits
 
-**Gas for one transaction (estimate).** Every operation costs about the same, because all of them verify the same proof and append a pair.
+**Gas for one transaction.** Every operation costs about the same, because all of them verify the same proof and append a pair. The tree is measured; the rest is estimated.
 
-| Component | Estimate | Basis |
-| --- | --- | --- |
-| Base and calldata, about 1.1 KB of payload | 45k | |
-| Groth16 verification, about 21 public inputs | 335k | A.1 measures 288k with 14 inputs |
-| 32 Poseidon hashes on chain | 670k | Assumes 21k per hash; **not measured in this project** |
-| Tree storage | 100k | |
-| Two nullifiers and one root, new slots | 66k | |
-| Events | 15k | |
-| **Total** | **about 1.2M** | A.1 steady-state transfer: 467k measured |
+*Appending one pair, measured locally (2026-10-13, `contracts/test/track-b/variant-1/NoteTree.ts`).* The figures include the 21k base cost of a transaction and the three storage writes for the root, the root flag and the leaf count.
 
-The on-chain tree is the largest item and the least certain. Measuring it comes first in the prototype.
+| Depth | Capacity in transactions | circomlibjs Poseidon | Hand-optimised Poseidon |
+| --- | --- | --- | --- |
+| 20 | 0.5 million | 794k | 588k |
+| 24 | 8 million | 943k | 696k |
+| 32 | 2 billion | 1,243k | 912k |
+
+- Each level costs about 37k gas with the Poseidon contract that circomlibjs generates and about 27k with a hand-optimised one.
+- The first append to a fresh tree costs about 550k more, once, for the frontier's first writes.
+- The hand-optimised figures were taken with the prebuilt bytecode of the `poseidon-solidity` library behind an adapter that adds one call per hash, so a direct integration is somewhat cheaper. That library states it is unaudited, its runtime is 23,478 bytes (the limit is 24,576), and it does not fit the limit when compiled with this project's settings. It was installed for the measurement only and is not a dependency.
+
+*Whole transaction at depth 24, the depth of 0.1.*
+
+| Component | circomlibjs Poseidon | Hand-optimised Poseidon | Basis |
+| --- | --- | --- | --- |
+| Tree, including the base cost | 943k | 696k | Measured |
+| Groth16 verification, about 21 public inputs | 335k | 335k | Estimate; A.1 measures 288k with 14 inputs |
+| Two nullifiers, new slots | 44k | 44k | Estimate |
+| Payload calldata and events | 40k | 40k | Estimate |
+| **Total** | **about 1.36M** | **about 1.12M** | A.1 transfer: 467k steady state, 706k on an account's first spend |
+
+At depth 32 the totals are about 1.66M and 1.33M. The first estimate of this section was 1.2M at depth 32; it assumed 21k per hash and 100k for the tree's storage.
 
 **Other limits.**
 
@@ -263,14 +275,15 @@ Not in: the public-ledger module, `prepare` / `cancel`, a relayer, a separate vi
 
 ## 14. Open decisions
 
-Each has a default, which this document uses.
+Each has a default, which this document uses. D1 and D7 were decided by the owner on 2026-10-13.
 
 | # | Decision | Default | Why it might change |
 | --- | --- | --- | --- |
-| D1 | Tree depth | 32 | Each level costs about 21k gas. Depth 24 holds 8 million transactions and saves about 170k |
+| D1 | Tree depth | 24 (decided) | Measured: each level costs 27k to 37k gas. Depth 32 holds 2 billion transactions and costs 215k to 300k more per transaction. The depth is a parameter of the circuit, so another depth is another set of keys |
 | D2 | Which roots are accepted | All past roots | A window of recent roots saves about 17k gas per transaction but lets proofs expire |
 | D3 | Number of circuits | One for everything | A smaller circuit for mint would make issuance cheaper to prove |
 | D4 | `from` / `to` and `balanceOf` | The token's own address; `balanceOf(token) = totalSupply()` | The privacy-only composition of A.1 returns 0 everywhere |
 | D5 | Payment reference | One field per output | Could be left to applications |
 | D6 | Mint needs a proof | Yes | Without it the regulator would not know the owner of a minted note until it is spent |
-| D7 | Where the tree is updated | On chain, in the transaction | Batched insertion under a separate proof would remove most of the gas, at the price of notes that are spendable only after the batch and of someone who posts batches |
+| D7 | Where the tree is updated | On chain, in the transaction (decided for 0.1) | The tree is 60% to 70% of the transaction's gas. Batched insertion under a separate proof would remove most of it, at the price of notes that are spendable only after the batch and of someone who posts batches |
+| D8 | Poseidon on chain | The circomlibjs bytecode in the prototype; whether a deployer may choose the implementation is open | The bytecode circomlibjs generates is the reference implementation of the circuit's hash and costs about 10k more per level. A hand-optimised implementation saves about 250k per transaction at depth 24 but is unaudited third-party code close to the size limit |

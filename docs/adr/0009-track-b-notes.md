@@ -65,11 +65,11 @@ English | [中文](0009-track-b-notes.zh-cn.md)
 
 ## Accepted costs
 
-These are estimates from the B.1 design, not measurements.
+These are estimates from the B.1 design, not measurements, except the tree part of the gas figure.
 
 | Cost | Estimate |
 | --- | --- |
-| Gas per transaction | About 1.2M, against 467k measured for an A.1 transfer. More than half is the on-chain tree |
+| Gas per transaction | 1.12M to 1.36M at tree depth 24, the depth chosen on 2026-10-13, against 467k for an A.1 transfer in steady state. The tree part is measured (2026-10-13) and is 60% to 70% of the total |
 | Proving | 2 to 4 s in Node, against 1.3 to 1.5 s |
 | Wallet synchronisation | Every wallet processes every transaction of the token |
 | Regulator views | A whole block range; tracing backwards is targeted, tracing forwards is not |

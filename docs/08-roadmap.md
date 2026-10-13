@@ -35,7 +35,9 @@ Status: `Draft`
 - [x] A.1 0.5.0: both tokens run end to end on chain (2026-10-13) → `tracks/track-a/variant-1/03-deployments.md`
 - [ ] A.1 0.5.0: exercise the dApp pages in a browser; add `mintConfidential` and the `0x81` burn to the page of the token with the public ledger
 - [x] Track B opened for the note model; B.1 design, 0.1.0-draft (2026-10-13) → ADR-0009, `tracks/track-b/`
-- [ ] B.1: measure the on-chain Poseidon tree, then circuit, contract and client (after the ADR-0008 restructuring)
+- [x] B.1: on-chain Poseidon tree measured locally (2026-10-13): 696k to 943k gas per transaction at depth 24 → `tracks/track-b/variant-1/01-design.md` §12
+- [x] B.1: tree depth 24, updated on chain in the transaction (D1, D7; 2026-10-13)
+- [ ] B.1: join-split circuit, then contract and client; decide how the on-chain Poseidon implementation is chosen (D8)
 - [ ] Threat model review
 - [ ] `Review` versions of the family conventions and the A.1 design
 
