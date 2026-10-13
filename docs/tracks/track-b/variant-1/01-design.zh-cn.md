@@ -2,7 +2,7 @@
 
 # B.1 设计（0.2.0-draft）
 
-状态：`Draft`。本文描述的是 0.2.0，它已定稿但尚未实现。0.1.0 已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`），并已部署到 BSC testnet（[02-deployments](02-deployments.zh-cn.md)，2026-10-13）。dApp 里已有它的页面（`/tracks/b/1`），但还没有在浏览器里对着这个代币实际用过。gas、约束数和证明时间都是本地实测（§12）。
+状态：`Draft`。本文描述的是 0.2.0。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`），dApp 的页面（`/tracks/b/1`）也已跟进。0.2.0 尚未部署：BSC testnet 上的代币是 0.1.0（[02-deployments](02-deployments.zh-cn.md)，2026-10-13）。这个页面还没有在浏览器里对着链上的代币实际用过。gas、约束数和证明时间都是本地实测（§12）。
 
 > 0.2.0（2026-10-13）只改表面，依据是 [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.zh-cn.md) 和 [ADR-0011](../../../adr/0011-project-name-casata.zh-cn.md)。发行改为 `mint(token, amount)`，join-split 作为尾部 payload，取代 `mintConfidential`。`approve` 回退 `NoPublicLedger()`。`pep()` 改为 `casata()`，密钥派生的域名改为 `"Casata"`，所以密钥与 0.1.0 的不同。电路、payload 和事件都不变。这个版本回答的是 `casata()` = `B:1:0.2.0`；它不是 2026-10-12 之前回答 `pep()` = `B:1:0.2.0` 的那个代币，那个是 A.1 的纯隐私组合。
 

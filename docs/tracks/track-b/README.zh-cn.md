@@ -55,4 +55,4 @@
 
 | Variant | 内核 | 付款方 / 收款方 | 金额 | 监管 | 状态 |
 | --- | --- | --- | --- | --- | --- |
-| [B.1](variant-1/README.zh-cn.md) | Poseidon 承诺与作废符，一个 join-split 电路（两进两出），Groth16 | 隐藏 | 隐藏 | 每笔交易都有 memo，在电路里强制 | 0.2.0-draft 已定稿；0.1.0 已部署到 BSC testnet |
+| [B.1](variant-1/README.zh-cn.md) | Poseidon 承诺与作废符，一个 join-split 电路（两进两出），Groth16 | 隐藏 | 隐藏 | 每笔交易都有 memo，在电路里强制 | 0.2.0-draft 已实现；0.1.0 已部署到 BSC testnet |

@@ -4,7 +4,7 @@
 
 版本：`0.6.0`　状态：`Draft`　日期：2026-10-13
 
-> 0.6.0（**2026-10-13 定稿，尚未实现**；已部署的代币是 0.5.0）：按 [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.zh-cn.md) 和 [ADR-0011](../../../adr/0011-project-name-casata.zh-cn.md) 修订。折叠改为独立函数 `fold(id, payload)`（§4.6）。删除 `prepare` / `cancel`（§3.4）。发行改为带 payload 规则的 `mint(to, amount)`，发给机密 id 时用类型 `0x82`，取代 `mintConfidential`（04-modules §4.2）。没有公开账本的代币上 `approve` 回退。`pep()` 改为 `casata()`，密钥派生的域名改为 `"Casata"`，所以密钥与 0.5.0 的不同。电路不变，`0x01`、`0x04`、`0x80`、`0x81` 的 payload 布局不变。`casata()` = `A:1:0.6.0`。
+> 0.6.0（**2026-10-13 已在合约和 dApp 里实现，尚未部署**；BSC testnet 上的代币是 0.5.0）：按 [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.zh-cn.md) 和 [ADR-0011](../../../adr/0011-project-name-casata.zh-cn.md) 修订。折叠改为独立函数 `fold(id, payload)`（§4.6）。删除 `prepare` / `cancel`（§3.4）。发行改为带 payload 规则的 `mint(to, amount)`，发给机密 id 时用类型 `0x82`，取代 `mintConfidential`（04-modules §4.2）。没有公开账本的代币上 `approve` 回退。`pep()` 改为 `casata()`，密钥派生的域名改为 `"Casata"`，所以密钥与 0.5.0 的不同。电路不变，`0x01`、`0x04`、`0x80`、`0x81` 的 payload 布局不变。`casata()` = `A:1:0.6.0`。
 
 > 0.5.0（**已实现，2026-10-13 部署到 BSC testnet**；两个代币的链上实测见 03-deployments）：**改为内核加模块的结构**（[ADR-0008](../../../adr/0008-modules.zh-cn.md)、[04-modules](04-modules.zh-cn.md)）。本文是内核；属于某个模块的小节都作了标注。电路、payload 布局和实测数字都不变。两种组合的 `pep()` 都是 `A:1:0.5.0`。
 

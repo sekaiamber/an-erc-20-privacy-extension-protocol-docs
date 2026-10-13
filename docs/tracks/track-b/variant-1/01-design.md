@@ -2,7 +2,7 @@ English | [中文](01-design.zh-cn.md)
 
 # B.1 design (0.2.0-draft)
 
-Status: `Draft`. This document describes 0.2.0, which is specified and not implemented yet. 0.1.0 is implemented and tested locally (`contracts/contracts/track-b/variant-1/`, `contracts/circuits/track-b/variant-1/join_split.circom`) and deployed on BSC testnet ([02-deployments](02-deployments.md), 2026-10-13). The dApp has a page for it (`/tracks/b/1`), which has not yet been exercised in a browser against the live token. Gas, constraint count and proving time are measured locally (§12).
+Status: `Draft`. This document describes 0.2.0. The contracts and the circuit are implemented and tested locally (`contracts/contracts/track-b/variant-1/`, `contracts/circuits/track-b/variant-1/join_split.circom`), and the dApp page (`/tracks/b/1`) follows them. 0.2.0 is not deployed yet: the token on BSC testnet is 0.1.0 ([02-deployments](02-deployments.md), 2026-10-13). The page has not yet been exercised in a browser against a live token. Gas, constraint count and proving time are measured locally (§12).
 
 > 0.2.0 (2026-10-13) changes the surface only, following [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.md) and [ADR-0011](../../../adr/0011-project-name-casata.md). Issuance is `mint(token, amount)` with the join-split as trailing payload, replacing `mintConfidential`. `approve` reverts `NoPublicLedger()`. `pep()` becomes `casata()` and the key-derivation domain becomes `"Casata"`, so keys differ from the ones of 0.1.0. The circuit, the payload and the events are unchanged. This version answers `casata()` = `B:1:0.2.0`; it is not the token that answered `pep()` = `B:1:0.2.0` before 2026-10-12, which was the privacy-only composition of A.1.
 

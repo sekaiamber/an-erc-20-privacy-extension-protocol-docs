@@ -6,7 +6,7 @@ Version: `0.6.0`. Status: `Draft`. Date: 2026-10-13
 
 This document is the structure of A.1 under [ADR-0008](../../../adr/0008-modules.md): one core and three modules.
 
-**Status of the implementation (2026-10-13).** This document describes 0.6.0, which is specified and not implemented yet; §9.1 lists what it changes. What is implemented and deployed is 0.5.0: `A1LedgerToken` and `A1PrivateToken` in the contracts repository, both on BSC testnet ([03-deployments](03-deployments.md)) and run end to end on chain, with the dApp targeting them. In 0.5.0, `mintConfidential` and the `0x81` burn on the token with the public ledger have only been run locally, and the dApp pages have not been exercised in a browser.
+**Status of the implementation (2026-10-13).** This document describes 0.6.0. It is implemented in the contracts repository (`a2c0ae0`, all tests pass) and in the dApp (`e06424a`), and it is not deployed yet; §9.1 lists what it changes. Deployed is 0.5.0: `A1LedgerToken` and `A1PrivateToken`, both on BSC testnet ([03-deployments](03-deployments.md)) and run end to end on chain, with the dApp targeting them. In 0.5.0, `mintConfidential` and the `0x81` burn on the token with the public ledger have only been run locally, and the dApp pages have not been exercised in a browser.
 
 The core is specified in [01-design](01-design.md). No circuit changes.
 
@@ -181,7 +181,7 @@ Relative to the two deployed contracts. Nothing here changes a circuit, a payloa
 
 ### 9.1 What changes at 0.6.0
 
-Relative to 0.5.0. Decision records: [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.md) and [ADR-0011](../../../adr/0011-project-name-casata.md). No circuit changes, so the proving keys and the verifier contracts stay the same. None of it is implemented yet.
+Relative to 0.5.0. Decision records: [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.md) and [ADR-0011](../../../adr/0011-project-name-casata.md). No circuit changes, so the proving keys and the verifier contracts stay the same. Items 1 to 6 are implemented (2026-10-13); item 7, the redeployment, is not done.
 
 | # | Change | Affects |
 | --- | --- | --- |
@@ -198,7 +198,7 @@ Relative to 0.5.0. Decision records: [ADR-0010](../../../adr/0010-erc20-surface-
 
 - The two shipped compositions were reviewed as standalone contracts ([02-security-review](02-security-review.md), [privacy-only review](../variant-1-privacy-only/03-security-review.md)). After the restructuring, the review is repeated against the diff, with attention to the hooks of §3 and to the cap being checked against `issuedSupply()` on every mint path.
 - Tests run per module and per shipped composition. Supply conservation (the table of §3) is asserted after every operation.
-- Bytecode: `A1LedgerToken` 18,339 bytes, `A1PrivateToken` 17,345 bytes; the limit is 24,576. The standalone contracts were 17,060 and 17,195.
+- Bytecode at 0.5.0: `A1LedgerToken` 18,339 bytes, `A1PrivateToken` 17,345 bytes; the limit is 24,576. The standalone contracts were 17,060 and 17,195. At 0.6.0: 13,808 and 14,293; the difference is the removed fallback path.
 - Gas, measured locally against the standalone contracts with the same tests: every operation is within 300 gas. New: `0x81` burn with the public ledger, 528k on an account's first spend.
 
 ## 11. Decisions

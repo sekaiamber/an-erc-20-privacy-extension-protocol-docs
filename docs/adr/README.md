@@ -19,11 +19,11 @@ ADR-0001 to ADR-0010 were written before the project was named Casata ([0011](00
 | [0008](0008-modules.md) | Track, Variant and module: the public ledger is a module, not a Track | Accepted (implemented 2026-10-13) |
 | [0009](0009-track-b-notes.md) | Open Track B: the note model | Accepted (design only; precondition met) |
 | [0003](0003-erc20-surface-conventions.md) | ERC-20 surface conventions: reuse standard selectors and trailing payload | Accepted (amended by 0010) |
-| [0010](0010-erc20-surface-tradeoffs.md) | ERC-20 compatibility is decided item by item; transfer stays the shared verb | Accepted (not implemented yet) |
+| [0010](0010-erc20-surface-tradeoffs.md) | ERC-20 compatibility is decided item by item; transfer stays the shared verb | Accepted (implemented; redeployment pending) |
 | [0006](0006-regulatory-committee.md) | Regulator as a threshold committee contract; crypto core switched to plain ElGamal | Accepted (§3 shipped; committee prototyped 2026-09-29) |
 | [0005](0005-family-wrapper.md) | A family-level Wrapper as a tool, not a replacement for Track A | Accepted (terms updated by 0008) |
 | [0004](0004-regulatory-access-principles.md) | Regulatory access principles | Accepted |
-| [0011](0011-project-name-casata.md) | The project is named Casata; the acronym PEP is retired | Accepted (not implemented yet) |
+| [0011](0011-project-name-casata.md) | The project is named Casata; the acronym PEP is retired | Accepted (implemented; redeployment and repository rename pending) |
 
 ## A.1
 

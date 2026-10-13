@@ -2,7 +2,7 @@
 
 # 0010 ERC-20 兼容逐项取舍；转账仍是共用的动词
 
-- 状态：Accepted（2026-10-13；尚未实现：在「后果」里列出的工作完成之前，约定、合约和 dApp 仍按 ADR-0003 执行）
+- 状态：Accepted（2026-10-13；同日已在约定、合约和 dApp 里实现，即 A.1 0.6.0 和 B.1 0.2.0；测试网上的三个代币尚未重新部署）
 - 日期：2026-10-13
 - 范围：家族（修订 [ADR-0003](0003-erc20-surface-conventions.zh-cn.md) 第 1、6、7 条；影响 [07](../07-family-conventions.zh-cn.md) §1、§5、§6、§7、§13.1，[A1-0006](a1-0006-fold-and-received-block.zh-cn.md) 里折叠的入口，以及 [A.1 模块规范](../tracks/track-a/variant-1/04-modules.zh-cn.md)的决定 M1）
 

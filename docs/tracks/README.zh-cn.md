@@ -10,7 +10,7 @@
 
 | Track | 状态模型 | Variant | 状态 |
 | --- | --- | --- | --- |
-| [A](track-a/README.zh-cn.md) | 加密账户：每个账户一份同态密文余额 | [A.1](track-a/variant-1/README.zh-cn.md) Baby Jubjub 上的 ElGamal + Groth16 | **主线**；0.6.0 已定稿；0.5.0，两种组合已上 BSC testnet |
+| [A](track-a/README.zh-cn.md) | 加密账户：每个账户一份同态密文余额 | [A.1](track-a/variant-1/README.zh-cn.md) Baby Jubjub 上的 ElGamal + Groth16 | **主线**；0.6.0 已实现；0.5.0，两种组合已上 BSC testnet |
 | [B](track-b/README.zh-cn.md) | note 模型：一棵承诺树和一个作废符集合，没有账户 | [B.1](track-b/variant-1/README.zh-cn.md) Poseidon note，一个 join-split 电路，Groth16 | 已部署到 BSC testnet，0.1.0（[ADR-0009](../adr/0009-track-b-notes.zh-cn.md)） |
 
 两个 Track 的信任基础相同：用户持有密钥，证明在客户端生成，不依赖外部网络。

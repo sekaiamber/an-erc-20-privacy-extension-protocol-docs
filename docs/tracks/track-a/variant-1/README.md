@@ -2,7 +2,7 @@ English | [中文](README.zh-cn.md)
 
 # A.1: ElGamal encrypted accounts + Groth16
 
-Version: `0.6.0` (core plus modules, [ADR-0008](../../../adr/0008-modules.md); 0.6.0 is specified and not implemented yet, the deployed tokens are 0.5.0). Status: `Draft`.
+Version: `0.6.0` (core plus modules, [ADR-0008](../../../adr/0008-modules.md); 0.6.0 is implemented and not deployed yet, the tokens on BSC testnet are 0.5.0). Status: `Draft`.
 
 Implemented as `A1LedgerToken` and `A1PrivateToken` and deployed on BSC testnet on 2026-10-13 ([03-deployments](03-deployments.md)). The two standalone contracts that predate the module structure, `ConfidentialERC20A1` 0.4.0 and `ConfidentialERC20B1` 0.2.0, remain on chain and are no longer opened by the dApp.
 

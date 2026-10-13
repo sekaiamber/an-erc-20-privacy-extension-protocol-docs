@@ -10,7 +10,7 @@ The family is organized by **Track / Variant / module** ([ADR-0008](../adr/0008-
 
 | Track | State model | Variant | Status |
 | --- | --- | --- | --- |
-| [A](track-a/README.md) | Encrypted accounts: one homomorphic-ciphertext balance per account | [A.1](track-a/variant-1/README.md) ElGamal on Baby Jubjub + Groth16 | **Mainline**; 0.6.0 specified; 0.5.0, two compositions on BSC testnet |
+| [A](track-a/README.md) | Encrypted accounts: one homomorphic-ciphertext balance per account | [A.1](track-a/variant-1/README.md) ElGamal on Baby Jubjub + Groth16 | **Mainline**; 0.6.0 implemented; 0.5.0, two compositions on BSC testnet |
 | [B](track-b/README.md) | Notes: a tree of commitments and a set of nullifiers, no accounts | [B.1](track-b/variant-1/README.md) Poseidon notes, one join-split circuit, Groth16 | Deployed on BSC testnet, 0.1.0 ([ADR-0009](../adr/0009-track-b-notes.md)) |
 
 Both Tracks have the same trust base: user-held keys, client-side proofs, no external network.

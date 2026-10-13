@@ -2,7 +2,7 @@
 
 # A.1：ElGamal 加密账户 + Groth16
 
-版本：`0.6.0`（内核加模块，见 [ADR-0008](../../../adr/0008-modules.zh-cn.md)；0.6.0 已定稿但尚未实现，已部署的代币是 0.5.0）　状态：`Draft`
+版本：`0.6.0`（内核加模块，见 [ADR-0008](../../../adr/0008-modules.zh-cn.md)；0.6.0 已实现但尚未部署，BSC testnet 上的代币是 0.5.0）　状态：`Draft`
 
 已实现为 `A1LedgerToken` 与 `A1PrivateToken`，并于 2026-10-13 部署到 BSC testnet（[03-deployments](03-deployments.zh-cn.md)）。早于模块结构的两个独立合约 `ConfidentialERC20A1` 0.4.0 与 `ConfidentialERC20B1` 0.2.0 仍留在链上，dApp 已不再打开它们。
 
