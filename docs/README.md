@@ -2,7 +2,7 @@ English | [中文](README.zh-cn.md)
 
 # Documentation index
 
-This directory contains all research and design documents of the "ERC-20 Privacy Extension Protocol" project. Reading in numbered order is recommended.
+This directory contains all research and design documents of Casata (until 2026-10-13: "ERC-20 Privacy Extension Protocol", see [ADR-0011](adr/0011-project-name-casata.md)). Reading in numbered order is recommended.
 
 | No. | Document | Contents |
 | --- | --- | --- |

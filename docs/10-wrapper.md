@@ -2,13 +2,13 @@ English | [中文](10-wrapper.zh-cn.md)
 
 # 10 Family tool: the generic Wrapper
 
-Status: `Prototype` (2026-09-27). Decision record: [ADR-0005](adr/0005-family-wrapper.md). Implementation: `contracts/contracts/family/{IPEPWrappable,PEPWrapper,WrappedERC20}.sol`; deployed on BSC testnet at `0xfA04051c4cC38e439f871cBfA179424a257c5455` (0.1.1; earlier instances are deprecated), which is the Wrapper plugged into the current privacy-only token (see the [A.1 deployment record](tracks/track-a/variant-1/03-deployments.md)).
+Status: `Prototype` (2026-09-27). Decision record: [ADR-0005](adr/0005-family-wrapper.md). Implementation: `contracts/contracts/family/{ICasataWrappable,CasataWrapper,WrappedERC20}.sol` (named `IPEPWrappable` and `PEPWrapper` before [ADR-0011](adr/0011-project-name-casata.md); the instance on chain was deployed under that name and stays in use); deployed on BSC testnet at `0xfA04051c4cC38e439f871cBfA179424a257c5455` (0.1.1; earlier instances are deprecated), which is the Wrapper plugged into the current privacy-only token (see the [A.1 deployment record](tracks/track-a/variant-1/03-deployments.md)).
 
 ## 1. What it is
 
 A single, family-level contract that gives **privacy tokens without a public ledger** (any composition without the public-ledger module, and any future Variant that is not ERC-20-shaped) a standard ERC-20 face for DeFi. For each underlying token it issues a plain ERC-20 *wrapped token* (`wTOKEN`); wrapping moves value from the confidential ledger to the public wrapped token, unwrapping moves it back.
 
-It is a **tool, not a requirement**: a token with the public-ledger module never uses it; a privacy-only token that never needs DeFi never registers with it. In the terms of [ADR-0008](adr/0008-modules.md) the Wrapper is a runtime module and `IPEPWrappable` is its port. The relationship is that of WETH to ETH.
+It is a **tool, not a requirement**: a token with the public-ledger module never uses it; a privacy-only token that never needs DeFi never registers with it. In the terms of [ADR-0008](adr/0008-modules.md) the Wrapper is a runtime module and `ICasataWrappable` is its port. The relationship is that of WETH to ETH.
 
 ## 2. Control inversion
 
@@ -17,7 +17,7 @@ The wrapper defines the interface; a privacy token opts in by implementing it an
 ```solidity
 /// Implemented by a privacy token that wants to be wrappable. `recipient` is opaque to the wrapper:
 /// a confidential id for account-model Variants, a note / stealth output for note-model Variants.
-interface IPEPWrappable {
+interface ICasataWrappable {
     /// Wrapper -> token. Credit `amount` (public) to the confidential `recipient`. Only the registered wrapper.
     function wrapperMint(bytes calldata recipient, uint256 amount) external;
 
@@ -33,12 +33,12 @@ interface IPEPWrappable {
 
 ```solidity
 /// One deployment per chain. Holds no keys, no confidential state, no upgradeability.
-contract PEPWrapper {
+contract CasataWrapper {
     mapping(address token => WrappedERC20) public wrapped;     // created on first use (minimal ERC-20, mint/burn by wrapper only)
 
     /// confidential -> public. Anyone may relay; the payout goes to the `to` bound in the proof.
     function wrap(address token, address from, address to, uint256 amount, bytes calldata payload) external {
-        IPEPWrappable(token).wrapperBurn(from, to, amount, payload);   // reverts unless proof ok and msg.sender == wrapper
+        ICasataWrappable(token).wrapperBurn(from, to, amount, payload);   // reverts unless proof ok and msg.sender == wrapper
         _wrapped(token).mint(to, amount);
         emit Wrapped(token, from, to, amount);
     }
@@ -46,7 +46,7 @@ contract PEPWrapper {
     /// public -> confidential. The caller burns their own wTOKEN.
     function unwrap(address token, bytes calldata recipient, uint256 amount) external {
         _wrapped(token).burnFrom(msg.sender, amount);
-        IPEPWrappable(token).wrapperMint(recipient, amount);
+        ICasataWrappable(token).wrapperMint(recipient, amount);
         emit Unwrapped(token, msg.sender, recipient, amount);
     }
 }
@@ -96,5 +96,5 @@ The Wrapper is used unchanged ([ADR-0009](adr/0009-track-b-notes.md)). A note-mo
 
 ## 7. Open points
 
-- Whether `wrap` should also accept a *prepared* payload (family §6) so wallets that cannot build calldata can use it. Draft: yes, by calling `token.prepare` first and letting `wrap` execute the prepared entry.
+- Closed: whether `wrap` should also accept a *prepared* payload. The family withdrew `prepare` ([ADR-0010](adr/0010-erc20-surface-tradeoffs.md)), so `wrap` takes its payload directly and nothing else.
 - Fee hook for relayers (they pay gas for `wrap`). Draft: none in 0.1; relayers can be paid out-of-band or by the `to` address.

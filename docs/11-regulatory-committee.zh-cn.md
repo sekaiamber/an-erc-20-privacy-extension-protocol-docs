@@ -36,7 +36,7 @@ v·G = C_amt − s·D_reg
 
 ## 4. 协议
 
-记号：`H` 是密钥生成元（`pk = s·H`，普通 ElGamal，§7）。秘密 `s = Σ_g s_g`；第 `g` 组以阈值 `t_g` 持有 `s_g` 的 Shamir 分享。成员序号是其在组内的位置（从 1 开始）。每位成员有一把**委员会密钥** `(x, X = x·H)`，由成员钱包对域 `(PEP, 1, chainId, committee)`、用途 `"Regulator committee key"` 的 EIP-712 签名派生，并通过 `registerKey(X)` 登记。
+记号：`H` 是密钥生成元（`pk = s·H`，普通 ElGamal，§7）。秘密 `s = Σ_g s_g`；第 `g` 组以阈值 `t_g` 持有 `s_g` 的 Shamir 分享。成员序号是其在组内的位置（从 1 开始）。每位成员有一把**委员会密钥** `(x, X = x·H)`，由成员钱包对域 `(Casata, 1, chainId, committee)`、用途 `"Regulator committee key"` 的 EIP-712 签名派生，并通过 `registerKey(X)` 登记。
 
 **份额投递。** 分发者取随机 `k`，公布 `K = k·H`，对接收者 `j` 公布 `enc_j = f(j) + Poseidon(Poseidon(k·X_j), j) mod p`。接收者 `j` 用 `x_j·K` 算出同一个掩码。因此份额以密文形式存在链上；成员随时从钱包重新派生密钥并恢复份额。
 
@@ -150,7 +150,7 @@ A.1 的 memo 多用一个 ECDH 点 `E = e·H`，密钥流由 `e·pk = s⁻¹·E`
 | 来源 | 适用 | 做法 |
 | --- | --- | --- |
 | 私钥 | 密钥存为文件或放在保险库 | 粘贴 `s_reg`，本地计算 |
-| 钱包 | 只有一个钱包的监管方 | `s = keccak256(EIP-712 签名) mod L`，域 `(PEP, 1, chainId)`，用途 `"Regulator key"`，带 `index`；不绑定代币，因此密钥可先于代币存在，并可监管多个代币 |
+| 钱包 | 只有一个钱包的监管方 | `s = keccak256(EIP-712 签名) mod L`，域 `(Casata, 1, chainId)`，用途 `"Regulator key"`，带 `index`；不绑定代币，因此密钥可先于代币存在，并可监管多个代币 |
 | 委员会 | 第 2 级合约（家族模板或兼容实现） | 请求、批准、合成（§4.3）；第 1 级合约转到离线任务单 |
 | 离线任务单 | 其他一切：自建合约、MPC 托管、多签、离线机器 | 导出任务，持钥方用自己的方式算出 `s·D`，再导入结果 |
 

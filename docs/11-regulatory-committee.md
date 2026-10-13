@@ -36,7 +36,7 @@ Tokens do not change: they keep `regulatorKey(keyId)` / `activeRegulatorKeyId` /
 
 ## 4. Protocols
 
-Notation: `H` is the key generator (`pk = s·H`, plain ElGamal, §7). The secret is `s = Σ_g s_g`; group `g` holds a Shamir sharing of `s_g` with threshold `t_g`. Member indices are 1-based positions in their group. Every member has a **committee key** `(x, X = x·H)`, derived from an EIP-712 signature of the member's wallet over the domain `(PEP, 1, chainId, committee)` with purpose `"Regulator committee key"`, and registered with `registerKey(X)`.
+Notation: `H` is the key generator (`pk = s·H`, plain ElGamal, §7). The secret is `s = Σ_g s_g`; group `g` holds a Shamir sharing of `s_g` with threshold `t_g`. Member indices are 1-based positions in their group. Every member has a **committee key** `(x, X = x·H)`, derived from an EIP-712 signature of the member's wallet over the domain `(Casata, 1, chainId, committee)` with purpose `"Regulator committee key"`, and registered with `registerKey(X)`.
 
 **Share delivery.** A dealer samples `k`, posts `K = k·H`, and for recipient `j` posts `enc_j = f(j) + Poseidon(Poseidon(k·X_j), j) mod p`. Recipient `j` computes the same pad from `x_j·K`. Shares therefore live on chain, encrypted; a member re-derives its key from the wallet and recovers its share whenever needed.
 
@@ -150,7 +150,7 @@ Decryption only ever needs `s·D` for each regulated transfer, and every value i
 | Source | For | How |
 | --- | --- | --- |
 | Secret | a key kept as a file or in a vault | paste `s_reg`; computed locally |
-| Wallet | a regulator whose only credential is one wallet | `s = keccak256(EIP-712 signature) mod L`, domain `(PEP, 1, chainId)`, purpose `"Regulator key"`, an `index`; not bound to a token, so the key exists before the token and can serve several |
+| Wallet | a regulator whose only credential is one wallet | `s = keccak256(EIP-712 signature) mod L`, domain `(Casata, 1, chainId)`, purpose `"Regulator key"`, an `index`; not bound to a token, so the key exists before the token and can serve several |
 | Committee | a level-2 contract (the family template or a compatible one) | request, approvals, combination (§4.3); a level-1 contract is sent to the offline job |
 | Offline job | anything else: a custom contract, an MPC custodian, a multisig, an air-gapped machine | export a job, the holder computes `s·D` its own way, import the result |
 

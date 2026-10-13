@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-本仓库是「ERC-20 隐私扩展协议」研究项目的主仓库。
+本仓库是 Casata 研究项目的主仓库。项目全称 Casata Segreta，2026-10-13 之前名为「ERC-20 隐私扩展协议」（PEP），见 `docs/adr/0011-project-name-casata.md`；仓库名和已部署的合约目前仍带旧名字。
 
 ## 结构
 

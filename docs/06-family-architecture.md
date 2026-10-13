@@ -6,7 +6,7 @@ Status: `Draft`
 
 ## Layers
 
-The protocol family has four layers. Each answers a different question:
+The family has four layers. Each answers a different question:
 
 | Layer | Question answered | What changing it costs | Carrier |
 | --- | --- | --- | --- |
@@ -38,7 +38,7 @@ Track A  Encrypted accounts: one homomorphic-ciphertext balance per account
        └─ privacy-only, with the Wrapper port   contract A1PrivateToken, pep() A:1:0.5.0   ← prototype on BSC testnet
 Track B  Notes: a tree of commitments and a set of nullifiers, no accounts
   └─ B.1  Poseidon notes, one join-split circuit, Groth16                       ← deployed on BSC testnet, `B:1:0.1.0` (ADR-0009)
-Runtime module  generic Wrapper (10-wrapper): issues wTOKEN for tokens without the public ledger   ← deployed (PEPWrapper)
+Runtime module  generic Wrapper (10-wrapper): issues wTOKEN for tokens without the public ledger   ← deployed (CasataWrapper)
 Family tool     Regulatory Committee (11): threshold regulator key, membership, policies, audit    ← prototype
 ```
 

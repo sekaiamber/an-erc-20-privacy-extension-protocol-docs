@@ -7,6 +7,8 @@ Records the important and hard-to-reverse technical decisions in the project. On
 - Family level: `NNNN-short-title.md`
 - Variant level: `a1-NNNN-short-title.md` (the prefix is the lowercase Variant number)
 
+ADR-0001 to ADR-0010 were written before the project was named Casata ([0011](0011-project-name-casata.md)). They keep the names in use at the time: PEP, `pep()`, `IPEP*`, `PEPWrapper`.
+
 ## Family level
 
 | No. | Title | Status |

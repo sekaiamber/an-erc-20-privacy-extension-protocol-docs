@@ -6,11 +6,17 @@ Status: `Draft`  Applies to: all Tracks / Variants
 
 This document is the **normative** family-level convention. Track and Variant documents may only narrow or supplement it; they must not conflict with it.
 
-## 1. Entry point: reuse the standard selectors + trailing payload
+> 2026-10-13: §1, §3 to §7, §13 and §14 follow [ADR-0010](adr/0010-erc20-surface-tradeoffs.md), and the names follow [ADR-0011](adr/0011-project-name-casata.md). A.1 implements this text from 0.6.0 and B.1 from 0.2.0. Tokens of earlier versions follow the text before it: they answer `pep()` instead of `casata()`, issue with `mintConfidential`, and A.1 still has `prepare` / `cancel`.
 
-- No new transfer selectors are added. Confidential operations reuse `transfer(address,uint256)` and `transferFrom(address,address,uint256)`.
-- The payload immediately follows the ABI-encoded arguments: `transfer` reads from `msg.data[68:]`, `transferFrom` reads from `msg.data[100:]`.
-- A call without a payload is an ordinary public-ledger operation. A token without the public-ledger module (§13) has nothing public to move: `balanceOf` returns 0 and a payload-less `transfer` reverts `NoPublicLedger()`.
+## 1. Entry point: the transfer verb + trailing payload
+
+Decision records: [ADR-0003](adr/0003-erc20-surface-conventions.md), amended by [ADR-0010](adr/0010-erc20-surface-tradeoffs.md).
+
+- Every operation that moves value goes through `transfer(address,uint256)` or `transferFrom(address,address,uint256)`. Transfers get no new selector.
+- A payload carries what the standard arguments cannot. Where the signature is fixed by someone else, the payload immediately follows the ABI-encoded arguments: `transfer` reads from `msg.data[68:]`, `transferFrom` from `msg.data[100:]`, and `mint` (§13.1) from `msg.data[68:]`. A function that a Variant defines for itself takes `bytes payload` as an ordinary argument.
+- A call without a payload behaves exactly as the standard function does: it is an ordinary public-ledger operation. A token without the public-ledger module (§13) has nothing public to move: a payload-less `transfer`, `transferFrom` or `mint` reverts `NoPublicLedger()`.
+- An operation that moves no value does not use the transfer verb. It is a function of the Variant (A.1: `fold`).
+- Compatibility with ERC-20 is decided item by item, by three questions: is what the token says true, is it cheap, and does anyone use it or does it make the design easier to explain (ADR-0010, item 1).
 
 ## 2. Payload header
 
@@ -39,6 +45,8 @@ byte 2.. segments determined by type
 
 In Track B (notes) there are no ids. With a note-transfer payload, `from` and `to` MUST be the token's own address; for a burn, `to` is the zero address. See the [Track B document](tracks/track-b/README.md).
 
+For `mint`, `to` is a public account when there is no payload. With a payload it is what the Variant's issuance type says: a confidential id in A.1, the token's own address in B.1.
+
 ## 4. Handles
 
 For confidential transfers (`0x01` / `0x02`) the `amount` slot carries a handle:
@@ -49,18 +57,24 @@ handle = keccak256(payload) | (1 << 255)
 
 The top bit is set to 1 so indexers can distinguish handles from public amounts; public amounts are bounded by each Variant's supply cap, far below 2²⁵⁵.
 
+Explorers and wallets show a handle as a very large amount. A client states this before it asks a wallet to sign a call that carries a handle: the number the wallet shows is a handle, not an amount.
+
 ## 5. Authorization
 
 - `transfer`: payer = the public account of `msg.sender`.
 - `transferFrom`: when `from` is a public account, standard allowance applies; when `from` is a confidential id, authorization is defined by the Variant (A.1: zero-knowledge proof) and `msg.sender` is not checked.
+- `approve` / `allowance`: standard on a token with the public-ledger module. On a token without it, `approve` reverts `NoPublicLedger()` and `allowance` returns 0: there is nothing an allowance could authorise, and returning true would be a false answer.
+- `mint`: the minter role of the role-issuance module (§13.1).
 
-## 6. Fallback path
+## 6. Fallback path (withdrawn)
 
-Callers that cannot assemble calldata may first register with `prepare(from, to, x, payload)`, after which a bare `transferFrom(from, to, x)` from any source executes it; `cancel` requires submitting the original payload. The registration is bound to the account state version at that time; once stale it fails and is not retried.
+This section described `prepare` / `cancel`: registering a confidential operation so that a bare `transferFrom` could execute it later. [ADR-0010](adr/0010-erc20-surface-tradeoffs.md) withdrew it. No Variant has to implement it; A.1 removes it in 0.6.0 and B.1 never had it. The section number is kept so that references to later sections stay valid.
 
 ## 7. Events
 
-- Every type emits the standard `Transfer(from, to, x)`; `x` is a handle or a public amount. With the public-ledger module, `0x03` / `0x04` are triggered by the public-ledger custody transfer and emit `Transfer(from, this, x)` / `Transfer(this, to, x)`.
+- Every operation that moves value emits the standard `Transfer(from, to, x)`; `x` is a handle or a public amount. With the public-ledger module, `0x03` / `0x04` are triggered by the public-ledger custody transfer and emit `Transfer(from, this, x)` / `Transfer(this, to, x)`.
+- Issuance emits `Transfer` from the zero address and a burn emits `Transfer` to the zero address.
+- An operation that moves no value emits no `Transfer`; it has an event of its own (A.1: `Folded`).
 - `0x03` / `0x04` additionally emit `LedgerCrossing(from, to, type, amount)`.
 - Confidential transfers additionally emit a Variant-defined dedicated event (A.1: `ConfidentialTransfer`) for recipient scanning and regulator decryption.
 - Track B: a note transfer emits `Transfer(token, token, handle)`, value entering emits `Transfer(0x0, token, amount)` and value leaving emits `Transfer(token, 0x0, amount)`, where `token` is the token's own address. The dedicated event has no indexed field that identifies a user.
@@ -70,12 +84,12 @@ Callers that cannot assemble calldata may first register with `prepare(from, to,
 User keys in every Variant are derived from a wallet signature, implemented once on the wallet side and shared by all:
 
 ```
-domain  = { name: "PEP", version: "1", chainId, verifyingContract }
+domain  = { name: "Casata", version: "1", chainId, verifyingContract }
 message = { purpose: "<variant> key", index }
 secret  = keccak256(sign_EIP712(domain, message)) mod <the Variant's scalar field order>
 ```
 
-The same wallet derives multiple accounts with different `index` values. Whether the derived public key goes on-chain is decided by the Variant (A.1: not on-chain).
+The same wallet derives multiple accounts with different `index` values. Whether the derived public key goes on-chain is decided by the Variant (A.1: not on-chain). Tokens of versions before the rename (ADR-0011) use the domain name `"PEP"`, so their keys differ from the ones derived here.
 
 ## 9. Regulator interface
 
@@ -93,14 +107,15 @@ Every operation that must be regulator-readable records the `keyId` used. The re
 ## 10. Family descriptor and ERC-165
 
 ```solidity
-interface IPEP {
-    /// ASCII "<track>:<variant>:<version>", e.g. "A:1:0.2.4", right-padded with zero bytes
-    function pep() external pure returns (bytes32);
+interface ICasata {
+    /// ASCII "<track>:<variant>:<version>", e.g. "A:1:0.6.0", right-padded with zero bytes
+    function casata() external pure returns (bytes32);
 }
 ```
 
-- The contract declares `type(IPEP).interfaceId` via ERC-165. Modules add their own interface ids (§13).
-- For any address, the frontend first calls `supportsInterface`, then reads `pep()` to parse track / variant / version and routes to the corresponding page. Which features the page offers follows from the modules (§13).
+- The contract declares `type(ICasata).interfaceId` (`0x75118339`) via ERC-165. Modules add their own interface ids (§13).
+- For any address, the frontend first calls `supportsInterface`, then reads `casata()` to parse track / variant / version and routes to the corresponding page. Which features the page offers follows from the modules (§13).
+- Before [ADR-0011](adr/0011-project-name-casata.md) the interface was `IPEP` with `pep()` (`0xace237f5`). Tokens of A.1 up to 0.5.0 and of B.1 0.1.0 answer that and not `casata()`.
 - The descriptor is **self-declared**: the family is permissive, there is no on-chain registry, and no check that contract behavior matches the declaration (just like ERC-20). The consequences of a wrong descriptor are borne by the publisher.
 - `version` follows the version of that Variant's design document; changing a circuit, an interface or the list of supported modules (§13.2) bumps the version.
 
@@ -129,9 +144,9 @@ Decision record: [ADR-0008](adr/0008-modules.md). A module is a contract-level o
 
 | Module | Kind | Interface | Adds | Limit enforced by the token |
 | --- | --- | --- | --- | --- |
-| Public ledger | Compile-time | `IPEPPublicLedger` | Standard ERC-20 balances at the token's address; payload types `0x03` / `0x04`; `shieldedSupply()`; `LedgerCrossing` | None |
-| Role issuance | Compile-time | `IPEPRoleIssuance` | Issuance by a minter role with a public amount, and a public-amount burn by the holder. The functions are defined per Variant (A.1: [04-modules §4.2](tracks/track-a/variant-1/04-modules.md); B.1: [01-design §5](tracks/track-b/variant-1/01-design.md)) | The Variant's supply cap |
-| Wrapper port | Port and runtime module | `IPEPWrappable` | `wrapperMint`, `wrapperBurn`, `wrapper()`; used by the family Wrapper ([10](10-wrapper.md)) | Credits never exceed what left through the port (`wrappedOut`) |
+| Public ledger | Compile-time | `ICasataPublicLedger` | Standard ERC-20 balances at the token's address; payload types `0x03` / `0x04`; `shieldedSupply()`; `LedgerCrossing` | None |
+| Role issuance | Compile-time | `ICasataRoleIssuance` | `mint(address to, uint256 amount)` for a minter role, with the payload rule of §1. Without a payload it is a public issuance to `to`. With a payload it issues a public amount into the confidential side, and the Variant's issuance type says what `to` means (A.1: [04-modules §4.2](tracks/track-a/variant-1/04-modules.md); B.1: [01-design §5](tracks/track-b/variant-1/01-design.md)). Also a public-amount burn by the holder: `transferFrom(from, 0x0, amount)` + payload | The Variant's supply cap |
+| Wrapper port | Port and runtime module | `ICasataWrappable` | `wrapperMint`, `wrapperBurn`, `wrapper()`; used by the family Wrapper ([10](10-wrapper.md)) | Credits never exceed what left through the port (`wrappedOut`) |
 
 Custody issuance (a vault that locks a plain ERC-20 and issues the privacy token) is a reserved name. It is not designed.
 
@@ -142,7 +157,9 @@ The registry is append-only. Registering a new module changes nothing for existi
 | Variant version | Public ledger | Role issuance | Wrapper port |
 | --- | --- | --- | --- |
 | A.1 0.5.0 | Yes | Yes | Yes |
+| A.1 0.6.0 | Yes | Yes | Yes |
 | B.1 0.1.0 | No | Yes | Yes |
+| B.1 0.2.0 | No | Yes | Yes |
 
 The interfaces are in `contracts/contracts/family/`.
 
@@ -161,21 +178,28 @@ The interfaces are in `contracts/contracts/family/`.
 ### 13.3 Probe
 
 ```solidity
-interface IPEPModules {
+interface ICasataModules {
     struct Module { bytes4 id; address impl; }
     /// `impl == address(this)`: compiled in. Another non-zero address: the runtime module plugged into
     /// this port. Zero: the port exists and nothing is plugged in.
-    function pepModules() external view returns (Module[] memory);
+    function casataModules() external view returns (Module[] memory);
 }
 ```
 
 - `id` is the ERC-165 interface id of the module's interface; `supportsInterface(id)` returns true for it.
-- The list is self-declared, like `pep()`.
-- `pep()` tells which Variant version a token is, and therefore which modules it could have; `pepModules()` tells which of them it has.
+- The list is self-declared, like `casata()`.
+- `casata()` tells which Variant version a token is, and therefore which modules it could have; `casataModules()` tells which of them it has.
 - Integrators must not infer from the Track letter whether a token has public balances. They read it from the probe.
-- Implemented by A.1 0.5.0 in the contracts repository. The tokens deployed before it (0.4.0 and the former B.1 0.2.0) do not have `pepModules()`; on those the Wrapper port is detected with `supportsInterface(type(IPEPWrappable).interfaceId)`.
-- Interface ids: `IPEPModules` `0xad5ad25b`, `IPEPPublicLedger` `0x43dcbbd9`, `IPEPRoleIssuance` `0x60b2d978`, `IPEPWrappable` `0x1464bbec`.
+- Interface ids: `ICasataModules` `0xf71c7351`, `ICasataPublicLedger` `0x43dcbbd9`, `ICasataRoleIssuance` `0x40c10f19`, `ICasataWrappable` `0x1464bbec`. The role-issuance id is the selector of `mint(address,uint256)`, since that is the interface's only function.
+- Earlier versions: A.1 0.5.0 and B.1 0.1.0 have the same probe under the name `pepModules()` (`IPEPModules`, `0xad5ad25b`), and their role-issuance id is `0x60b2d978` (`mintConfidential`). Tokens before A.1 0.5.0 have no probe; on those the Wrapper port is detected with `supportsInterface(0x1464bbec)`.
 
 ### 13.4 A token without the public-ledger module
 
-Its ERC-20 surface is described in [00-erc20-surface](tracks/track-a/variant-1-privacy-only/00-erc20-surface.md): `balanceOf` is always 0, a payload-less `transfer` reverts, `totalSupply()` is minted minus burned, and mint and burn amounts are public. This holds for Track A. A Track B token differs in `balanceOf` and in its events; see the [Track B document](tracks/track-b/README.md).
+Its ERC-20 surface is specified by the Variant: for A.1 in [04-modules §5](tracks/track-a/variant-1/04-modules.md), for B.1 in [01-design §5](tracks/track-b/variant-1/01-design.md). In Track A, `balanceOf` is always 0, a payload-less `transfer` reverts, `approve` reverts, `totalSupply()` is minted minus burned minus what is out through the Wrapper, and mint and burn amounts are public. A Track B token differs in `balanceOf` and in its events; see the [Track B document](tracks/track-b/README.md). The decisions behind this surface were first recorded in [00-erc20-surface](tracks/track-a/variant-1-privacy-only/00-erc20-surface.md), which describes the standalone contract of 2026-09 and is kept as a record.
+
+## 14. Read surface and supply
+
+- Every token keeps `name`, `symbol`, `decimals`, `totalSupply` and `balanceOf`. Their answers are true on every token. On a token without the public ledger, `balanceOf` reports the public balance, which is zero for a user.
+- `totalSupply()` equals what has been issued at the token and not burned.
+- Recommended, not required: a token reports figures from which anyone can compute its confidential supply, by subtracting the public part from `totalSupply()`. How a Variant presents this is its own choice. A.1 with the public ledger has `shieldedSupply()`; B.1 lets the token's own address hold the confidential supply in `balanceOf`.
+- Whether a token may hide its supply is not decided. No Variant does so.

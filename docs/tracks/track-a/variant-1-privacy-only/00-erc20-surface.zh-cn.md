@@ -6,6 +6,8 @@
 
 > **已由 [ADR-0008](../../../adr/0008-modules.zh-cn.md) 重新归类（2026-10-12）。** 本文原是「Track B」的 README，现在描述的是 A.1 纯隐私组合的 ERC-20 表面：同一套电路，没有公开账本模块，带角色铸造和 Wrapper 端口。在合约重构之前，合约名和 `B:1:…` 描述符保持不变，下文也仍然写作「Track B」「B.1」。自 [ADR-0009](../../../adr/0009-track-b-notes.zh-cn.md) 起，Track B 指 note 模型，文档在 [track-b](../../track-b/README.zh-cn.md)。
 
+> **2026-10-13。** 本文是那个独立合约的记录。从 A.1 0.6.0 起，下表有三行不再成立（[ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.zh-cn.md)）：`approve` 回退 `NoPublicLedger()`；折叠是 `fold(id, payload)`，不再是 `transferFrom`；发行是带 payload `0x82` 的 `mint(id, amount)`。现行的表面见 [04-modules §5](../variant-1/04-modules.zh-cn.md)。
+
 ## 集成方契约
 
 Track B 代币**没有公开账本**。不存在任何明文「持有」代币的地址，所以「有多少代币在机密状态」这个问题根本不存在：唯一公开的数字是 `totalSupply`。

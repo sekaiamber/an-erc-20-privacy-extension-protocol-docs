@@ -25,15 +25,15 @@ Track A        状态模型与信任基础
 
 ## 集成方契约（所有 A.x 都遵守，与带哪些模块无关）
 
-- 只用 ERC-20 已有的 `transfer(address,uint256)` 与 `transferFrom(address,address,uint256)` 选择器。payload 放在 ABI 参数之后：`transfer` 从 `msg.data[68:]`、`transferFrom` 从 `msg.data[100:]` 读取。
+- 凡是移动价值的操作，都用 ERC-20 已有的 `transfer(address,uint256)` 与 `transferFrom(address,address,uint256)` 选择器。payload 放在 ABI 参数之后：`transfer` 从 `msg.data[68:]`、`transferFrom` 从 `msg.data[100:]` 读取。
 - payload 第一字节是类型，第二字节是 flags。类型编号用家族统一的（07 §2）。
 - **`to` / `from` 的含义由 payload 类型决定。** 协议不判断一个 20 字节值是钱包地址还是机密 id。
 - 机密账户用一个 20 字节的 id 寻址。id 怎么派生由 Variant 定义。
 - `0x01`，机密到机密：`transferFrom(id, id, handle)`。授权方式由 Variant 定义（A.1：零知识证明）；不检查 `msg.sender`。
-- 机密转账的金额槽里放句柄，最高位为 1。所有类型都发标准 `Transfer` 事件；机密转账另发一个 Variant 定义的事件，写出两个 id，并携带收款方和监管方需要的内容。
-- 无法携带附加数据的调用，可以执行事先用 `prepare` 登记的机密操作（07 §6）。
+- 机密转账的金额槽里放句柄，最高位为 1。凡是移动价值的操作都发标准 `Transfer` 事件；机密转账另发一个 Variant 定义的事件，写出两个 id，并携带收款方和监管方需要的内容。
+- 不移动价值的操作是 Variant 自己的函数，不是转账（07 §1）。对无法携带附加数据的调用没有兜底：`prepare` 已撤销（07 §6）。
 - 任何账户 id 的状态都可以通过 Variant 定义的视图以密文形式读出。
-- `pep()` 与模块探针通过 ERC-165 暴露（07 §10、§13）。
+- `casata()` 与模块探针通过 ERC-165 暴露（07 §10、§13）。
 - 监管接口同 07 §9。
 
 ## 模块对集成方意味着什么
@@ -48,4 +48,4 @@ Track A        状态模型与信任基础
 
 | Variant | 内核 | 收付方 | 金额 | 监管 | 声明支持的模块 | 状态 |
 | --- | --- | --- | --- | --- | --- | --- |
-| [A.1](variant-1/README.zh-cn.md) | Baby Jubjub 上的 ElGamal + Groth16，账户 = 公钥 | 化名：id 稳定、可关联 | 隐藏 | 每笔转账的第三份密文，在电路里强制 | 0.5.0 声明支持：公开账本、角色铸造、Wrapper 端口 | 0.5.0；两种组合已部署到 BSC testnet |
+| [A.1](variant-1/README.zh-cn.md) | Baby Jubjub 上的 ElGamal + Groth16，账户 = 公钥 | 化名：id 稳定、可关联 | 隐藏 | 每笔转账的第三份密文，在电路里强制 | 0.6.0 声明支持：公开账本、角色铸造、Wrapper 端口 | 0.6.0 已定稿；0.5.0：两种组合已部署到 BSC testnet |

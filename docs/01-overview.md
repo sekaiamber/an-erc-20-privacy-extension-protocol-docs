@@ -14,7 +14,7 @@ The question this project studies is:
 
 > Can we design an **extension protocol** that gives an ERC-20 token optional privacy capabilities while keeping it compatible with the standard interface?
 
-The answer is not a single protocol but a **protocol family**: a Track is a state model and a trust base that no other Track can deliver; a Variant is one set of circuits under a Track; a module is a contract-level option on a Variant, such as the public ledger. The routes coexist and evolve independently (see [06 Family Architecture](06-family-architecture.md)).
+The answer is not a single protocol but a **family** of token contracts, which the project maintains under the name Casata ([ADR-0011](adr/0011-project-name-casata.md)): a Track is a state model and a trust base that no other Track can deliver; a Variant is one set of circuits under a Track; a module is a contract-level option on a Variant, such as the public ledger. The routes coexist and evolve independently (see [06 Family Architecture](06-family-architecture.md)).
 
 ## Goals
 

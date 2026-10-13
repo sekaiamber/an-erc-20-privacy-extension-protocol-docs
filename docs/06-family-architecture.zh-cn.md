@@ -6,7 +6,7 @@
 
 ## 分层
 
-协议家族分四层，每层回答一个不同的问题：
+家族分四层，每层回答一个不同的问题：
 
 | 层 | 回答的问题 | 换一个的代价 | 载体 |
 | --- | --- | --- | --- |
@@ -38,7 +38,7 @@ Track A  加密账户：每个账户一份同态密文余额
        └─ 纯隐私，带 Wrapper 端口     合约 A1PrivateToken，pep() A:1:0.5.0   ← 原型已上 BSC testnet
 Track B  note 模型：一棵承诺树和一个作废符集合，没有账户
   └─ B.1  Poseidon note，一个 join-split 电路，Groth16                        ← 已部署到 BSC testnet，`B:1:0.1.0`（ADR-0009）
-运行时模块  通用 Wrapper（10-wrapper）：为没有公开账本的代币发行 wTOKEN             ← 已部署（PEPWrapper）
+运行时模块  通用 Wrapper（10-wrapper）：为没有公开账本的代币发行 wTOKEN             ← 已部署（CasataWrapper）
 家族工具    监管委员会（11）：门限监管密钥、成员、策略、审计                       ← 原型
 ```
 

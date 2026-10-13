@@ -6,6 +6,8 @@ Date: 2026-09-25. Subject: `contracts` repository at `21ebe6b` (circuits, contra
 
 > This is an author self-review, not an independent audit. The purpose is to clear and record the problems the author can see before advancing the prototype to `Review` status.
 
+> 2026-10-13: A.1 0.6.0 removes `prepare` / `cancel` ([ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.md)). The findings about that path (F2, F3, F4, F10, D3, D6) stay here as a record and do not apply from 0.6.0. Names in this review are the ones in use when it was written.
+
 ## Conclusions
 
 - **No path to forge proofs, double-spend, or mint out of thin air was found.** The circuit's public-input unpacking is unique (every field has a range check), and every point used on-chain is bound by equality constraints to the values computed inside the circuit.

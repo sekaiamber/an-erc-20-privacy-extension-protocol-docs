@@ -2,13 +2,13 @@
 
 # 10 家族工具：通用 Wrapper
 
-状态：`Prototype`（2026-09-27）。决策记录：[ADR-0005](adr/0005-family-wrapper.zh-cn.md)。实现：`contracts/contracts/family/{IPEPWrappable,PEPWrapper,WrappedERC20}.sol`；已部署到 BSC testnet `0xfA04051c4cC38e439f871cBfA179424a257c5455`（0.1.1；更早的实例作废），当前的纯隐私代币插的就是它（见 [A.1 部署记录](tracks/track-a/variant-1/03-deployments.zh-cn.md)）。
+状态：`Prototype`（2026-09-27）。决策记录：[ADR-0005](adr/0005-family-wrapper.zh-cn.md)。实现：`contracts/contracts/family/{ICasataWrappable,CasataWrapper,WrappedERC20}.sol`（[ADR-0011](adr/0011-project-name-casata.zh-cn.md) 之前叫 `IPEPWrappable` 和 `PEPWrapper`；链上的实例是用那个名字部署的，继续使用）；已部署到 BSC testnet `0xfA04051c4cC38e439f871cBfA179424a257c5455`（0.1.1；更早的实例作废），当前的纯隐私代币插的就是它（见 [A.1 部署记录](tracks/track-a/variant-1/03-deployments.zh-cn.md)）。
 
 ## 1. 它是什么
 
 一个家族级的单一合约，让**没有公开账本的隐私代币**（任何没有公开账本模块的组合，以及将来任何形态不像 ERC-20 的 Variant）拥有一张面向 DeFi 的标准 ERC-20 面孔。它为每个底层代币发行一个普通 ERC-20 的*包装代币*（`wTOKEN`）；wrap 把价值从机密账本移到公开的包装代币，unwrap 移回去。
 
-它是**工具，不是要求**：带公开账本模块的代币永远用不到它；一个永远不需要进 DeFi 的纯隐私代币也不必注册。按 [ADR-0008](adr/0008-modules.zh-cn.md) 的说法，Wrapper 是运行时模块，`IPEPWrappable` 是它的端口。它与底层代币的关系就像 WETH 与 ETH。
+它是**工具，不是要求**：带公开账本模块的代币永远用不到它；一个永远不需要进 DeFi 的纯隐私代币也不必注册。按 [ADR-0008](adr/0008-modules.zh-cn.md) 的说法，Wrapper 是运行时模块，`ICasataWrappable` 是它的端口。它与底层代币的关系就像 WETH 与 ETH。
 
 ## 2. 控制反转
 
@@ -17,7 +17,7 @@ Wrapper 定义接口；隐私代币通过实现接口并把 `WRAPPER_ROLE` 授�
 ```solidity
 /// 想被包装的隐私代币实现此接口。`recipient` 对 wrapper 是不透明的：
 /// 账户模型 Variant 传机密 id，note 模型 Variant 传 note / stealth 输出。
-interface IPEPWrappable {
+interface ICasataWrappable {
     /// Wrapper -> 代币。把公开金额 `amount` 记入机密 `recipient`。仅限已注册的 wrapper。
     function wrapperMint(bytes calldata recipient, uint256 amount) external;
 
@@ -31,12 +31,12 @@ interface IPEPWrappable {
 
 ```solidity
 /// 每条链部署一份。不持有密钥、不持有机密状态、不可升级。
-contract PEPWrapper {
+contract CasataWrapper {
     mapping(address token => WrappedERC20) public wrapped;     // 首次使用时创建（最小 ERC-20，只有 wrapper 能铸销）
 
     /// 机密 -> 公开。任何人可代为提交；wTOKEN 发给证明里绑定的 `to`。
     function wrap(address token, address from, address to, uint256 amount, bytes calldata payload) external {
-        IPEPWrappable(token).wrapperBurn(from, to, amount, payload);   // 证明不通过或 msg.sender != wrapper 则 revert
+        ICasataWrappable(token).wrapperBurn(from, to, amount, payload);   // 证明不通过或 msg.sender != wrapper 则 revert
         _wrapped(token).mint(to, amount);
         emit Wrapped(token, from, to, amount);
     }
@@ -44,7 +44,7 @@ contract PEPWrapper {
     /// 公开 -> 机密。调用者销毁自己的 wTOKEN。
     function unwrap(address token, bytes calldata recipient, uint256 amount) external {
         _wrapped(token).burnFrom(msg.sender, amount);
-        IPEPWrappable(token).wrapperMint(recipient, amount);
+        ICasataWrappable(token).wrapperMint(recipient, amount);
         emit Unwrapped(token, msg.sender, recipient, amount);
     }
 }
@@ -94,5 +94,5 @@ Wrapper 原样使用（[ADR-0009](adr/0009-track-b-notes.zh-cn.md)）。note 模
 
 ## 7. 待决
 
-- `wrap` 是否也接受*已登记*的 payload（家族 §6），让拼不了 calldata 的钱包也能用。草案：接受——先调 `token.prepare`，再由 `wrap` 执行登记项。
+- 已关闭：`wrap` 是否也接受*已登记*的 payload。家族已经撤销了 `prepare`（[ADR-0010](adr/0010-erc20-surface-tradeoffs.zh-cn.md)），所以 `wrap` 只直接接收 payload。
 - 中继者的费用钩子（它们为 `wrap` 付 gas）。草案：0.1 不做；中继费用链下结算或由 `to` 地址支付。

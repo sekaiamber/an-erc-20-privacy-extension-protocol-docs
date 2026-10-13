@@ -1,8 +1,10 @@
 [English](01-design.md) | 中文
 
-# B.1 设计（0.1.0-draft）
+# B.1 设计（0.2.0-draft）
 
-状态：`Draft`。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`）。已部署到 BSC testnet（[02-deployments](02-deployments.zh-cn.md)，2026-10-13）。dApp 里已有它的页面（`/tracks/b/1`），但还没有在浏览器里对着这个代币实际用过。gas、约束数和证明时间都是本地实测（§12）。
+状态：`Draft`。本文描述的是 0.2.0，它已定稿但尚未实现。0.1.0 已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`），并已部署到 BSC testnet（[02-deployments](02-deployments.zh-cn.md)，2026-10-13）。dApp 里已有它的页面（`/tracks/b/1`），但还没有在浏览器里对着这个代币实际用过。gas、约束数和证明时间都是本地实测（§12）。
+
+> 0.2.0（2026-10-13）只改表面，依据是 [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.zh-cn.md) 和 [ADR-0011](../../../adr/0011-project-name-casata.zh-cn.md)。发行改为 `mint(token, amount)`，join-split 作为尾部 payload，取代 `mintConfidential`。`approve` 回退 `NoPublicLedger()`。`pep()` 改为 `casata()`，密钥派生的域名改为 `"Casata"`，所以密钥与 0.1.0 的不同。电路、payload 和事件都不变。这个版本回答的是 `casata()` = `B:1:0.2.0`；它不是 2026-10-12 之前回答 `pep()` = `B:1:0.2.0` 的那个代币，那个是 A.1 的纯隐私组合。
 
 所属 Track：[B，note 模型](../README.zh-cn.md)。由 [ADR-0009](../../../adr/0009-track-b-notes.zh-cn.md) 开设。
 
@@ -131,29 +133,29 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 | --- | --- | --- | --- |
 | `transferFrom(token, token, handle)` | `0x01` | 无 | note 之间转账 |
 | `transferFrom(token, 0x0, amount)` | `0x81` | `v_pub_out = amount`，`to = 0x0` | 销毁 |
-| `mintConfidential(token, amount)` | `0x82` | `v_pub_in = amount` | 角色铸造；仅 `MINTER_ROLE` |
+| `mint(token, amount)` | `0x82` | `v_pub_in = amount` | 角色铸造；仅 `MINTER_ROLE` |
 | `wrapperBurn(0x0, to, amount, payload)` | `0x81` | `v_pub_out = amount`，绑定 `to` | Wrapper 端口：出到包装代币 |
 | `wrapperMint(recipient, amount)` | `0x82` | `v_pub_in = amount` | Wrapper 端口：`recipient` 就是整个 payload |
-| 不带 payload 的 `transfer(to, x)` | 无 | 无 | 回退 `NoPublicLedger()` |
+| 不带 payload 的 `transfer`、`transferFrom`、`mint` | 无 | 无 | 回退 `NoPublicLedger()` |
 | `balanceOf(a)` | 无 | 无 | 代币自身地址返回 `totalSupply()`，其它地址返回 0 |
-| `approve`、`allowance` | 无 | 无 | 为接口完整而保留，不授权任何东西 |
+| `approve`、`allowance` | 无 | 无 | `approve` 回退 `NoPublicLedger()`；`allowance` 返回 0 |
 
 - `token` 指代币自身的地址。note 转账里 `from` 和 `to` 不携带任何信息，所以固定为它。标准事件于是读作池子内部的一次移动，不会被当成铸造或销毁。
 - 重放由作废符阻止：一份 payload 只能执行一次。
-- `prepare` / `cancel`（约定 §6）不在 0.1 范围内。
-- `mintConfidential` 就是家族角色铸造接口里的那个函数，join-split 作为尾部 payload 附在后面。这里没有账户可指，所以第一个参数必须是代币自身的地址。
+- B.1 没有 `prepare` / `cancel`。家族已经撤销了这条路径（约定 §6）。
+- `mint` 就是家族角色铸造接口（约定 §13.1）里的那个函数，join-split 作为尾部 payload 附在后面，从 `msg.data[68:]` 读取。这里没有账户可指，所以 `to` 必须是代币自身的地址。不带 payload 的 `mint` 是公开发行，B.1 没有这种发行。0.1.0 里这个函数叫 `mintConfidential`。
 - **payload。** 所有操作共用一种布局，838 字节：类型（1）、flags（1，必须为 0）、`root`（32）、`nf[2]`（64）、`cm[2]`（64）、`D`（64）、`memo_recv`（192）、`memo_reg`（160）、`regKeyId`（4）、证明（256）。公开金额和 `to` 是调用的参数，由证明绑定。
 - **payload 类型。** `0x01` 是 note 转账；`0x81` 是公开金额流出（销毁、wrap）；`0x82` 是公开金额流入（铸造、unwrap）。证明不绑定类型。销毁和 wrap 靠 `to` 区分：销毁时为零地址，wrap 时不为零。
 
 ### 5.1 模块
 
-| 模块 | B.1 0.1.0 |
+| 模块 | B.1 0.2.0（与 0.1.0 相同） |
 | --- | --- |
-| 角色铸造 | 支持：`mintConfidential` 与 `0x81` 销毁 |
-| Wrapper 端口 | 支持：`IPEPWrappable`，限额 `wrappedOut` |
+| 角色铸造 | 支持：`mint` 与 `0x81` 销毁 |
+| Wrapper 端口 | 支持：`ICasataWrappable`，限额 `wrappedOut` |
 | 公开账本 | 不支持。以后可以在同一对 `v_pub_in` / `v_pub_out` 上加 |
 
-这是 B.1 0.1.0 声明的清单（07 §13.2）。要支持别的模块，包括公开账本，都得出新的 B.1 版本。
+这是 B.1 0.2.0 声明的清单（07 §13.2），与 0.1.0 的相同。要支持别的模块，包括公开账本，都得出新的 B.1 版本。
 
 ### 5.2 供应量
 
@@ -189,7 +191,7 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 
 ### 7.1 铸造
 
-铸造方知道收款人的收款码。它构造一个 join-split：两个占位输入，`v_pub_in = amount`，一个输出给收款人，一个零金额输出，然后调用 `mintConfidential(token, amount)`，把 payload 附在后面。
+铸造方知道收款人的收款码。它构造一个 join-split：两个占位输入，`v_pub_in = amount`，一个输出给收款人，一个零金额输出，然后调用 `mint(token, amount)`，把 payload 附在后面。
 
 金额虽然公开，仍然需要证明，因为监管方必须在新 note 创建的那一刻就知道它的所有者。
 
@@ -203,8 +205,8 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 
 ### 7.4 wrap 与 unwrap
 
-- **wrap**（note 换成包装 ERC-20）：`PEPWrapper.wrap(token, 0x0, to, amount, payload)`。证明绑定 `to` 和 `amount`。`wrappedOut` 增加。
-- **unwrap**（包装 ERC-20 换回 note）：`PEPWrapper.unwrap(token, recipient, amount)`，其中 `recipient` 是一份 `v_pub_in = amount` 的 join-split payload。代币检查 `amount ≤ wrappedOut`。
+- **wrap**（note 换成包装 ERC-20）：`CasataWrapper.wrap(token, 0x0, to, amount, payload)`。证明绑定 `to` 和 `amount`。`wrappedOut` 增加。
+- **unwrap**（包装 ERC-20 换回 note）：`CasataWrapper.unwrap(token, recipient, amount)`，其中 `recipient` 是一份 `v_pub_in = amount` 的 join-split payload。代币检查 `amount ≤ wrappedOut`。
 
 Wrapper 合约原样使用，不需要改动。
 
@@ -227,7 +229,7 @@ Wrapper 合约原样使用，不需要改动。
 
 `prevBlock` 是上一次操作所在的区块，`lastOperationBlock()` 是最近一次操作所在的区块。两者把这个代币的全部历史串成一条链：客户端从最新的区块开始往回走，每次只请求一个区块，不需要扫描中间那些什么都没有的区块。
 
-视图：`root()`、`isKnownRoot(root)`、`isSpent(nf)`、`leafCount()`、`totalSupply()`、`issuedSupply()`、`wrappedOut()`、约定 §9 的监管密钥视图、返回 `B:1:<version>` 的 `pep()`、模块探针，以及 `TREE_DEPTH()`、`hasher()`、`verifier()`、`lastOperationBlock()`。
+视图：`root()`、`isKnownRoot(root)`、`isSpent(nf)`、`leafCount()`、`totalSupply()`、`issuedSupply()`、`wrappedOut()`、约定 §9 的监管密钥视图、返回 `B:1:<version>` 的 `casata()`、模块探针，以及 `TREE_DEPTH()`、`hasher()`、`verifier()`、`lastOperationBlock()`。
 
 ## 9. 客户端
 
@@ -316,6 +318,8 @@ Alice 付款，Bob 是商户，Carol 和 Dave 是其他顾客。
 包含：join-split 电路、角色铸造、Wrapper 端口、监管 memo、上面的事件与视图，以及一个在浏览器里扫描、保存 note 并生成证明的客户端。
 
 不包含：公开账本模块、`prepare` / `cancel`、代发服务、独立的只读密钥、批量插入树、两个以上的输入。
+
+0.2 的范围相同。它只改表面（见文首的说明）。
 
 ## 14. 待定决策
 

@@ -2,7 +2,9 @@
 
 # A.1 细节设计：内核
 
-版本：`0.5.0`　状态：`Draft`　日期：2026-10-13
+版本：`0.6.0`　状态：`Draft`　日期：2026-10-13
+
+> 0.6.0（**2026-10-13 定稿，尚未实现**；已部署的代币是 0.5.0）：按 [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.zh-cn.md) 和 [ADR-0011](../../../adr/0011-project-name-casata.zh-cn.md) 修订。折叠改为独立函数 `fold(id, payload)`（§4.6）。删除 `prepare` / `cancel`（§3.4）。发行改为带 payload 规则的 `mint(to, amount)`，发给机密 id 时用类型 `0x82`，取代 `mintConfidential`（04-modules §4.2）。没有公开账本的代币上 `approve` 回退。`pep()` 改为 `casata()`，密钥派生的域名改为 `"Casata"`，所以密钥与 0.5.0 的不同。电路不变，`0x01`、`0x04`、`0x80`、`0x81` 的 payload 布局不变。`casata()` = `A:1:0.6.0`。
 
 > 0.5.0（**已实现，2026-10-13 部署到 BSC testnet**；两个代币的链上实测见 03-deployments）：**改为内核加模块的结构**（[ADR-0008](../../../adr/0008-modules.zh-cn.md)、[04-modules](04-modules.zh-cn.md)）。本文是内核；属于某个模块的小节都作了标注。电路、payload 布局和实测数字都不变。两种组合的 `pep()` 都是 `A:1:0.5.0`。
 
@@ -22,12 +24,12 @@
 
 | 小节 | 属于 |
 | --- | --- |
-| §1、§2.1、§2.2（账户、登记项、监管密钥）、§2.3 的 I2–I5、§2.4、§3（`0x01`、`0x80`、`prepare`）、§4.2、§4.3、§4.6、§5、§8 | 内核 |
+| §1、§2.1、§2.2（账户、监管密钥）、§2.3 的 I2–I5、§2.4、§3（`0x01`、`fold`）、§4.2、§4.3、§4.6、§5、§8 | 内核 |
 | §2.2（`shieldedSupply`、ERC-20 账本）、§2.3 的 I1、§3（不带 payload 的调用、`0x03`、`0x04`）、§4.1、§4.4、§4.5、§6 里的 `LedgerCrossing` | 公开账本模块 |
-| `0x81`、`mint`、`mintConfidential`、`Minted`、`Burned` | 角色铸造模块（04-modules §4.2） |
+| `0x81`、`0x82`、`mint`、`Minted`、`Burned` | 角色铸造模块（04-modules §4.2） |
 | `wrapperMint`、`wrapperBurn` | Wrapper 端口（04-modules §4.3） |
 
-只有内核时，它是一个纯隐私账本：没有公开账本模块，`balanceOf` 对所有地址返回 0，不带 payload 的 `transfer` 回退。
+只有内核时，它是一个纯隐私账本：没有公开账本模块，`balanceOf` 对所有地址返回 0，不带 payload 的 `transfer` 和 `approve` 回退。
 
 ## 0. 设计原则
 
@@ -64,7 +66,7 @@
 
 机密账户没有以太坊地址，也没有注册动作。一个账户就是一把 Baby Jubjub 密钥，链上用 `id = Poseidon(pk)` 的低 160 位指代。
 
-- **派生**：`s = keccak256(sign_EIP712({name:"PEP", chainId, contract}, {purpose:"A.1 key", index}))  mod l`。同一钱包可用不同 `index` 派生多个账户。
+- **派生**：`s = keccak256(sign_EIP712({name:"Casata", chainId, contract}, {purpose:"A.1 key", index}))  mod l`。同一钱包可用不同 `index` 派生多个账户。
 - **发布**：账户持有人把 `pk`（64 字节）链下交给付款方；`id` 可由 `pk` 算出。链上没有任何地方可以查到 `pk`。
 - **创建**：第一笔发往 `id` 的转账创建存储槽。没有"开户"。
 - **与钱包的关联**：只出现在公开地址与 id 相遇的地方：带公开账本模块时的 `0x03` / `0x04`，经 Wrapper 端口的 wrap 或 unwrap，以及向某个 id 铸造。每一处都是钱包与 id 之间的一条公开的边。
@@ -86,7 +88,6 @@ struct ConfidentialAccount {
 }
 
 mapping(address => ConfidentialAccount) internal _accounts;   // key = id
-mapping(address => mapping(uint256 => Prepared)) internal _prepared;   // 兜底，见 §3.4
 uint256 public shieldedSupply;            // 机密供应量；由公开账本模块以这个名字暴露（04-modules §3）
 
 struct RegulatorKey { Point pk; uint64 activatedAt; }
@@ -119,17 +120,19 @@ uint32 public activeRegulatorKeyId;
 ```solidity
 function transfer(address to, uint256 x) external returns (bool);
     // 付款方 = msg.sender 的公开账户。无 payload：公开转账；payload 0x03：进 to 的机密账本
-function transferFrom(address from, uint256 to, uint256 x) external returns (bool);
+function transferFrom(address from, address to, uint256 x) external returns (bool);
     // 付款方 = from。from 是公开账户：标准 allowance；from 是机密 id：证明授权（payload 0x01 / 0x04）
-function prepare(bytes calldata payload) external;          // 兜底：先验证并登记
-function cancel(address from, uint256 handle) external;      // 撤销未执行的登记，仅登记者可调
+function fold(address id, bytes calldata payload) external;
+    // §4.6。不移动价值，所以不是转账；payload 是普通参数
+function mint(address to, uint256 x) external;
+    // 角色铸造模块，铸造角色。无 payload：向 to 公开铸造；payload 0x82：进 to 的机密账本
 ```
 
-没有 `register`、`shield`、`unshield`、`applyPending`。不带 payload 的调用形式以及 `0x03` / `0x04` 只在带公开账本模块时存在；没有该模块时它们回退（04-modules §5）。
+没有 `register`、`shield`、`unshield`、`applyPending`，自 0.6.0 起也没有 `prepare`、`cancel`。不带 payload 的调用形式以及 `0x03` / `0x04` 只在带公开账本模块时存在；没有该模块时它们回退，`approve` 也回退（04-modules §5）。
 
 ### 3.2 payload
 
-附加数据紧跟在 ABI 编码的参数之后：`transfer` 从 `msg.data[68:]` 读，`transferFrom` 从 `msg.data[100:]` 读。Solidity 的 ABI 解码器忽略多余字节，这是 ERC-2771 依赖的同一特性。
+附加数据紧跟在 ABI 编码的参数之后：`transfer` 和 `mint` 从 `msg.data[68:]` 读，`transferFrom` 从 `msg.data[100:]` 读。Solidity 的 ABI 解码器忽略多余字节，这是 ERC-2771 依赖的同一特性。`fold` 是 A.1 自己的函数，payload 作为参数传入（07 §1）。
 
 ```
 byte 0      type
@@ -146,8 +149,9 @@ byte 2..    sections（按 type 与 flags 决定，顺序固定）
 | `0x02` | stealth 机密转账 | 机密 id | 一次性 id | 句柄 | 是 | — | 内核（保留） |
 | `0x03` | 公开 → 机密 | 公开账户 | 机密 id | 明文金额 | 否 | `+x` | 公开账本 |
 | `0x04` | 机密 → 公开 | 机密 id | 公开账户 | 明文金额 | 是 | `−x` | 公开账本 |
-| `0x80` | 纯折叠（A.1 私有） | 机密 id | 同一 id | 句柄 | 是（仅私钥知识） | 0 | 内核 |
+| `0x80` | 纯折叠（A.1 私有） | 机密 id（`fold` 的 `id` 参数） | — | — | 是（仅私钥知识） | 0 | 内核 |
 | `0x81` | 销毁（A.1 私有） | 机密 id | `0x0` | 明文金额 | 是（`0x04` 的证明） | `−x` | 角色铸造 |
+| `0x82` | 发行给某个 id（A.1 私有） | —（由铸造角色调用 `mint`） | 机密 id | 明文金额 | 否 | `+x` | 角色铸造 |
 
 `0x02` 在 0.2 中仅保留编号，见 §11。
 
@@ -173,7 +177,7 @@ byte 2..    sections（按 type 与 flags 决定，顺序固定）
 | `proof` | 256 | Groth16 |
 | `decryptable` | 2 + n | 长度前缀 + 密文，flags.bit1 置位时存在 |
 
-约 900 字节。`0x04` 去掉 `D_recv`、`D_reg`、`E`、两个 memo；`0x03` 只有 type 与 flags。
+约 900 字节。`0x04` 去掉 `D_recv`、`D_reg`、`E`、两个 memo；`0x03` 和 `0x82` 只有 type 与 flags。
 
 **句柄**：`handle = keccak256(payload) | (1 << 255)`。最高位为 1 用于让索引器区分句柄与公开金额；公开金额受 I2 约束远小于 `2²⁵⁵`。
 
@@ -188,19 +192,12 @@ byte 2..    sections（按 type 与 flags 决定，顺序固定）
 | 5 | `regKeyId == activeRegulatorKeyId` | `0x01` |
 | 6 | 证明验证通过，公开输入由合约按 §4 组装，不从 payload 直接信任任何本应由合约提供的值 | `0x01` `0x04` |
 | 7 | `from` 为公开账户时 allowance 充足（标准 ERC-20） | `transferFrom` 无 payload / `0x03` |
-| 8 | `_prepared[from][handle]` 存在且登记时的 `nonce` 与当前一致 | 兜底执行 |
 
 `from == to` 允许。`msg.sender` 在 `0x01` / `0x04` 中不做检查。
 
-### 3.4 兜底：`prepare` / `cancel`
+### 3.4 兜底：`prepare` / `cancel`（0.6.0 删除）
 
-给无法拼 calldata 的调用方（钱包原生界面、不认识本协议的合约）使用：
-
-1. `prepare(from, to, x, payload)`：按 §3.3 与 §4 完整验证，存储 `{type, to, preparedBy, nonce, 增量密文}` 到 `_prepared[from][handle]`。两种类型都以句柄为 key（`0x04` 的句柄在合约内由 payload 派生）。`0x01` 登记时发 `ConfidentialTransferPrepared`，收款方须等 `PreparedExecuted` 才算收到。
-2. 之后任何来源的 `transferFrom(from, to, handle)`（无附加数据）读取登记项，检查 `nonce` 未变，执行 §4 的状态更新并删除登记。
-3. `cancel(from, handle)`：仅 `preparedBy` 可调。payload 在 `prepare` 交易里已公开，不能作为授权。
-
-`nonce` 已变化时执行失败并 revert，不自动重试。
+到 0.5.0 为止，无法拼 calldata 的调用方可以先用 `prepare` 登记一笔操作，之后由裸 `transferFrom` 执行。[ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.zh-cn.md) 撤销了这条路径：dApp 从未用过它，而它在安全评审里占了四条发现和两条拒绝服务条目。0.6.0 删除 `prepare`、`cancel`、`preparedOf`、已存储的登记项以及相关事件。保留节号是因为安全评审引用了它。
 
 ## 4. 执行流程
 
@@ -264,21 +261,23 @@ emit LedgerCrossing(from, to, 0x04, x)
 | 公开 → 机密 | 同上 + `0x03` | 2 字节 | 否 | 是 |
 | 机密 → 机密 | `transferFrom(id, id, handle)` + `0x01` | ~840 字节 | 是 | 否 |
 | 机密 → 公开 | `transferFrom(id, addr, x)` + `0x04` | ~450 字节 | 是 | 是 |
-| 折叠（不转账） | `transferFrom(id, id, handle)` + `0x80` | ~260 字节 | 是 | — |
+| 折叠（不转账） | `fold(id, payload)`，payload 类型 `0x80` | ~260 字节 | 是 | — |
 
 ### 4.6 `0x80` 纯折叠
 
 折叠原本只搭在花费上发生（§4.3）。`0x80` 让本人在不转账的情况下执行同一状态更新：
 
 ```
-verify(proof, H(chainId, this, from, acc.nonce))          // 只证明持有 from 的私钥
+verify(proof, H(chainId, this, id, acc.nonce))            // 只证明持有 id 的私钥
 acc.available += acc.pending − acc.folded ; acc.folded = acc.pending
 acc.nonce += 1 ; acc.foldedAtBlock = block.number
 if flags.decryptable: acc.decryptable = payload.decryptable
-emit Folded(from, handle, acc.nonce)
+emit Folded(id, acc.nonce)
 ```
 
-调用形式 `transferFrom(id, id, handle)` + payload（`to` 必须等于 `from`，`handle = keccak(payload) | 2²⁵⁵`）。payload 只有 `[type, flags, proof, decryptable?]`，`includePending` 位在此保留（折叠天然包含 pending）。不支持 `prepare`。
+调用形式 `fold(id, payload)`。payload 是 `[type = 0x80, flags, proof, decryptable?]`，字节与以前相同；`includePending` 位在此保留（折叠天然包含 pending）。任何人都可以发这笔调用：证明就是授权。没有句柄，因为没有任何东西放进金额槽；`fold` 也不发 `Transfer`。
+
+到 0.5.0 为止，折叠的调用形式是 `transferFrom(id, id, handle)` 加尾部 payload。它不移动价值，所以 ADR-0010（第 5 条）把它从转账动词里拿了出来。
 
 用途：
 
@@ -329,8 +328,7 @@ emit Folded(from, handle, acc.nonce)
 | `LedgerCrossing` | `(from, to, type, amount)` | 公开账本模块：`0x03` / `0x04`，索引器维护 `shieldedSupply` |
 | `Minted` / `Burned` | `(id, amount)` | 角色铸造模块：按公开金额记入某个 id，或从某个 id 扣出 |
 | `WrapperMinted` / `WrapperBurned` | `(id, amount)` / `(id, to, amount)` | Wrapper 端口：unwrap 与 wrap 时同样的记入与扣出 |
-| `Folded` | `(id, handle, nonce)` | `0x80`，`nonce` 为折叠后的新值 |
-| `Prepared` / `Cancelled` | `(from, handle)` | 兜底 |
+| `Folded` | `(id, nonce)` | `fold`，`nonce` 为折叠后的新值 |
 | `RegulatorKeyRotated` | `(keyId, pk)` | |
 
 收款方按 `to == 自己的 id` 过滤 `ConfidentialTransfer` 与 `LedgerCrossing`。
@@ -343,8 +341,8 @@ function confidentialAccountOf(address id) external view
     returns (Ciphertext available, Ciphertext pending, uint64 nonce, uint64 foldedAtBlock, uint64 lastReceivedAtBlock, bytes memory decryptable);
 function shieldedSupply() external view returns (uint256);              // 公开账本模块
 function regulatorKey(uint32 id) external view returns (Point memory);
-function supportsInterface(bytes4) external view returns (bool);         // IPEP 与各模块的接口标识
-function pepModules() external view returns (Module[] memory);          // 模块探针（07 §13.3），0.5.0 起
+function supportsInterface(bytes4) external view returns (bool);         // ICasata 与各模块的接口标识
+function casataModules() external view returns (Module[] memory);       // 模块探针（07 §13.3）；0.5.0 里是 pepModules()
 ```
 
 ## 8. 客户端流程
@@ -377,7 +375,7 @@ function pepModules() external view returns (Module[] memory);          // 模�
 | `0x01` 机密 → 机密，**稳态**（双方存储已热） | **467k** | 目标 ≤ 500k 达成 | 0.35 | 0.018 |
 | `0x01` 机密 → 机密，账户首次花费 | 709k | 一次性：available、folded 冷写各 4 槽 | 0.53 | 0.027 |
 | `0x04` 机密 → 公开，账户首次花费 | 583k | 同上 | 0.44 | 0.022 |
-| `prepare` 后裸 `transferFrom`（首次） | 360k | 不含 `prepare` 本身 | 0.27 | 0.0135 |
+| `prepare` 后裸 `transferFrom`（首次；0.6.0 删除） | 360k | 不含 `prepare` 本身 | 0.27 | 0.0135 |
 | Groth16 `verifyProof`（14 输入，0.4） | ~312k | 含 21k 基础与 calldata；15 输入 316k，25 输入未打包时 386k | | |
 | 证明生成（Node，M 系列） | 1.3~1.5 s（0.4） | 29,719 约束（0.3.x：2.1~2.5 s，35,137） | | |
 
@@ -406,7 +404,7 @@ function pepModules() external view returns (Module[] memory);          // 模�
 
 **包含**：公开账本、`transfer` / `transferFrom` 四种类型（`0x02` 除外）、`prepare` / `cancel`、监管密钥登记与轮换、事件与视图、ERC-165、公开输入打包。
 
-自 0.5.0 起，范围按部分来说明：本文里没有标为模块的内容都属于内核，模块见 [04-modules](04-modules.zh-cn.md)。
+自 0.5.0 起，范围按部分来说明：本文里没有标为模块的内容都属于内核，模块见 [04-modules](04-modules.zh-cn.md)。0.6.0 把 `prepare` / `cancel` 移出范围。
 
 ## 11. Backlog
 
@@ -426,4 +424,4 @@ function pepModules() external view returns (Module[] memory);          // 模�
 - [ ] `decryptable` 放链上还是纯链下（靠 memo 与事件重放重建）。
 - [ ] 监管密钥阈值化（DKG）推荐方案。
 - [ ] 部署目标：先 L2 还是先 L1。
-- [ ] `Transfer` 事件是否对 `0x01` 也发（当前：发，句柄最高位区分），还是只发 `ConfidentialTransfer`。
+- [x] `Transfer` 事件是否对 `0x01` 也发：发。凡是移动价值的操作都发，句柄放在金额槽里（ADR-0010 第 2、3 条）。

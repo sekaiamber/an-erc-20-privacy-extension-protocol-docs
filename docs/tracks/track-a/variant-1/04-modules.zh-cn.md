@@ -2,11 +2,11 @@
 
 # A.1 的模块与组合
 
-版本：`0.5.0`　状态：`Draft`　日期：2026-10-13
+版本：`0.6.0`　状态：`Draft`　日期：2026-10-13
 
 本文是 A.1 按 [ADR-0008](../../../adr/0008-modules.zh-cn.md) 调整后的结构：一个内核加三个模块。
 
-**实现状态（2026-10-13）。** 合约仓库已按本文实现为 `A1LedgerToken` 与 `A1PrivateToken`；全部测试通过，每项实测操作的 gas 与原来的独立合约相差都在 300 以内。两种组合都已部署到 BSC testnet（[03-deployments](03-deployments.zh-cn.md)），dApp 也已面向它们。两个代币都已在链上完整跑过一遍；链上 gas 与本地数字一致，原来就有的操作也与 0.4.0 的部署一致。还没做的：带公开账本的代币上的 `mintConfidential` 和 `0x81` 销毁只在本地跑过，dApp 的页面也还没有在浏览器里实际点过。改变了什么见 §9。
+**实现状态（2026-10-13）。** 本文描述的是 0.6.0，它已定稿但尚未实现；它改了什么见 §9.1。已实现并部署的是 0.5.0：合约仓库里的 `A1LedgerToken` 与 `A1PrivateToken`，两者都在 BSC testnet 上（[03-deployments](03-deployments.zh-cn.md)），都在链上完整跑过一遍，dApp 面向的也是它们。0.5.0 里，带公开账本的代币上的 `mintConfidential` 和 `0x81` 销毁只在本地跑过，dApp 的页面也还没有在浏览器里实际点过。
 
 内核的规格在 [01-design](01-design.zh-cn.md)。电路不变。
 
@@ -14,26 +14,26 @@
 
 ```
 A.1 内核                 加密账户的纯隐私账本
-│                        0x01 转账、0x80 折叠、prepare / cancel、监管密钥
+│                        0x01 转账、折叠（0x80）、监管密钥
 │                        电路：transfer、unshield、fold
 │
 ├─ 公开账本      编译时    代币地址上的标准 ERC-20 余额
 │                        0x03 shield、0x04 unshield
-├─ 角色铸造      编译时    mintConfidential、0x81 销毁；带公开账本时还有 mint
-└─ Wrapper 端口  编译时    IPEPWrappable
-     └─ PEPWrapper  运行时  家族 Wrapper，插在这个端口上
+├─ 角色铸造      编译时    mint（发给 id 用 0x82；不带 payload 是公开铸造）、0x81 销毁
+└─ Wrapper 端口  编译时    ICasataWrappable
+     └─ CasataWrapper  运行时  家族 Wrapper，插在这个端口上
 ```
 
 | 部分 | 种类 | 依赖 | 增加的 payload 类型 | 是否改电路 |
 | --- | --- | --- | --- | --- |
 | 内核 | 无 | 无 | `0x01`、`0x80` | 无 |
 | 公开账本 | 编译时模块 | 内核 | `0x03`、`0x04` | 否 |
-| 角色铸造 | 编译时模块 | 内核 | `0x81` | 否 |
+| 角色铸造 | 编译时模块 | 内核 | `0x81`、`0x82` | 否 |
 | Wrapper 端口 | 编译时端口，运行时模块 | 内核 | 无 | 否 |
 
 一个代币就是内核加上其中若干个。它需要一个供应来源，而目前唯一的来源是角色铸造，所以每种组合都包含它。Wrapper 端口不能发行：它只能归还经它出去的数量。
 
-**支持声明。** A.1 0.5.0 支持且只支持这三个模块：公开账本、角色铸造、Wrapper 端口。这份清单是版本的一部分（07 §13.2）。家族里以后登记的模块，A.1 0.5.0 不支持，0.5.0 的代币也不能使用；要支持它，就得出一个新的 A.1 版本。
+**支持声明。** A.1 0.6.0 与 0.5.0 一样，支持且只支持这三个模块：公开账本、角色铸造、Wrapper 端口。这份清单是版本的一部分（07 §13.2）。家族里以后登记的模块，A.1 0.6.0 不支持，0.6.0 的代币也不能使用；要支持它，就得出一个新的 A.1 版本。
 
 ## 2. 内核向模块提供什么
 
@@ -66,9 +66,9 @@ A.1 内核                 加密账户的纯隐私账本
 
 | 操作 | 模块 | 机密供应量 | 公开余额 | `wrappedOut` | `totalSupply` | `issuedSupply` |
 | --- | --- | --- | --- | --- | --- | --- |
-| `0x01`、`0x80` | 内核 | 0 | 0 | 0 | 0 | 0 |
-| `mint` | 角色铸造，带公开账本 | 0 | `+x` | 0 | `+x` | `+x` |
-| `mintConfidential` | 角色铸造 | `+x` | 0 | 0 | `+x` | `+x` |
+| `0x01`、`fold` | 内核 | 0 | 0 | 0 | 0 | 0 |
+| 不带 payload 的 `mint` | 角色铸造，带公开账本 | 0 | `+x` | 0 | `+x` | `+x` |
+| 带 `0x82` 的 `mint` | 角色铸造 | `+x` | 0 | 0 | `+x` | `+x` |
 | `0x81` 销毁 | 角色铸造 | `−x` | 0 | 0 | `−x` | `−x` |
 | `0x03` shield | 公开账本 | `+x` | `−x` | 0 | 0 | 0 |
 | `0x04` unshield | 公开账本 | `−x` | `+x` | 0 | 0 | 0 |
@@ -87,19 +87,22 @@ A.1 内核                 加密账户的纯隐私账本
 | 增加 | 按以太坊地址记账的标准 ERC-20 账本：`balanceOf`、不带 payload 的 `transfer` / `transferFrom`、`approve`、`allowance`。payload 类型 `0x03`（shield）与 `0x04`（unshield）。`shieldedSupply()`。事件 `LedgerCrossing` |
 | 流程 | 01-design §4.1 与 §4.4：shield 是一次转入托管的公开转账，再加 `_creditPublic`；unshield 是 `_debitPublic`，再从托管中放出 |
 | 要求 | 公开账本的逻辑就是未经修改的 OpenZeppelin `ERC20`。机密逻辑的任何故障都不能影响它 |
-| 接口（草案） | `IPEPPublicLedger { function shieldedSupply() external view returns (uint256); }` |
-| 没有它时 | `balanceOf` 对所有地址返回 0，不带 payload 的 `transfer` 回退 `NoPublicLedger()`，`approve` 与 `allowance` 不授权任何东西，`0x03` / `0x04` 回退 `TypeNotAllowedHere` |
+| 接口 | `ICasataPublicLedger { function shieldedSupply() external view returns (uint256); }` |
+| 没有它时 | `balanceOf` 对所有地址返回 0，不带 payload 的 `transfer`、`transferFrom`、`mint` 回退 `NoPublicLedger()`，`approve` 回退 `NoPublicLedger()`，`allowance` 返回 0，`0x03` / `0x04` 回退 `TypeNotAllowedHere` |
 
 ### 4.2 角色铸造
 
 | | |
 | --- | --- |
 | 种类 | 编译时 |
-| 增加 | `MINTER_ROLE`。`mintConfidential(id, amount)`：调用 `_creditPublic`，发出 `Transfer(0x0, id, amount)` 与 `Minted`。payload 类型 `0x81`，调用形式 `transferFrom(id, 0x0, amount)`：以 `to = 0x0` 调用 `_debitPublic`，发出 `Transfer(id, 0x0, amount)` 与 `Burned`。带公开账本时，这两个操作的 `Transfer` 事件是代币地址上托管量的铸造与销毁，另外还有 `mint(to, amount)`，即公开铸造 |
+| 增加 | `MINTER_ROLE` 和 `mint(to, amount)`，后者遵循家族的 payload 规则（07 §1、§13.1）。销毁用的 payload 类型 `0x81` |
+| 发给某个 id | `mint(id, amount)` 加 payload `0x82`。payload 是 `[type, flags = 0]`，2 字节，和 `0x03` 一样。调用 `_creditPublic`，发出 `Transfer(0x0, id, amount)` 与 `Minted`。带公开账本时，这个 `Transfer` 是代币地址上托管量的铸造 |
+| 公开铸造 | 不带 payload 的 `mint(to, amount)`：向地址 `to` 的普通 ERC-20 铸造。只在带公开账本时存在；没有公开账本时这个调用回退 `NoPublicLedger()` |
+| 销毁 | `transferFrom(id, 0x0, amount)` 加 payload `0x81`：以 `to = 0x0` 调用 `_debitPublic`，发出 `Transfer(id, 0x0, amount)` 与 `Burned`。带公开账本时，这个 `Transfer` 是代币地址上托管量的销毁 |
 | 谁能销毁 | 持有人：`0x81` 由持有人的证明授权，不由角色授权 |
 | 限额 | §3 的供应上限 |
-| 接口（草案） | `IPEPRoleIssuance { function mintConfidential(address id, uint256 amount) external; }` |
-| 可登记 | `0x81` 与 `0x04` 一样可以走 `prepare` / `cancel` |
+| 接口 | `ICasataRoleIssuance { function mint(address to, uint256 amount) external; }` |
+| 漏了 payload | 在带公开账本的代币上，`mint(id, amount)` 如果漏了 payload，就成了向地址 `id` 的公开铸造。没有人持有这个地址的私钥，这笔余额动不了。转账本来就遵循这条规则（07 §3），铸造方也得遵循 |
 
 铸造和销毁的金额是公开的，接收铸造的 id 也是公开的。隐藏发行需要电路，所以那是 Variant 层面的事，不是模块。
 
@@ -107,12 +110,11 @@ A.1 内核                 加密账户的纯隐私账本
 
 | | |
 | --- | --- |
-| 种类 | 编译时端口；运行时模块是家族的 `PEPWrapper`（[10](../../../10-wrapper.zh-cn.md)） |
+| 种类 | 编译时端口；运行时模块是家族的 `CasataWrapper`（[10](../../../10-wrapper.zh-cn.md)） |
 | 增加 | `wrapperMint(recipient, amount)`：`recipient` 是 20 字节的 id；要求 `amount ≤ wrappedOut`，然后 `wrappedOut −= amount` 并调用 `_creditPublic`。`wrapperBurn(from, to, amount, payload)`：以 `to` = 包装代币的接收地址调用 `_debitPublic`，然后 `wrappedOut += amount`。`wrapper()`、`wrappedOut()`。事件 `WrapperMinted` 与 `WrapperBurned`；端口不发 `Minted` 或 `Burned` |
 | 谁能调用 | 只有 `wrapper()`。它在构造时设置，或由管理员设置一次，之后不能更换 |
 | 限额 | 记入量永远不超过 `wrappedOut`：被攻破的 Wrapper 最多把经它出去的数量记错人，不能增发（评审 B1-F2） |
-| 接口 | `IPEPWrappable`，不变 |
-| 不可登记 | `wrapperBurn` 直接接收 payload |
+| 接口 | `ICasataWrappable`。函数和接口标识不变，只是名字与 0.5.0 不同 |
 
 ## 5. 各组合的 ERC-20 表面
 
@@ -120,14 +122,15 @@ A.1 内核                 加密账户的纯隐私账本
 | --- | --- | --- |
 | `balanceOf(a)` | 公开余额；代币自身地址上是托管量 | 所有地址都是 0 |
 | 不带 payload 的 `transfer` / `transferFrom` | 标准 ERC-20 | 回退 `NoPublicLedger()` |
-| `approve`、`allowance` | 标准；`0x03` 经 `transferFrom` 时也用到 | 为 ABI 保留；不授权任何东西 |
+| `approve`、`allowance` | 标准；`0x03` 经 `transferFrom` 时也用到 | `approve` 回退 `NoPublicLedger()`；`allowance` 返回 0 |
+| 不带 payload 的 `mint` | 向某个地址公开铸造 | 回退 `NoPublicLedger()` |
 | `totalSupply()` | 公开余额，含托管量 | 已铸造减已销毁，再减经 Wrapper 出去的数量 |
 | `Σ balanceOf == totalSupply` | 成立 | 必然不成立：没有任何余额是公开的 |
 | 钱包与浏览器 | 显示公开余额 | 显示 0；真实余额只有支持 A.1 的钱包能看到 |
 | DeFi | 代币本身 | 有端口时经 Wrapper 的 `wTOKEN` |
 | `supportsInterface(IERC20)` | true | true：两种组合的 ABI 都是 ERC-20。余额是不是真的，由探针说明 |
 
-两种组合里，带 `0x01` 或 `0x80` 的 `transferFrom(id, id, handle)` 的行为都与 01-design 一致。
+两种组合里，带 `0x01` 的 `transferFrom(id, id, handle)`、带 `0x82` 的 `mint(id, amount)` 以及 `fold(id, payload)` 的行为都与 01-design 和 §4.2 的规定一致。
 
 ## 6. 组合
 
@@ -142,12 +145,14 @@ A.1 内核                 加密账户的纯隐私账本
 
 ## 7. 探针
 
-两种组合的 `pep()` 都返回 `A:1:0.5.0`，靠 `pepModules()` 区分（07 §13.3）：
+两种组合的 `casata()` 都返回 `A:1:0.6.0`，靠 `casataModules()` 区分（07 §13.3）：
 
-| 组合 | `pepModules()` |
+| 组合 | `casataModules()` |
 | --- | --- |
-| 带公开账本 | `(IPEPPublicLedger, token)`、`(IPEPRoleIssuance, token)` |
-| 纯隐私 | `(IPEPRoleIssuance, token)`、`(IPEPWrappable, wrapper)`；还没有设置 Wrapper 时第二项的地址是零地址 |
+| 带公开账本 | `(ICasataPublicLedger, token)`、`(ICasataRoleIssuance, token)` |
+| 纯隐私 | `(ICasataRoleIssuance, token)`、`(ICasataWrappable, wrapper)`；还没有设置 Wrapper 时第二项的地址是零地址 |
+
+0.5.0 里这两个函数叫 `pep()` 和 `pepModules()`（ADR-0011）。
 
 ## 8. 隐私上的差别
 
@@ -174,6 +179,21 @@ A.1 内核                 加密账户的纯隐私账本
 | 8 | 两个测试网代币重新部署。纯隐私代币复用新一次带公开账本代币部署出来的验证器和窗口表，以及链上已有的 Wrapper | 部署 |
 | 9 | wrap 只发 `WrapperBurned`。原来的独立合约还会同时发 `Burned`，dApp 的监管视图会把它算成第二笔流出 | 合约、监管视图 |
 
+### 9.1 0.6.0 改变什么
+
+相对于 0.5.0。决策记录：[ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.zh-cn.md) 和 [ADR-0011](../../../adr/0011-project-name-casata.zh-cn.md)。电路不变，所以证明密钥和验证合约都不变。下面各项都还没有实现。
+
+| # | 改动 | 影响 |
+| --- | --- | --- |
+| 1 | 折叠的调用形式是 `fold(id, payload)`，不再是 `transferFrom`。payload 的字节不变。`Folded` 是 `(id, nonce)`，不带句柄 | 合约、dApp、脚本 |
+| 2 | 删除 `prepare`、`cancel`、`preparedOf`、已存储的登记项，以及事件 `ConfidentialTransferPrepared`、`OperationPrepared`、`PreparedCancelled`、`PreparedExecuted` | 合约 |
+| 3 | 带 payload 规则的 `mint(to, amount)` 取代 `mintConfidential`。新增 payload 类型 `0x82` | 合约、dApp、脚本 |
+| 4 | 没有公开账本时，`approve` 回退 `NoPublicLedger()` | 合约 |
+| 5 | `pep()` 改为 `casata()`，`pepModules()` 改为 `casataModules()`，家族接口改为 `ICasata*`。密钥派生的域名是 `"Casata"`，所以同一个钱包派生出的密钥与 0.5.0 的不同 | 合约、dApp |
+| 6 | dApp 在签名前说明：钱包显示的那个数是句柄（07 §4） | dApp |
+| 7 | 两个测试网代币重新部署。链上已有的验证合约、窗口表和 Wrapper 可以复用 | 部署 |
+
+
 ## 10. 评审与测试
 
 - 已发布的两种组合是作为独立合约评审的（[02-security-review](02-security-review.zh-cn.md)、[纯隐私组合的评审](../variant-1-privacy-only/03-security-review.zh-cn.md)）。重构之后要针对差异重新评审，重点是 §3 的钩子，以及每条铸造路径是否都按 `issuedSupply()` 检查上限。
@@ -183,11 +203,14 @@ A.1 内核                 加密账户的纯隐私账本
 
 ## 11. 决策
 
-四项都在 2026-10-13 按草案采纳，并已实现。
+M1 到 M4 在 2026-10-13 按草案采纳，并已在 0.5.0 实现。M5 到 M7 属于 0.6.0。
 
 | # | 决策 | 采纳 | 未采用的做法 |
 | --- | --- | --- | --- |
-| M1 | 机密铸造叫什么 | 每种组合里都叫 `mintConfidential(id, amount)`；`mint(to, amount)` 永远是公开铸造 | 保留 `mint`，含义随组合而变，和现在一样 |
+| M1 | 机密铸造叫什么 | 0.5.0：每种组合里都叫 `mintConfidential(id, amount)`；`mint(to, amount)` 永远是公开铸造。**在 0.6.0 被 M5 取代** | 保留 `mint`，含义随组合而变，和 0.5.0 之前一样 |
 | M2 | 带公开账本的组合里要不要有 `mintConfidential` 和 `0x81` | 要 | 不加，让那个合约与已部署的完全一致 |
 | M3 | 合约名 | §6 的提议 | 带公开账本的组合继续叫 `ConfidentialERC20A1` |
 | M4 | 公开账本模块的接口 | `shieldedSupply()` | 用一个不依赖具体函数的标记 id |
+| M5 | 0.6.0 的发行 | 只有一个 `mint(to, amount)`；`to` 的含义由 payload 决定，和转账一样（ADR-0010 第 10 条） | 在公开的 `mint` 之外保留 `mintConfidential`（M1） |
+| M6 | 发给某个 id 时的 payload 类型 | 新增一个 A.1 私有类型 `0x82`，没有正文 | 复用 `0x03`。没有采用：家族把 `0x03` 登记为只属于公开账本模块，而纯隐私代币在没有这个模块的情况下发行 |
+| M7 | 折叠的签名 | `fold(address id, bytes payload)`，不带句柄；`Folded(id, nonce)` | 保留句柄参数，并保留在事件里。没有采用：句柄是为了填金额槽而存在的，`fold` 没有金额槽；`id` 和 `nonce` 已经能确定一次折叠 |

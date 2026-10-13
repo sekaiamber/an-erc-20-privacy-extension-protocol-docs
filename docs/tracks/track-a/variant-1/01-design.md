@@ -2,7 +2,9 @@ English | [中文](01-design.zh-cn.md)
 
 # A.1 Detailed Design: the core
 
-Version: `0.5.0`. Status: `Draft`. Date: 2026-10-13
+Version: `0.6.0`. Status: `Draft`. Date: 2026-10-13
+
+> 0.6.0 (**specified 2026-10-13, not implemented yet**; the deployed tokens are 0.5.0): follows [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.md) and [ADR-0011](../../../adr/0011-project-name-casata.md). The fold becomes a function of its own, `fold(id, payload)` (§4.6). `prepare` / `cancel` are removed (§3.4). Issuance is `mint(to, amount)` with the payload rule, type `0x82` for a confidential id, replacing `mintConfidential` (04-modules §4.2). `approve` reverts on a token without the public ledger. `pep()` becomes `casata()` and the key-derivation domain becomes `"Casata"`, so keys differ from the ones of 0.5.0. No circuit changes and no change to the payload layouts of `0x01`, `0x04`, `0x80` and `0x81`. `casata()` = `A:1:0.6.0`.
 
 > 0.5.0 (**implemented and deployed on BSC testnet 2026-10-13**; on-chain runs of both tokens in 03-deployments): **restructured into a core and modules** ([ADR-0008](../../../adr/0008-modules.md), [04-modules](04-modules.md)). This document is the core; sections that belong to a module are marked. No circuit, payload layout or measured figure changes. `pep()` = `A:1:0.5.0` for both compositions.
 
@@ -22,12 +24,12 @@ Since 0.5.0 A.1 is a **core** plus optional **modules** ([ADR-0008](../../../adr
 
 | Sections | Belong to |
 | --- | --- |
-| §1, §2.1, §2.2 (accounts, prepared entries, regulator keys), §2.3 I2–I5, §2.4, §3 (`0x01`, `0x80`, `prepare`), §4.2, §4.3, §4.6, §5, §8 | Core |
+| §1, §2.1, §2.2 (accounts, regulator keys), §2.3 I2–I5, §2.4, §3 (`0x01`, `fold`), §4.2, §4.3, §4.6, §5, §8 | Core |
 | §2.2 (`shieldedSupply`, the ERC-20 ledger), §2.3 I1, §3 (payload-less calls, `0x03`, `0x04`), §4.1, §4.4, §4.5, `LedgerCrossing` in §6 | Public-ledger module |
-| `0x81`, `mint`, `mintConfidential`, `Minted`, `Burned` | Role-issuance module (04-modules §4.2) |
+| `0x81`, `0x82`, `mint`, `Minted`, `Burned` | Role-issuance module (04-modules §4.2) |
 | `wrapperMint`, `wrapperBurn` | Wrapper port (04-modules §4.3) |
 
-The core alone is a privacy-only ledger: without the public-ledger module `balanceOf` is 0 for every address and a payload-less `transfer` reverts.
+The core alone is a privacy-only ledger: without the public-ledger module `balanceOf` is 0 for every address, and a payload-less `transfer` and `approve` revert.
 
 ## 0. Design Principles
 
@@ -64,7 +66,7 @@ The core alone is a privacy-only ledger: without the public-ledger module `balan
 
 A confidential account has no Ethereum address and no registration step. An account is simply a Baby Jubjub key, referred to on chain by the low 160 bits of `id = Poseidon(pk)`.
 
-- **Derivation**: `s = keccak256(sign_EIP712({name:"PEP", chainId, contract}, {purpose:"A.1 key", index}))  mod l`. The same wallet can derive multiple accounts using different values of `index`.
+- **Derivation**: `s = keccak256(sign_EIP712({name:"Casata", chainId, contract}, {purpose:"A.1 key", index}))  mod l`. The same wallet can derive multiple accounts using different values of `index`.
 - **Publication**: the account holder hands `pk` (64 bytes) to the payer off chain; `id` can be computed from `pk`. There is nowhere on chain where `pk` can be looked up.
 - **Creation**: the first transfer sent to `id` creates the storage slot. There is no "account opening".
 - **Association with a wallet**: appears only where a public address meets an id: `0x03` / `0x04` with the public-ledger module, a wrap or unwrap through the Wrapper port, and a mint to an id. Each is a public edge between a wallet and an id.
@@ -86,7 +88,6 @@ struct ConfidentialAccount {
 }
 
 mapping(address => ConfidentialAccount) internal _accounts;   // key = id
-mapping(address => mapping(uint256 => Prepared)) internal _prepared;   // fallback, see §3.4
 uint256 public shieldedSupply;            // the confidential supply; exposed under this name by the public-ledger module (04-modules §3)
 
 struct RegulatorKey { Point pk; uint64 activatedAt; }
@@ -119,17 +120,19 @@ Public-ledger module: OpenZeppelin `ERC20` as is, keyed by Ethereum address. The
 ```solidity
 function transfer(address to, uint256 x) external returns (bool);
     // payer = msg.sender's public account. No payload: public transfer; payload 0x03: into to's confidential ledger
-function transferFrom(address from, uint256 to, uint256 x) external returns (bool);
+function transferFrom(address from, address to, uint256 x) external returns (bool);
     // payer = from. from is a public account: standard allowance; from is a confidential id: proof authorization (payload 0x01 / 0x04)
-function prepare(bytes calldata payload) external;          // fallback: verify and register first
-function cancel(address from, uint256 handle) external;      // revoke an unexecuted registration, callable only by the registrant
+function fold(address id, bytes calldata payload) external;
+    // §4.6. Moves no value, so it is not a transfer; the payload is an ordinary argument
+function mint(address to, uint256 x) external;
+    // role-issuance module, minter role. No payload: public mint to to; payload 0x82: into to's confidential ledger
 ```
 
-There is no `register`, `shield`, `unshield` or `applyPending`. The payload-less forms and `0x03` / `0x04` exist only with the public-ledger module; without it they revert (04-modules §5).
+There is no `register`, `shield`, `unshield` or `applyPending`, and since 0.6.0 no `prepare` or `cancel`. The payload-less forms and `0x03` / `0x04` exist only with the public-ledger module; without it they revert, and so does `approve` (04-modules §5).
 
 ### 3.2 payload
 
-The extra data follows immediately after the ABI-encoded arguments: `transfer` reads from `msg.data[68:]`, `transferFrom` reads from `msg.data[100:]`. Solidity's ABI decoder ignores trailing bytes; this is the same property ERC-2771 relies on.
+The extra data follows immediately after the ABI-encoded arguments: `transfer` and `mint` read from `msg.data[68:]`, `transferFrom` reads from `msg.data[100:]`. Solidity's ABI decoder ignores trailing bytes; this is the same property ERC-2771 relies on. `fold` is A.1's own function and takes its payload as an argument (07 §1).
 
 ```
 byte 0      type
@@ -146,8 +149,9 @@ byte 2..    sections (determined by type and flags, fixed order)
 | `0x02` | Stealth confidential transfer | Confidential id | One-time id | Handle | Yes | — | Core (reserved) |
 | `0x03` | Public → confidential | Public account | Confidential id | Plaintext amount | No | `+x` | Public ledger |
 | `0x04` | Confidential → public | Confidential id | Public account | Plaintext amount | Yes | `−x` | Public ledger |
-| `0x80` | Pure fold (A.1-private) | Confidential id | Same id | Handle | Yes (private-key knowledge only) | 0 | Core |
+| `0x80` | Pure fold (A.1-private) | Confidential id (the `id` argument of `fold`) | — | — | Yes (private-key knowledge only) | 0 | Core |
 | `0x81` | Burn (A.1-private) | Confidential id | `0x0` | Plaintext amount | Yes (the `0x04` proof) | `−x` | Role issuance |
+| `0x82` | Issuance to an id (A.1-private) | — (the minter role calls `mint`) | Confidential id | Plaintext amount | No | `+x` | Role issuance |
 
 `0x02` only reserves its number in 0.2, see §11.
 
@@ -173,7 +177,7 @@ byte 2..    sections (determined by type and flags, fixed order)
 | `proof` | 256 | Groth16 |
 | `decryptable` | 2 + n | Length prefix + ciphertext, present when flags.bit1 is set |
 
-About 900 bytes. `0x04` drops `D_recv`, `D_reg`, `E` and the two memos; `0x03` has only type and flags.
+About 900 bytes. `0x04` drops `D_recv`, `D_reg`, `E` and the two memos; `0x03` and `0x82` have only type and flags.
 
 **Handle**: `handle = keccak256(payload) | (1 << 255)`. The top bit set to 1 lets indexers distinguish handles from public amounts; public amounts are bounded by I2 and far smaller than `2²⁵⁵`.
 
@@ -188,19 +192,12 @@ About 900 bytes. `0x04` drops `D_recv`, `D_reg`, `E` and the two memos; `0x03` h
 | 5 | `regKeyId == activeRegulatorKeyId` | `0x01` |
 | 6 | Proof verifies; public inputs are assembled by the contract per §4, never trusting from the payload any value the contract is supposed to supply | `0x01` `0x04` |
 | 7 | When `from` is a public account, allowance is sufficient (standard ERC-20) | `transferFrom` without payload / `0x03` |
-| 8 | `_prepared[from][handle]` exists and the `nonce` recorded at registration matches the current one | Fallback execution |
 
 `from == to` is allowed. `msg.sender` is not checked for `0x01` / `0x04`.
 
-### 3.4 Fallback: `prepare` / `cancel`
+### 3.4 Fallback: `prepare` / `cancel` (removed in 0.6.0)
 
-For callers that cannot assemble calldata (native wallet UIs, contracts unaware of this protocol):
-
-1. `prepare(from, to, x, payload)`: fully validates per §3.3 and §4, then stores `{type, to, preparedBy, nonce, delta ciphertext}` into `_prepared[from][handle]`. Both types are keyed by handle (for `0x04` the handle is derived from the payload inside the contract). A `0x01` registration emits `ConfidentialTransferPrepared`; the payee must wait for `PreparedExecuted` before treating the funds as received.
-2. Afterwards, a `transferFrom(from, to, handle)` from any source (without extra data) reads the registration, checks that `nonce` has not changed, performs the state update of §4 and deletes the registration.
-3. `cancel(from, handle)`: callable only by `preparedBy`. The payload is already public in the `prepare` transaction and cannot serve as authorization.
-
-If `nonce` has changed, execution fails and reverts; there is no automatic retry.
+Up to 0.5.0 a caller that could not assemble calldata could register an operation with `prepare` and have a bare `transferFrom` execute it later. [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.md) withdrew this path: the dApp never used it, and it accounted for four findings and two denial-of-service entries of the security review. 0.6.0 removes `prepare`, `cancel`, `preparedOf`, the stored registrations and their events. The section number is kept because the security review cites it.
 
 ## 4. Execution Flows
 
@@ -264,21 +261,23 @@ emit LedgerCrossing(from, to, 0x04, x)
 | Public → confidential | Same as above + `0x03` | 2 bytes | No | Yes |
 | Confidential → confidential | `transferFrom(id, id, handle)` + `0x01` | ~840 bytes | Yes | No |
 | Confidential → public | `transferFrom(id, addr, x)` + `0x04` | ~450 bytes | Yes | Yes |
-| Fold (no transfer) | `transferFrom(id, id, handle)` + `0x80` | ~260 bytes | Yes | — |
+| Fold (no transfer) | `fold(id, payload)`, payload type `0x80` | ~260 bytes | Yes | — |
 
 ### 4.6 `0x80` Pure Fold
 
 Originally, folding happened only as part of a spend (§4.3). `0x80` lets the owner perform the same state update without transferring:
 
 ```
-verify(proof, H(chainId, this, from, acc.nonce))          // proves only possession of from's private key
+verify(proof, H(chainId, this, id, acc.nonce))            // proves only possession of id's private key
 acc.available += acc.pending − acc.folded ; acc.folded = acc.pending
 acc.nonce += 1 ; acc.foldedAtBlock = block.number
 if flags.decryptable: acc.decryptable = payload.decryptable
-emit Folded(from, handle, acc.nonce)
+emit Folded(id, acc.nonce)
 ```
 
-Call form: `transferFrom(id, id, handle)` + payload (`to` must equal `from`, `handle = keccak(payload) | 2²⁵⁵`). The payload contains only `[type, flags, proof, decryptable?]`; the `includePending` bit is reserved here (a fold inherently includes pending). `prepare` is not supported.
+Call form: `fold(id, payload)`. The payload is `[type = 0x80, flags, proof, decryptable?]`, the same bytes as before; the `includePending` bit is reserved here (a fold inherently includes pending). Anyone may send the call: the proof is the authorization. There is no handle, because nothing is put in an amount slot, and `fold` emits no `Transfer`.
+
+Up to 0.5.0 the fold was called as `transferFrom(id, id, handle)` with the payload appended. It moves no value, so ADR-0010 (item 5) took it off the transfer verb.
 
 Uses:
 
@@ -329,8 +328,7 @@ This circuit is the public-amount exit behind `_debitPublic` (04-modules §2); `
 | `LedgerCrossing` | `(from, to, type, amount)` | Public-ledger module: `0x03` / `0x04`; indexers maintain `shieldedSupply` |
 | `Minted` / `Burned` | `(id, amount)` | Role-issuance module: a public amount credited to, or debited from, an id |
 | `WrapperMinted` / `WrapperBurned` | `(id, amount)` / `(id, to, amount)` | Wrapper port: the same for an unwrap and a wrap |
-| `Folded` | `(id, handle, nonce)` | `0x80`; `nonce` is the new value after the fold |
-| `Prepared` / `Cancelled` | `(from, handle)` | Fallback |
+| `Folded` | `(id, nonce)` | `fold`; `nonce` is the new value after the fold |
 | `RegulatorKeyRotated` | `(keyId, pk)` | |
 
 The payee filters `ConfidentialTransfer` and `LedgerCrossing` by `to == own id`.
@@ -343,8 +341,8 @@ function confidentialAccountOf(address id) external view
     returns (Ciphertext available, Ciphertext pending, uint64 nonce, uint64 foldedAtBlock, uint64 lastReceivedAtBlock, bytes memory decryptable);
 function shieldedSupply() external view returns (uint256);              // public-ledger module
 function regulatorKey(uint32 id) external view returns (Point memory);
-function supportsInterface(bytes4) external view returns (bool);         // IPEP and the module interface ids
-function pepModules() external view returns (Module[] memory);          // module probe (07 §13.3), from 0.5.0
+function supportsInterface(bytes4) external view returns (bool);         // ICasata and the module interface ids
+function casataModules() external view returns (Module[] memory);       // module probe (07 §13.3); pepModules() in 0.5.0
 ```
 
 ## 8. Client Flows
@@ -377,7 +375,7 @@ Environment: Hardhat 3 / solc 0.8.34 viaIR / Groth16 (snarkjs) / after public-in
 | `0x01` confidential → confidential, **steady state** (both sides' storage warm) | **467k** | Target ≤ 500k achieved | 0.35 | 0.018 |
 | `0x01` confidential → confidential, account's first spend | 709k | One-time: cold writes of available and folded, 4 slots each | 0.53 | 0.027 |
 | `0x04` confidential → public, account's first spend | 583k | Same as above | 0.44 | 0.022 |
-| Bare `transferFrom` after `prepare` (first time) | 360k | Excludes `prepare` itself | 0.27 | 0.0135 |
+| Bare `transferFrom` after `prepare` (first time; removed in 0.6.0) | 360k | Excludes `prepare` itself | 0.27 | 0.0135 |
 | Groth16 `verifyProof` (14 inputs, 0.4) | ~312k | Includes 21k base and calldata; 316k with 15 inputs, 386k with 25 inputs unpacked | | |
 | Proof generation (Node, M-series) | 1.3~1.5 s (0.4) | 29,719 constraints (0.3.x: 2.1~2.5 s, 35,137) | | |
 
@@ -406,7 +404,7 @@ Environment: Hardhat 3 / solc 0.8.34 viaIR / Groth16 (snarkjs) / after public-in
 
 **Included**: public ledger, the four `transfer` / `transferFrom` types (excluding `0x02`), `prepare` / `cancel`, regulator key registration and rotation, events and views, ERC-165, public-input packing.
 
-Since 0.5.0 the scope is stated per part: the core is everything in this document not marked as a module, and the modules are in [04-modules](04-modules.md).
+Since 0.5.0 the scope is stated per part: the core is everything in this document not marked as a module, and the modules are in [04-modules](04-modules.md). 0.6.0 takes `prepare` / `cancel` out of the scope.
 
 ## 11. Backlog
 
@@ -426,4 +424,4 @@ Since 0.5.0 the scope is stated per part: the core is everything in this documen
 - [ ] Whether `decryptable` lives on chain or purely off chain (rebuilt by replaying memos and events).
 - [ ] Recommended scheme for regulator key thresholdization (DKG).
 - [ ] Deployment target: L2 first or L1 first.
-- [ ] Whether the `Transfer` event is also emitted for `0x01` (currently: yes, distinguished by the handle's top bit), or only `ConfidentialTransfer`.
+- [x] Whether the `Transfer` event is also emitted for `0x01`: yes. Every operation that moves value emits it, with the handle in the amount slot (ADR-0010, items 2 and 3).

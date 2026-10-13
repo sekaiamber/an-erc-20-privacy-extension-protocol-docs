@@ -25,15 +25,15 @@ The base of every Variant is a **privacy-only ledger**. Whether a token also has
 
 ## Integrator contract (honoured by every A.x, with any modules)
 
-- Only the existing ERC-20 selectors `transfer(address,uint256)` and `transferFrom(address,address,uint256)` are used. The payload follows the ABI parameters: `transfer` reads from `msg.data[68:]`, `transferFrom` from `msg.data[100:]`.
+- Every operation that moves value uses the existing ERC-20 selectors `transfer(address,uint256)` and `transferFrom(address,address,uint256)`. The payload follows the ABI parameters: `transfer` reads from `msg.data[68:]`, `transferFrom` from `msg.data[100:]`.
 - The first byte of the payload is the type, the second is the flags. Type numbers are the family's (07 §2).
 - **The meaning of `to` / `from` is determined by the payload type.** The protocol does not judge whether a 20-byte value is a wallet address or a confidential id.
 - A confidential account is addressed by a 20-byte id. How the id is derived is defined by the Variant.
 - `0x01`, confidential to confidential: `transferFrom(id, id, handle)`. It is authorised as the Variant defines (A.1: a zero-knowledge proof); `msg.sender` is not checked.
-- For confidential transfers the amount slot carries a handle whose top bit is 1. Every type emits the standard `Transfer` event; a confidential transfer also emits a Variant-defined event that names both ids and carries what the payee and the regulator need.
-- Calls that cannot carry extra data can run a confidential operation registered beforehand with `prepare` (07 §6).
+- For confidential transfers the amount slot carries a handle whose top bit is 1. Every operation that moves value emits the standard `Transfer` event; a confidential transfer also emits a Variant-defined event that names both ids and carries what the payee and the regulator need.
+- An operation that moves no value is a function of the Variant, not a transfer (07 §1). There is no fallback for calls that cannot carry extra data: `prepare` was withdrawn (07 §6).
 - The state of any account id can be read as ciphertext through a Variant-defined view.
-- `pep()` and the module probe are exposed through ERC-165 (07 §10, §13).
+- `casata()` and the module probe are exposed through ERC-165 (07 §10, §13).
 - The regulator interface is that of 07 §9.
 
 ## What the modules change for integrators
@@ -48,4 +48,4 @@ The base of every Variant is a **privacy-only ledger**. Whether a token also has
 
 | Variant | Core | Payer / recipient | Amount | Regulator | Modules declared | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| [A.1](variant-1/README.md) | ElGamal on Baby Jubjub + Groth16, account = public key | Pseudonymous: ids are stable and linkable | Hidden | Third ciphertext in every transfer, enforced in the circuit | 0.5.0 declares: public ledger, role issuance, Wrapper port | 0.5.0; two compositions deployed on BSC testnet |
+| [A.1](variant-1/README.md) | ElGamal on Baby Jubjub + Groth16, account = public key | Pseudonymous: ids are stable and linkable | Hidden | Third ciphertext in every transfer, enforced in the circuit | 0.6.0 declares: public ledger, role issuance, Wrapper port | 0.6.0 specified; 0.5.0: two compositions deployed on BSC testnet |

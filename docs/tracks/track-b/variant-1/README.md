@@ -2,7 +2,7 @@ English | [中文](README.zh-cn.md)
 
 # B.1: notes with one join-split circuit
 
-Version: `0.1.0-draft`  Status: `Draft` (contracts, circuit and dApp page implemented; deployed on BSC testnet on 2026-10-13)
+Version: `0.2.0-draft`  Status: `Draft` (0.2.0 is specified and not implemented yet; 0.1.0 has its contracts, circuit and dApp page implemented and was deployed on BSC testnet on 2026-10-13)
 
 | Document | Content |
 | --- | --- |

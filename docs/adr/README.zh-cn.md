@@ -7,6 +7,8 @@
 - 家族级：`NNNN-短标题.md`
 - Variant 级：`a1-NNNN-短标题.md`（前缀为 Variant 编号小写）
 
+ADR-0001 到 ADR-0010 写于项目定名 Casata（[0011](0011-project-name-casata.zh-cn.md)）之前，保留当时使用的名字：PEP、`pep()`、`IPEP*`、`PEPWrapper`。
+
 ## 家族级
 
 | 编号 | 标题 | 状态 |

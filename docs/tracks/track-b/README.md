@@ -55,4 +55,4 @@ A Track B token is a Variant plus modules, like any token of the family ([07 §1
 
 | Variant | Core | Payer / recipient | Amount | Regulator | Status |
 | --- | --- | --- | --- | --- | --- |
-| [B.1](variant-1/README.md) | Poseidon commitments and nullifiers, one join-split circuit (two in, two out), Groth16 | Hidden | Hidden | Memo in every transaction, enforced in the circuit | 0.1.0-draft; deployed on BSC testnet |
+| [B.1](variant-1/README.md) | Poseidon commitments and nullifiers, one join-split circuit (two in, two out), Groth16 | Hidden | Hidden | Memo in every transaction, enforced in the circuit | 0.2.0-draft specified; 0.1.0 deployed on BSC testnet |

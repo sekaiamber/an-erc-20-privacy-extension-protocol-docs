@@ -6,6 +6,8 @@ Status: `Prototype` — B.1 deployed on BSC testnet 2026-09-27 (started the same
 
 > **Reclassified by [ADR-0008](../../../adr/0008-modules.md) (2026-10-12).** This document was the README of the former "Track B". It now describes the ERC-20 surface of the privacy-only composition of A.1: the same circuits, without the public-ledger module, with role issuance and the Wrapper port. The contract name and the `B:1:…` descriptor are kept until the contracts are restructured, and the text below still says "Track B" and "B.1". Since [ADR-0009](../../../adr/0009-track-b-notes.md), Track B is the note model, documented in [track-b](../../track-b/README.md).
 
+> **2026-10-13.** This document is a record of the standalone contract. From A.1 0.6.0 three rows of the table below no longer hold ([ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.md)): `approve` reverts `NoPublicLedger()`, the fold is `fold(id, payload)` and not a `transferFrom`, and issuance is `mint(id, amount)` with payload `0x82`. The current surface is in [04-modules §5](../variant-1/04-modules.md).
+
 ## The integrator contract
 
 A Track B token has **no public ledger**. There is no address that "holds" tokens in the clear, so the question of how many tokens are in the confidential state does not exist: the only public number is `totalSupply`.

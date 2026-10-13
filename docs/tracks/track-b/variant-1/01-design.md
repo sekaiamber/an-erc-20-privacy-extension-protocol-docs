@@ -1,8 +1,10 @@
 English | [中文](01-design.zh-cn.md)
 
-# B.1 design (0.1.0-draft)
+# B.1 design (0.2.0-draft)
 
-Status: `Draft`. The contracts and the circuit are implemented and tested locally (`contracts/contracts/track-b/variant-1/`, `contracts/circuits/track-b/variant-1/join_split.circom`). It is deployed on BSC testnet ([02-deployments](02-deployments.md), 2026-10-13). The dApp has a page for it (`/tracks/b/1`), which has not yet been exercised in a browser against the live token. Gas, constraint count and proving time are measured locally (§12).
+Status: `Draft`. This document describes 0.2.0, which is specified and not implemented yet. 0.1.0 is implemented and tested locally (`contracts/contracts/track-b/variant-1/`, `contracts/circuits/track-b/variant-1/join_split.circom`) and deployed on BSC testnet ([02-deployments](02-deployments.md), 2026-10-13). The dApp has a page for it (`/tracks/b/1`), which has not yet been exercised in a browser against the live token. Gas, constraint count and proving time are measured locally (§12).
+
+> 0.2.0 (2026-10-13) changes the surface only, following [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.md) and [ADR-0011](../../../adr/0011-project-name-casata.md). Issuance is `mint(token, amount)` with the join-split as trailing payload, replacing `mintConfidential`. `approve` reverts `NoPublicLedger()`. `pep()` becomes `casata()` and the key-derivation domain becomes `"Casata"`, so keys differ from the ones of 0.1.0. The circuit, the payload and the events are unchanged. This version answers `casata()` = `B:1:0.2.0`; it is not the token that answered `pep()` = `B:1:0.2.0` before 2026-10-12, which was the privacy-only composition of A.1.
 
 Track: [B, notes](../README.md). Opened by [ADR-0009](../../../adr/0009-track-b-notes.md).
 
@@ -131,29 +133,29 @@ Family conventions §1–§5 apply: the standard selectors, a trailing payload, 
 | --- | --- | --- | --- |
 | `transferFrom(token, token, handle)` | `0x01` | none | Transfer between notes |
 | `transferFrom(token, 0x0, amount)` | `0x81` | `v_pub_out = amount`, `to = 0x0` | Burn |
-| `mintConfidential(token, amount)` | `0x82` | `v_pub_in = amount` | Role issuance; `MINTER_ROLE` only |
+| `mint(token, amount)` | `0x82` | `v_pub_in = amount` | Role issuance; `MINTER_ROLE` only |
 | `wrapperBurn(0x0, to, amount, payload)` | `0x81` | `v_pub_out = amount`, `to` bound | Wrapper port: exit to the wrapped token |
 | `wrapperMint(recipient, amount)` | `0x82` | `v_pub_in = amount` | Wrapper port: `recipient` is the whole payload |
-| `transfer(to, x)` without payload | n/a | n/a | Reverts `NoPublicLedger()` |
+| `transfer`, `transferFrom` or `mint` without payload | n/a | n/a | Reverts `NoPublicLedger()` |
 | `balanceOf(a)` | n/a | n/a | `totalSupply()` for the token's own address, 0 otherwise |
-| `approve`, `allowance` | n/a | n/a | Kept for interface completeness; they authorise nothing |
+| `approve`, `allowance` | n/a | n/a | `approve` reverts `NoPublicLedger()`; `allowance` returns 0 |
 
 - `token` stands for the token's own address. `from` and `to` carry no information in a note transfer, so they are fixed to it. The standard event then reads as a movement inside the pool and does not look like a mint or a burn.
 - Replay is stopped by the nullifiers: a payload can be executed once.
-- `prepare` / `cancel` (conventions §6) are not part of 0.1.
-- `mintConfidential` is the function of the family's role-issuance interface, with the join-split as a trailing payload. There is no account to name, so its first argument must be the token's own address.
+- B.1 has no `prepare` / `cancel`. The family withdrew that path (conventions §6).
+- `mint` is the function of the family's role-issuance interface (conventions §13.1), with the join-split as a trailing payload read from `msg.data[68:]`. There is no account to name, so `to` must be the token's own address. A `mint` without a payload would be a public issuance, which B.1 does not have. In 0.1.0 the function was `mintConfidential`.
 - **Payload.** One layout for every operation, 838 bytes: type (1), flags (1, must be 0), `root` (32), `nf[2]` (64), `cm[2]` (64), `D` (64), `memo_recv` (192), `memo_reg` (160), `regKeyId` (4), proof (256). The public amounts and `to` are arguments of the call, and the proof binds them.
 - **Payload types.** `0x01` note transfer; `0x81` a public amount out (burn, wrap); `0x82` a public amount in (mint, unwrap). The proof does not bind the type. A burn and a wrap are kept apart by `to`, which is zero for a burn and non-zero for a wrap.
 
 ### 5.1 Modules
 
-| Module | B.1 0.1.0 |
+| Module | B.1 0.2.0 (the same as 0.1.0) |
 | --- | --- |
-| Role issuance | Supported: `mintConfidential` and the `0x81` burn |
-| Wrapper port | Supported: `IPEPWrappable`, limit `wrappedOut` |
+| Role issuance | Supported: `mint` and the `0x81` burn |
+| Wrapper port | Supported: `ICasataWrappable`, limit `wrappedOut` |
 | Public ledger | Not supported. It could be added later on the same `v_pub_in` / `v_pub_out` |
 
-This is the declared list of B.1 0.1.0 (07 §13.2). Supporting another module, the public ledger included, takes a new B.1 version.
+This is the declared list of B.1 0.2.0 (07 §13.2), the same as that of 0.1.0. Supporting another module, the public ledger included, takes a new B.1 version.
 
 ### 5.2 Supply
 
@@ -189,7 +191,7 @@ From these the regulator rebuilds a table of all notes: owner, amount, the trans
 
 ### 7.1 Mint
 
-The minter knows the recipient's receiving code. It builds a join-split with two dummy inputs, `v_pub_in = amount`, one output to the recipient and one zero-value output, and calls `mintConfidential(token, amount)` with the payload appended.
+The minter knows the recipient's receiving code. It builds a join-split with two dummy inputs, `v_pub_in = amount`, one output to the recipient and one zero-value output, and calls `mint(token, amount)` with the payload appended.
 
 A proof is required although the amount is public, because the regulator must learn the owner of the new note at the moment it is created.
 
@@ -203,8 +205,8 @@ As a transfer, with `v_pub_out = amount` and `to = 0x0`. Change returns as a not
 
 ### 7.4 Wrap and unwrap
 
-- **Wrap** (notes to wrapped ERC-20): `PEPWrapper.wrap(token, 0x0, to, amount, payload)`. The proof binds `to` and `amount`. `wrappedOut` increases.
-- **Unwrap** (wrapped ERC-20 to notes): `PEPWrapper.unwrap(token, recipient, amount)`, where `recipient` is a join-split payload with `v_pub_in = amount`. The token checks `amount ≤ wrappedOut`.
+- **Wrap** (notes to wrapped ERC-20): `CasataWrapper.wrap(token, 0x0, to, amount, payload)`. The proof binds `to` and `amount`. `wrappedOut` increases.
+- **Unwrap** (wrapped ERC-20 to notes): `CasataWrapper.unwrap(token, recipient, amount)`, where `recipient` is a join-split payload with `v_pub_in = amount`. The token checks `amount ≤ wrappedOut`.
 
 The Wrapper contract is used unchanged.
 
@@ -227,7 +229,7 @@ The Wrapper contract is used unchanged.
 
 `prevBlock` is the block of the operation before this one, and `lastOperationBlock()` is the block of the latest. Together they are a chain through the token's whole history: a client starts at the latest block and follows it backwards, one block per request, and never scans a range of blocks that holds nothing.
 
-Views: `root()`, `isKnownRoot(root)`, `isSpent(nf)`, `leafCount()`, `totalSupply()`, `issuedSupply()`, `wrappedOut()`, the regulator key views of conventions §9, `pep()` returning `B:1:<version>`, the module probe, and `TREE_DEPTH()`, `hasher()`, `verifier()`, `lastOperationBlock()`.
+Views: `root()`, `isKnownRoot(root)`, `isSpent(nf)`, `leafCount()`, `totalSupply()`, `issuedSupply()`, `wrappedOut()`, the regulator key views of conventions §9, `casata()` returning `B:1:<version>`, the module probe, and `TREE_DEPTH()`, `hasher()`, `verifier()`, `lastOperationBlock()`.
 
 ## 9. Client
 
@@ -316,6 +318,8 @@ Alice pays, Bob is a merchant, Carol and Dave are other customers.
 In: the join-split circuit, role issuance, the Wrapper port, the regulator memo, the events and views above, and a client that scans, keeps notes and proves in the browser.
 
 Not in: the public-ledger module, `prepare` / `cancel`, a relayer, a separate viewing key, batched tree insertion, more than two inputs.
+
+0.2 has the same scope. It changes the surface only (see the note at the top).
 
 ## 14. Open decisions
 
