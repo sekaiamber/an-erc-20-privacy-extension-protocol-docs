@@ -218,18 +218,20 @@ The Wrapper contract is used unchanged.
 | Event | Fields | When |
 | --- | --- | --- |
 | `Transfer` | `(token, token, handle)`; `(0x0, token, amount)`; `(token, 0x0, amount)` | Note transfer; mint and unwrap; burn and wrap |
-| `NoteTransfer` | first leaf index, new root, `nf[2]`, `cm[2]`, `regKeyId`, `D`, the two recipient memos, the regulator memo, `v_pub_in`, `v_pub_out`, `to` | Every operation |
+| `NoteTransfer` | first leaf index, new root, `nf[2]`, `cm[2]`, `regKeyId`, `D`, the two recipient memos, the regulator memo, `v_pub_in`, `v_pub_out`, `to`, `prevBlock` | Every operation |
 | `Minted`, `Burned` | `amount` | Mint, burn |
 | `WrapperMinted`, `WrapperBurned` | `amount`; `to` and `amount` | Unwrap, wrap |
 | `RegulatorKeyRotated` | As A.1 | Rotation |
 
 `NoteTransfer` has no indexed field that identifies a user. That is the point, and it is also why wallets cannot filter (§9).
 
-Views: `root()`, `isKnownRoot(root)`, `isSpent(nf)`, `leafCount()`, `totalSupply()`, `issuedSupply()`, `wrappedOut()`, the regulator key views of conventions §9, `pep()` returning `B:1:<version>`, the module probe, and `TREE_DEPTH()`, `hasher()`, `verifier()`.
+`prevBlock` is the block of the operation before this one, and `lastOperationBlock()` is the block of the latest. Together they are a chain through the token's whole history: a client starts at the latest block and follows it backwards, one block per request, and never scans a range of blocks that holds nothing.
+
+Views: `root()`, `isKnownRoot(root)`, `isSpent(nf)`, `leafCount()`, `totalSupply()`, `issuedSupply()`, `wrappedOut()`, the regulator key views of conventions §9, `pep()` returning `B:1:<version>`, the module probe, and `TREE_DEPTH()`, `hasher()`, `verifier()`, `lastOperationBlock()`.
 
 ## 9. Client
 
-- **Scanning.** The wallet reads every `NoteTransfer` of the token in order. For each one it does one scalar multiplication `s·D` and tries both recipient memos. It cannot ask a node for "my" events.
+- **Scanning.** The wallet reads every `NoteTransfer` of the token, following `prevBlock` backwards from `lastOperationBlock()` until it reaches a block it has already processed (§8). For each event it does one scalar multiplication `s·D` and tries both recipient memos. It cannot ask a node for "my" events.
 - **Tree.** The same pass gives it every commitment, from which it keeps the tree frontier and the paths of its own notes. Asking a server for the path of one leaf would reveal which note is being spent.
 - **Nullifiers.** The wallet computes the nullifiers of its notes and marks a note spent when its nullifier appears.
 - **New device.** The key is derived again from the wallet signature and the token is scanned from its deployment block.
@@ -285,15 +287,15 @@ Alice pays, Bob is a merchant, Carol and Dave are other customers.
 
 | Operation | Gas |
 | --- | --- |
-| Mint | 1,371k |
-| Note transfer | 1,367k |
-| Burn | 1,372k |
-| Wrap, through the family Wrapper | 1,400k |
-| Unwrap, through the family Wrapper | 1,411k |
+| Mint | 1,375k |
+| Note transfer | 1,370k |
+| Burn | 1,376k |
+| Wrap, through the family Wrapper | 1,403k |
+| Unwrap, through the family Wrapper | 1,415k |
 
 - An A.1 transfer costs 467k in steady state and 706k on an account's first spend.
-- Of the 1,367k of a transfer, the tree is 943k. The other 424k is the Groth16 verification with 21 public inputs, two new nullifier slots, calldata and events.
-- The first operation on a fresh tree costs about 440k more (1,809k for the first mint). The first wrap of a token also deploys its wrapped ERC-20 (1,994k).
+- Of the 1,370k of a transfer, the tree is 943k. The other 427k is the Groth16 verification with 21 public inputs, two new nullifier slots, calldata, events and the link to the previous operation.
+- The first operation on a fresh tree costs about 440k more (1,830k for the first mint). The first wrap of a token also deploys its wrapped ERC-20 (1,998k).
 - With a hand-optimised Poseidon the tree would cost 696k and an operation about 1.12M. That is not built (§14 D8).
 - At depth 32 an operation would cost about 300k more.
 - Runtime bytecode: `B1NoteToken` 15,104 bytes, the verifier 4,454 bytes (limit 24,576).

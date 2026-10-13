@@ -218,18 +218,20 @@ Wrapper 合约原样使用，不需要改动。
 | 事件 | 字段 | 何时发出 |
 | --- | --- | --- |
 | `Transfer` | `(token, token, handle)`；`(0x0, token, amount)`；`(token, 0x0, amount)` | note 转账；铸造与 unwrap；销毁与 wrap |
-| `NoteTransfer` | 第一个叶子位置、新树根、`nf[2]`、`cm[2]`、`regKeyId`、`D`、两份收款方 memo、监管 memo、`v_pub_in`、`v_pub_out`、`to` | 每一次操作 |
+| `NoteTransfer` | 第一个叶子位置、新树根、`nf[2]`、`cm[2]`、`regKeyId`、`D`、两份收款方 memo、监管 memo、`v_pub_in`、`v_pub_out`、`to`、`prevBlock` | 每一次操作 |
 | `Minted`、`Burned` | `amount` | 铸造、销毁 |
 | `WrapperMinted`、`WrapperBurned` | `amount`；`to` 与 `amount` | unwrap、wrap |
 | `RegulatorKeyRotated` | 与 A.1 相同 | 轮换 |
 
 `NoteTransfer` 没有任何能识别用户的索引字段。这正是目的所在，也是钱包无法过滤事件的原因（§9）。
 
-视图：`root()`、`isKnownRoot(root)`、`isSpent(nf)`、`leafCount()`、`totalSupply()`、`issuedSupply()`、`wrappedOut()`、约定 §9 的监管密钥视图、返回 `B:1:<version>` 的 `pep()`、模块探针，以及 `TREE_DEPTH()`、`hasher()`、`verifier()`。
+`prevBlock` 是上一次操作所在的区块，`lastOperationBlock()` 是最近一次操作所在的区块。两者把这个代币的全部历史串成一条链：客户端从最新的区块开始往回走，每次只请求一个区块，不需要扫描中间那些什么都没有的区块。
+
+视图：`root()`、`isKnownRoot(root)`、`isSpent(nf)`、`leafCount()`、`totalSupply()`、`issuedSupply()`、`wrappedOut()`、约定 §9 的监管密钥视图、返回 `B:1:<version>` 的 `pep()`、模块探针，以及 `TREE_DEPTH()`、`hasher()`、`verifier()`、`lastOperationBlock()`。
 
 ## 9. 客户端
 
-- **扫描。** 钱包按顺序读取该代币的每一条 `NoteTransfer`。每一条做一次标量乘 `s·D`，然后尝试两份收款方 memo。它没法向节点只要「自己的」事件。
+- **扫描。** 钱包读取该代币的每一条 `NoteTransfer`：从 `lastOperationBlock()` 开始沿 `prevBlock` 往回走，直到遇到已经处理过的区块（§8）。每一条做一次标量乘 `s·D`，然后尝试两份收款方 memo。它没法向节点只要「自己的」事件。
 - **树。** 同一遍扫描让钱包拿到每一条承诺，据此维护树的前沿和自己 note 的路径。向服务器索要某个叶子的路径，会暴露正在花的是哪张 note。
 - **作废符。** 钱包算出自己 note 的作废符，一旦某个作废符出现在链上，就把对应的 note 标为已花。
 - **换设备。** 用钱包签名重新派生出同一把密钥，从代币的部署区块开始重新扫描。
@@ -285,15 +287,15 @@ Alice 付款，Bob 是商户，Carol 和 Dave 是其他顾客。
 
 | 操作 | gas |
 | --- | --- |
-| 铸造 | 1,371k |
-| note 转账 | 1,367k |
-| 销毁 | 1,372k |
-| wrap，经家族 Wrapper | 1,400k |
-| unwrap，经家族 Wrapper | 1,411k |
+| 铸造 | 1,375k |
+| note 转账 | 1,370k |
+| 销毁 | 1,376k |
+| wrap，经家族 Wrapper | 1,403k |
+| unwrap，经家族 Wrapper | 1,415k |
 
 - A.1 的转账稳态是 467k，账户首次花费是 706k。
-- 一笔转账的 1,367k 里，承诺树占 943k。其余 424k 是 21 个公开输入的 Groth16 验证、两个新的作废符存储槽、calldata 和事件。
-- 对一棵全新的树做第一次操作要多花约 44 万（第一次铸造是 1,809k）。某个代币第一次 wrap 时还要部署它的包装 ERC-20（1,994k）。
+- 一笔转账的 1,370k 里，承诺树占 943k。其余 427k 是 21 个公开输入的 Groth16 验证、两个新的作废符存储槽、calldata、事件，以及指向上一次操作的链接。
+- 对一棵全新的树做第一次操作要多花约 44 万（第一次铸造是 1,830k）。某个代币第一次 wrap 时还要部署它的包装 ERC-20（1,998k）。
 - 换成手工优化的 Poseidon，承诺树是 696k，一次操作约 112 万。这个没有做（§14 D8）。
 - 深度 32 时，一次操作要多花约 30 万。
 - 运行时字节码：`B1NoteToken` 15,104 字节，验证器 4,454 字节（上限 24,576）。
