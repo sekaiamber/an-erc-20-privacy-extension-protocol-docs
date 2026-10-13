@@ -34,8 +34,8 @@
 ```
 Track A  加密账户：每个账户一份同态密文余额
   └─ A.1  Baby Jubjub 上的 ElGamal + Groth16，账户 = 公钥                    ← 主线
-       ├─ 带公开账本                 合约 ConfidentialERC20A1，pep() A:1:0.4.0   ← 原型已上 BSC testnet
-       └─ 纯隐私，带 Wrapper 端口     合约 ConfidentialERC20B1，pep() B:1:0.2.0   ← 原型已上 BSC testnet
+       ├─ 带公开账本                 合约 A1LedgerToken，pep() A:1:0.5.0    ← 原型已上 BSC testnet
+       └─ 纯隐私，带 Wrapper 端口     合约 A1PrivateToken，pep() A:1:0.5.0   ← 原型已上 BSC testnet
 Track B  note 模型：一棵承诺树和一个作废符集合，没有账户
   └─ B.1  Poseidon note，一个 join-split 电路，Groth16                        ← 仅设计（ADR-0009）
 运行时模块  通用 Wrapper（10-wrapper）：为没有公开账本的代币发行 wTOKEN             ← 已部署（PEPWrapper）
@@ -44,7 +44,7 @@ Track B  note 模型：一棵承诺树和一个作废符集合，没有账户
 
 两个 Track 的信任基础相同：用户持有密钥，证明在客户端生成，不依赖外部网络。
 
-A.1 的纯隐私组合当初是作为「Track B / B.1」开设的。在合约重构完成之前（ADR-0008「过渡」），它在合约和 dApp 里沿用这个名字，链上也沿用 `B:1:…` 描述符。在那之前不会部署任何 note 模型的代币。
+两种组合自报的描述符相同，靠模块探针区分。纯隐私组合当初是作为「Track B / B.1」开设的，在 2026-10-13 合约重构之前一直以这个名字发布（ADR-0008「过渡」）。
 
 ## 一个代币的典型结构（A.1 带公开账本模块）
 

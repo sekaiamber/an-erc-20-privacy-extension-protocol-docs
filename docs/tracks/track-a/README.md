@@ -48,4 +48,4 @@ The base of every Variant is a **privacy-only ledger**. Whether a token also has
 
 | Variant | Core | Payer / recipient | Amount | Regulator | Modules declared | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| [A.1](variant-1/README.md) | ElGamal on Baby Jubjub + Groth16, account = public key | Pseudonymous: ids are stable and linkable | Hidden | Third ciphertext in every transfer, enforced in the circuit | 0.5.0 declares: public ledger, role issuance, Wrapper port | Design 0.5.0-draft; two compositions deployed on BSC testnet (0.4.0 and the former B.1 0.2.0) |
+| [A.1](variant-1/README.md) | ElGamal on Baby Jubjub + Groth16, account = public key | Pseudonymous: ids are stable and linkable | Hidden | Third ciphertext in every transfer, enforced in the circuit | 0.5.0 declares: public ledger, role issuance, Wrapper port | 0.5.0; two compositions deployed on BSC testnet |

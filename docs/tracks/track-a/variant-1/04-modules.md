@@ -2,11 +2,11 @@ English | [中文](04-modules.zh-cn.md)
 
 # A.1 modules and compositions
 
-Version: `0.5.0-draft`. Status: `Draft`. Date: 2026-10-13
+Version: `0.5.0`. Status: `Draft`. Date: 2026-10-13
 
 This document is the structure of A.1 under [ADR-0008](../../../adr/0008-modules.md): one core and three modules.
 
-**Status of the implementation (2026-10-13).** The contracts repository implements it as `A1LedgerToken` and `A1PrivateToken`; all tests pass, and gas is within 300 of the standalone contracts on every measured operation. It is **not deployed**: the tokens on BSC testnet are still the standalone `ConfidentialERC20A1` (0.4.0) and `ConfidentialERC20B1` (0.2.0), and the dApp still targets those. §9 lists what changed.
+**Status of the implementation (2026-10-13).** The contracts repository implements it as `A1LedgerToken` and `A1PrivateToken`; all tests pass, and gas is within 300 of the standalone contracts on every measured operation. Both compositions are deployed on BSC testnet ([03-deployments](03-deployments.md)) and the dApp targets them. Not done yet: no operation has been run against the new tokens on chain, and the dApp pages have not been exercised in a browser. §9 lists what changed.
 
 The core is specified in [01-design](01-design.md). No circuit changes.
 
@@ -131,10 +131,10 @@ In both, `transferFrom(id, id, handle)` with `0x01` or `0x80` behaves as in 01-d
 
 ## 6. Compositions
 
-| Composition | Core | Public ledger | Role issuance | Wrapper port | Shipped today as |
+| Composition | Core | Public ledger | Role issuance | Wrapper port | Contract |
 | --- | --- | --- | --- | --- | --- |
-| **With the public ledger** | Yes | Yes | Yes | No | `ConfidentialERC20A1` 0.4.0 |
-| **Privacy-only** | Yes | No | Yes | Yes | `ConfidentialERC20B1` 0.2.0 ([records](../variant-1-privacy-only/README.md)) |
+| **With the public ledger** | Yes | Yes | Yes | No | `A1LedgerToken` (before 0.5.0: `ConfidentialERC20A1`) |
+| **Privacy-only** | Yes | No | Yes | Yes | `A1PrivateToken` (before 0.5.0: `ConfidentialERC20B1`, [records](../variant-1-privacy-only/README.md)) |
 
 - **Inheritance order**: core, public ledger, role issuance, Wrapper port (07 §13.2).
 - **Public ledger together with the Wrapper port**: not built or tested. No use is known, and it would need one more thing. The unshield proof binds `to` but not which exit is meant. Today the exits cannot be confused because they accept disjoint recipients: zero for a burn, non-zero for an unshield or a wrap, and no built composition has both of the last two. A token with both would have to bind the kind of exit into the proof.
@@ -160,7 +160,7 @@ The core gives both compositions the same guarantees (01-design; the evaluation 
 
 ## 9. What changes at 0.5.0
 
-Relative to the two deployed contracts. Nothing here changes a circuit, a payload layout or an event that clients parse for `0x01` / `0x80`. Items 1 to 6 and 9 are done in the contracts repository; items 7 and 8 are open.
+Relative to the two deployed contracts. Nothing here changes a circuit, a payload layout or an event that clients parse for `0x01` / `0x80`. All nine items are done (contracts `3414e24`, dApp `4975eb8`, deployments of 2026-10-13).
 
 | # | Change | Affects |
 | --- | --- | --- |

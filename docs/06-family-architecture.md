@@ -34,8 +34,8 @@ The base of every Variant is a privacy-only ledger. Whether a token also has a p
 ```
 Track A  Encrypted accounts: one homomorphic-ciphertext balance per account
   └─ A.1  ElGamal on Baby Jubjub + Groth16, account = public key                ← mainline
-       ├─ with the public ledger            contract ConfidentialERC20A1, pep() A:1:0.4.0   ← prototype on BSC testnet
-       └─ privacy-only, with the Wrapper port   contract ConfidentialERC20B1, pep() B:1:0.2.0   ← prototype on BSC testnet
+       ├─ with the public ledger            contract A1LedgerToken,  pep() A:1:0.5.0   ← prototype on BSC testnet
+       └─ privacy-only, with the Wrapper port   contract A1PrivateToken, pep() A:1:0.5.0   ← prototype on BSC testnet
 Track B  Notes: a tree of commitments and a set of nullifiers, no accounts
   └─ B.1  Poseidon notes, one join-split circuit, Groth16                       ← design only (ADR-0009)
 Runtime module  generic Wrapper (10-wrapper): issues wTOKEN for tokens without the public ledger   ← deployed (PEPWrapper)
@@ -44,7 +44,7 @@ Family tool     Regulatory Committee (11): threshold regulator key, membership, 
 
 Both Tracks have the same trust base: user-held keys, client-side proofs, no external network.
 
-The privacy-only composition of A.1 was opened as "Track B / B.1". It keeps that name in the contracts and the dApp, and the `B:1:…` descriptor on chain, until the contracts are restructured (ADR-0008, Transition). No note-model token is deployed before that.
+Both compositions report the same descriptor and are told apart by the module probe. The privacy-only composition was opened as "Track B / B.1" and shipped under that name until the contracts were restructured on 2026-10-13 (ADR-0008, Transition).
 
 ## Typical structure of a token (A.1 with the public-ledger module)
 

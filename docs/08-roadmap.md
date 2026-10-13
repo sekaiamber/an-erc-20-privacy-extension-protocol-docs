@@ -31,7 +31,8 @@ Status: `Draft`
 - [x] Family restructured into Track / Variant / module; the public ledger is a module and the former Track B is a composition of A.1 (2026-10-12) → ADR-0007, ADR-0008, `07-family-conventions.md` §13
 - [x] Track A documents restructured as Track / Variant / modules: A.1 0.5.0-draft, core in `01-design.md`, modules and compositions in `04-modules.md` (2026-10-13)
 - [x] Contracts restructured to A.1 0.5.0 (2026-10-13): `A1Core` with the public-ledger, role-issuance and Wrapper-port modules, `IPEPModules` probe, one version; tests pass, gas unchanged
-- [ ] dApp follows A.1 0.5.0 (page from `pep()`, features from the modules) and both testnet tokens are redeployed (`tracks/track-a/variant-1/04-modules.md` §9, items 7 and 8)
+- [x] dApp follows A.1 0.5.0 (page from `pep()`, features from the modules) and both testnet tokens are redeployed (2026-10-13) → `tracks/track-a/variant-1/03-deployments.md`
+- [ ] A.1 0.5.0: run the operations on chain and exercise the dApp pages in a browser; add `mintConfidential` and the `0x81` burn to the page of the token with the public ledger
 - [x] Track B opened for the note model; B.1 design, 0.1.0-draft (2026-10-13) → ADR-0009, `tracks/track-b/`
 - [ ] B.1: measure the on-chain Poseidon tree, then circuit, contract and client (after the ADR-0008 restructuring)
 - [ ] Threat model review

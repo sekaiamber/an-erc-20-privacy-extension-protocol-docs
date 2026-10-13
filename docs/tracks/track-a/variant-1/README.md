@@ -2,9 +2,9 @@ English | [中文](README.zh-cn.md)
 
 # A.1: ElGamal encrypted accounts + Groth16
 
-Design version: `0.5.0-draft` (core plus modules, [ADR-0008](../../../adr/0008-modules.md)). Status: `Draft`.
+Version: `0.5.0` (core plus modules, [ADR-0008](../../../adr/0008-modules.md)). Status: `Draft`.
 
-Implemented in the contracts repository as `A1LedgerToken` and `A1PrivateToken` (2026-10-13), not deployed yet. Deployed today are the two standalone contracts that predate the module structure: `ConfidentialERC20A1` 0.4.0 (with the public ledger) and `ConfidentialERC20B1` 0.2.0 (privacy-only).
+Implemented as `A1LedgerToken` and `A1PrivateToken` and deployed on BSC testnet on 2026-10-13 ([03-deployments](03-deployments.md)). The two standalone contracts that predate the module structure, `ConfidentialERC20A1` 0.4.0 and `ConfidentialERC20B1` 0.2.0, remain on chain and are no longer opened by the dApp.
 
 ## In one sentence
 
@@ -27,8 +27,8 @@ How the parts combine, how supply is accounted for across them, and what changes
 
 | Composition | Modules | Deployed as | Records |
 | --- | --- | --- | --- |
-| With the public ledger | Public ledger, role issuance | `ConfidentialERC20A1`, `A:1:0.4.0` | [02-security-review.md](02-security-review.md), [03-deployments.md](03-deployments.md) |
-| Privacy-only | Role issuance, Wrapper port | `ConfidentialERC20B1`, `B:1:0.2.0` | [variant-1-privacy-only](../variant-1-privacy-only/README.md): deployments, security review, and the design of the standalone contract |
+| With the public ledger | Public ledger, role issuance | `A1LedgerToken`, `A:1:0.5.0` | [02-security-review.md](02-security-review.md), [03-deployments.md](03-deployments.md) |
+| Privacy-only | Role issuance, Wrapper port | `A1PrivateToken`, `A:1:0.5.0` | [03-deployments.md](03-deployments.md); for the standalone contract before 0.5.0: [variant-1-privacy-only](../variant-1-privacy-only/README.md) |
 
 ## Privacy evaluation (family conventions §12)
 
@@ -48,5 +48,5 @@ How the parts combine, how supply is accounted for across them, and what changes
 | [01-design.md](01-design.md) | The core in detail: parameters, accounts and state, payload, flows, circuits, events, client flows, gas |
 | [04-modules.md](04-modules.md) | Modules and compositions: primitives, supply accounting, each module, ERC-20 surface per composition, probe, what changes at 0.5.0 |
 | [02-security-review.md](02-security-review.md) | Round-one security self-review of the composition with the public ledger |
-| [03-deployments.md](03-deployments.md) | Deployment record of that composition (BSC testnet) |
+| [03-deployments.md](03-deployments.md) | Deployment record (BSC testnet): both compositions from 0.5.0, the composition with the public ledger before it |
 | [variant-1-privacy-only](../variant-1-privacy-only/README.md) | Records of the privacy-only composition under its former name B.1 |

@@ -2,7 +2,7 @@
 
 # 10 家族工具：通用 Wrapper
 
-状态：`Prototype`（2026-09-27）。决策记录：[ADR-0005](adr/0005-family-wrapper.zh-cn.md)。实现：`contracts/contracts/family/{IPEPWrappable,PEPWrapper,WrappedERC20}.sol`；已部署到 BSC testnet `0xcAF2c404a7EB33D3EE9f08AEB3Cf9a743c0Abe24`（0.1.1；0.1.0 实例作废）（见[纯隐私组合的部署记录](tracks/track-a/variant-1-privacy-only/02-deployments.zh-cn.md)）。
+状态：`Prototype`（2026-09-27）。决策记录：[ADR-0005](adr/0005-family-wrapper.zh-cn.md)。实现：`contracts/contracts/family/{IPEPWrappable,PEPWrapper,WrappedERC20}.sol`；已部署到 BSC testnet `0xfA04051c4cC38e439f871cBfA179424a257c5455`（0.1.1；更早的实例作废），当前的纯隐私代币插的就是它（见 [A.1 部署记录](tracks/track-a/variant-1/03-deployments.zh-cn.md)）。
 
 ## 1. 它是什么
 

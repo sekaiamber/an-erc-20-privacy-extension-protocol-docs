@@ -2,7 +2,7 @@ English | [中文](10-wrapper.zh-cn.md)
 
 # 10 Family tool: the generic Wrapper
 
-Status: `Prototype` (2026-09-27). Decision record: [ADR-0005](adr/0005-family-wrapper.md). Implementation: `contracts/contracts/family/{IPEPWrappable,PEPWrapper,WrappedERC20}.sol`; deployed on BSC testnet at `0xcAF2c404a7EB33D3EE9f08AEB3Cf9a743c0Abe24` (0.1.1; the 0.1.0 instance is deprecated) (see the [deployments of the privacy-only composition](tracks/track-a/variant-1-privacy-only/02-deployments.md)).
+Status: `Prototype` (2026-09-27). Decision record: [ADR-0005](adr/0005-family-wrapper.md). Implementation: `contracts/contracts/family/{IPEPWrappable,PEPWrapper,WrappedERC20}.sol`; deployed on BSC testnet at `0xfA04051c4cC38e439f871cBfA179424a257c5455` (0.1.1; earlier instances are deprecated), which is the Wrapper plugged into the current privacy-only token (see the [A.1 deployment record](tracks/track-a/variant-1/03-deployments.md)).
 
 ## 1. What it is
 

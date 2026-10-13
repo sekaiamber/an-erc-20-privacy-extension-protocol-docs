@@ -2,7 +2,40 @@
 
 # A.1 部署记录
 
-## BSC testnet（chain id 97）— 0.4.0（当前）
+## BSC testnet（chain id 97）— 0.5.0（当前）
+
+部署日期：2026-10-13　两个代币的 `pep()` 都是 `A:1:0.5.0`，靠 `pepModules()` 区分　合约源码 contracts `3414e24`
+
+| 组合 | deployment id | 合约 | 地址 |
+| --- | --- | --- | --- |
+| 带公开账本 | `a1-v0_5_0-ledger-bsc-testnet` | **`A1LedgerToken`**（Test / TEST） | [`0x6CA39A8b9Dd09162E99614D4386B897c88d38ccf`](https://testnet.bscscan.com/address/0x6CA39A8b9Dd09162E99614D4386B897c88d38ccf) |
+| 纯隐私 | `a1-v0_5_0-private-bsc-testnet` | **`A1PrivateToken`**（Closed / CLS） | [`0x5F855e2221E9eBf854c3374149dF31298fF608B0`](https://testnet.bscscan.com/address/0x5F855e2221E9eBf854c3374149dF31298fF608B0) |
+
+| 共用合约 | 地址 |
+| --- | --- |
+| `TransferVerifier` | `0xE6c4717933F803b405f79c5AAa284e23Ac1ee189` |
+| `UnshieldVerifier` | `0xEC9D20d244866dD9863F0FDFCA0127DD16A7873C` |
+| `FoldVerifier` | `0xC26Bb79C880dddA2fC0cd22848beF2458CbEAb70` |
+| `G8Table` | `0x53d2d59F7EEc575A214e1B2cB2413EcE26506A9A` |
+| `PEPWrapper`（插在纯隐私代币的端口上；随原 B.1 0.2.0 一起部署） | `0xfA04051c4cC38e439f871cBfA179424a257c5455` |
+
+验证器和窗口表随带公开账本的代币一起部署，纯隐私代币复用它们。电路与 0.4.0 相同，没有改动。
+
+部署后从链上读回的结果：
+
+| | `A1LedgerToken` | `A1PrivateToken` |
+| --- | --- | --- |
+| `pepModules()` | 公开账本（`0x43dcbbd9`）与角色铸造（`0x60b2d978`），地址都是代币自身 | 角色铸造（`0x60b2d978`），地址是代币自身；Wrapper 端口（`0x1464bbec`），地址是 `PEPWrapper` |
+| `totalSupply()` | 1,000,000 TEST（初始公开铸造） | 0 |
+| `shieldedSupply()` / `wrappedOut()` | 0 | 0 |
+
+管理员、铸造角色和监管管理员都是部署钱包。监管密钥与 0.4.0 那次部署相同，key id 为 0。
+
+**0.5.0 还没做的**：这两个代币在链上还没有执行过任何操作，所以没有它们的链上 gas 实测。在本地与独立合约的对比实测见 [04-modules §10](04-modules.zh-cn.md)。
+
+相对 0.4.0 和原 B.1 0.2.0：两个独立合约变成了一个内核加若干模块（[04-modules §9](04-modules.zh-cn.md)）。**下面的 0.4.0 代币以及原 B.1 0.2.0 代币，dApp 已不再打开。** 它们仍留在链上。
+
+## BSC testnet（chain id 97）— 0.4.0（已被 0.5.0 取代）
 
 部署日期：2026-09-28　deployment id：`a1-v0_4_0-bsc-testnet`　`pep()` = `A:1:0.4.0`　合约源码 contracts `c518c1c`
 

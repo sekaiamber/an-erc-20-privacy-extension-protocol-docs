@@ -2,7 +2,40 @@ English | [中文](03-deployments.zh-cn.md)
 
 # A.1 Deployment Record
 
-## BSC testnet (chain id 97) — 0.4.0 (current)
+## BSC testnet (chain id 97) — 0.5.0 (current)
+
+Deployed: 2026-10-13. `pep()` = `A:1:0.5.0` for both tokens; they are told apart by `pepModules()`. Contract source: contracts `3414e24`.
+
+| Composition | Deployment id | Contract | Address |
+| --- | --- | --- | --- |
+| With the public ledger | `a1-v0_5_0-ledger-bsc-testnet` | **`A1LedgerToken`** (Test / TEST) | [`0x6CA39A8b9Dd09162E99614D4386B897c88d38ccf`](https://testnet.bscscan.com/address/0x6CA39A8b9Dd09162E99614D4386B897c88d38ccf) |
+| Privacy-only | `a1-v0_5_0-private-bsc-testnet` | **`A1PrivateToken`** (Closed / CLS) | [`0x5F855e2221E9eBf854c3374149dF31298fF608B0`](https://testnet.bscscan.com/address/0x5F855e2221E9eBf854c3374149dF31298fF608B0) |
+
+| Shared contract | Address |
+| --- | --- |
+| `TransferVerifier` | `0xE6c4717933F803b405f79c5AAa284e23Ac1ee189` |
+| `UnshieldVerifier` | `0xEC9D20d244866dD9863F0FDFCA0127DD16A7873C` |
+| `FoldVerifier` | `0xC26Bb79C880dddA2fC0cd22848beF2458CbEAb70` |
+| `G8Table` | `0x53d2d59F7EEc575A214e1B2cB2413EcE26506A9A` |
+| `PEPWrapper` (plugged into the privacy-only token's port; deployed with the former B.1 0.2.0) | `0xfA04051c4cC38e439f871cBfA179424a257c5455` |
+
+The verifiers and the table were deployed with the ledger token and are reused by the privacy-only token. The circuits are those of 0.4.0, unchanged.
+
+Read back from the chain after deployment:
+
+| | `A1LedgerToken` | `A1PrivateToken` |
+| --- | --- | --- |
+| `pepModules()` | public ledger (`0x43dcbbd9`) and role issuance (`0x60b2d978`), both at the token | role issuance (`0x60b2d978`) at the token; Wrapper port (`0x1464bbec`) at `PEPWrapper` |
+| `totalSupply()` | 1,000,000 TEST (the initial public mint) | 0 |
+| `shieldedSupply()` / `wrappedOut()` | 0 | 0 |
+
+Admin, minter and regulator admin: the deployer wallet. Regulator key: the same key id 0 as the 0.4.0 deployment.
+
+**Not done yet for 0.5.0**: no operation has been run against these two tokens on chain, so there are no on-chain gas measurements for them. Local measurements against the standalone contracts are in [04-modules §10](04-modules.md).
+
+Change from 0.4.0 and from the former B.1 0.2.0: the two standalone contracts became one core plus modules ([04-modules §9](04-modules.md)). **The 0.4.0 token below and the former B.1 0.2.0 token are no longer opened by the dApp.** They remain on chain.
+
+## BSC testnet (chain id 97) — 0.4.0 (superseded by 0.5.0)
 
 Deployed: 2026-09-28. Deployment id: `a1-v0_4_0-bsc-testnet`. `pep()` = `A:1:0.4.0`. Contract source: contracts `c518c1c`.
 

@@ -2,7 +2,7 @@
 
 # 0009 开设 Track B：note 模型
 
-- 状态：Accepted（仅设计；实现要等 [ADR-0008](0008-modules.zh-cn.md) 的合约重构完成）
+- 状态：Accepted（仅设计；第 7 条的前提已在 2026-10-13 满足：[ADR-0008](0008-modules.zh-cn.md) 的重构已完成，dApp 里不再有任何路由对应 `B:1`）
 - 日期：2026-10-13
 - 范围：家族（按 [ADR-0007](0007-track-definition.zh-cn.md) 第 4 条开设一个 Track；更新 ADR-0008 的「过渡」一节）
 

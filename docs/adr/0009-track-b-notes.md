@@ -2,7 +2,7 @@ English | [中文](0009-track-b-notes.zh-cn.md)
 
 # 0009 Open Track B: the note model
 
-- Status: Accepted (design only; implementation waits for the contract restructuring of [ADR-0008](0008-modules.md))
+- Status: Accepted (design only; the precondition of item 7 was met on 2026-10-13: the restructuring of [ADR-0008](0008-modules.md) is done and the dApp no longer routes `B:1`)
 - Date: 2026-10-13
 - Scope: Family (opens a Track under item 4 of [ADR-0007](0007-track-definition.md); updates the Transition of ADR-0008)
 
