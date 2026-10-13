@@ -24,6 +24,7 @@ ADR-0001 到 ADR-0010 写于项目定名 Casata（[0011](0011-project-name-casat
 | [0005](0005-family-wrapper.zh-cn.md) | 家族级 Wrapper 是工具，不取代 Track A | Accepted（用语由 0008 更新） |
 | [0004](0004-regulatory-access-principles.zh-cn.md) | 监管接入原则 | Accepted |
 | [0011](0011-project-name-casata.zh-cn.md) | 项目定名 Casata；缩写 PEP 停用 | Accepted（2026-10-13 已实现；仓库尚未改名） |
+| [0012](0012-visual-identity.zh-cn.md) | 视觉形象：秘密账簿，以一枚火漆印为标志 | Accepted（只接受风格；dApp 之后再做） |
 
 ## A.1
 

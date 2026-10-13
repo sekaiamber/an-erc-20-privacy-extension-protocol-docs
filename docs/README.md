@@ -18,6 +18,7 @@ This directory contains all research and design documents of Casata (until 2026-
 | 09 | [Development guide](09-development.md) | How to use the repository, submodules and the contract environment |
 | 10 | [Family tool: Wrapper](10-wrapper.md) | The generic Wrapper: the standard DeFi path for tokens without the public-ledger module |
 | 11 | [Family tool: Regulatory Committee](11-regulatory-committee.md) | Threshold regulator key with on-chain membership, policies and view audit trail; per-project tool |
+| 12 | [Visual style](12-visual-style.md) | What Casata looks like: the secret ledger, colour, type, the seal, and how a sculpture on the home page fits in |
 | — | [Glossary](glossary.md) | Definitions of terms used in the project |
 | — | [References](references.md) | Links to EIPs, papers and code repositories |
 | — | [ADR](adr/README.md) | Architecture decision records |

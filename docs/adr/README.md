@@ -24,6 +24,7 @@ ADR-0001 to ADR-0010 were written before the project was named Casata ([0011](00
 | [0005](0005-family-wrapper.md) | A family-level Wrapper as a tool, not a replacement for Track A | Accepted (terms updated by 0008) |
 | [0004](0004-regulatory-access-principles.md) | Regulatory access principles | Accepted |
 | [0011](0011-project-name-casata.md) | The project is named Casata; the acronym PEP is retired | Accepted (implemented 2026-10-13; repository rename pending) |
+| [0012](0012-visual-identity.md) | Visual identity: the secret ledger, and a wax seal as the mark | Accepted (style only; the dApp follows later) |
 
 ## A.1
 

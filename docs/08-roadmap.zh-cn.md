@@ -44,6 +44,7 @@
 - [x] ADR-0010（2026-10-13 接受，同日完成）：改写 07 §1、§5、§6、§7、§13.1；A.1 和 B.1 各出新版本（`mint` 按转账规则、折叠为独立函数、没有公开账本时 `approve` 回退、去掉 `prepare` / `cancel`）；dApp；重新部署
 - [ ] ADR-0011（2026-10-13 接受）：项目定名 Casata（全称 Casata Segreta），向导定名 Cicerone；`pep()` / `IPEP*` / `PEPWrapper` 和 EIP-712 域名在 ADR-0010 的同一批 Variant 版本里改名。除仓库改名（由 owner 在 GitHub 上操作）外都已完成
 - [x] ADR-0010 和 ADR-0011 落到文档（2026-10-13）：07、A.1 0.6.0（01-design、04-modules）、B.1 0.2.0、06、10、11、各索引和 README
+- [ ] ADR-0012（2026-10-14 接受）：视觉形象。以秘密账簿为风格，以带纹章的火漆印为标志 → `12-visual-style.md`、`brand/seal/`。dApp 里已有、还没有用钱包试过的：品牌和字体；代币页的账簿行、封存记号和页边批注；日间 / 夜间开关；带公开账本的 A.1 代币页上的铸给机密 id 和 `0x81` 销毁；B.1 部署表单；入口页的 Cicerone。首页是独立的应用，尚未开始
 - [x] A.1 0.6.0 和 B.1 0.2.0 落到合约和 dApp（2026-10-13）：Casata 的名字、`fold(id, payload)`、按 payload 规则的 `mint`、去掉 `prepare` / `cancel`、没有公开账本时 `approve` 回退、签名前的句柄提示；合约 70 个测试通过
 - [x] 测试网上的三个代币已按 A.1 0.6.0 和 B.1 0.2.0 重新部署，并在链上完整跑过一遍（2026-10-13）→ `tracks/track-a/variant-1/03-deployments.md`、`tracks/track-b/variant-1/02-deployments.md`
 - [ ] B.1：在浏览器里把 dApp 页面点一遍；监管视图的 B.1 解码器；dApp 里的部署表单

@@ -23,6 +23,8 @@ Registers the EIPs, papers, code repositories and articles cited by this project
 | Blockchain Privacy and Regulatory Compliance: Towards a Practical Equilibrium (2023) | Theoretical foundation of Privacy Pools |
 | Bulletproofs: Short Proofs for Confidential Transactions and More | Range proofs |
 | Zether: Towards Privacy in a Smart Contract World (Bünz, Agrawal, Zamani, Boneh, 2019) | Confidential transfers with the account model + ElGamal ciphertexts + ZK; raises the front-running problem and the epoch solution, the direct counterpart of the A.1 pending design |
+| ["Sigillo", Enciclopedia Italiana (Treccani)](https://www.treccani.it/enciclopedia/sigillo_(Enciclopedia-Italiana)/) | Seals and their legends: script, opening sign, formula, dates. Source for the seal in 12 Visual style |
+| ["Casata", Du Cange, Glossarium mediae et infimae latinitatis](http://ducange.enc.sorbonne.fr/CASATA) | The word in medieval Latin: a dwelling with land enough for one family, and the family itself |
 
 ## Projects / code repositories
 

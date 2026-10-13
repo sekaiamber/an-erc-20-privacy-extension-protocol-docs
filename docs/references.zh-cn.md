@@ -23,6 +23,8 @@
 | Blockchain Privacy and Regulatory Compliance: Towards a Practical Equilibrium (2023) | Privacy Pools 的理论基础 |
 | Bulletproofs: Short Proofs for Confidential Transactions and More | 范围证明 |
 | Zether: Towards Privacy in a Smart Contract World（Bünz, Agrawal, Zamani, Boneh, 2019） | 账户模型 + ElGamal 密文 + ZK 的机密转账；提出 front-running 问题与 epoch 解法，A.1 pending 设计的直接对照 |
+| [「Sigillo」，《意大利百科全书》（Treccani）](https://www.treccani.it/enciclopedia/sigillo_(Enciclopedia-Italiana)/) | 印章及其铭文：字体、起始记号、格式、年份。12 视觉风格里印的依据 |
+| [「Casata」，Du Cange《中世纪与晚期拉丁语词典》](http://ducange.enc.sorbonne.fr/CASATA) | 这个词在中世纪拉丁语里的意思：足以养活一家的住所和土地，以及这一家人 |
 
 ## 项目 / 代码库
 
