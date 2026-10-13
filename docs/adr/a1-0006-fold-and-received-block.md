@@ -2,7 +2,7 @@ English | [中文](a1-0006-fold-and-received-block.zh-cn.md)
 
 # A1-0006 Pure fold `0x80` and `lastReceivedAtBlock`
 
-- Status: Accepted
+- Status: Accepted (the entry point of the fold is to change under [0010](0010-erc20-surface-tradeoffs.md), item 5; not implemented yet)
 - Date: 2026-09-26
 - Scope: A.1 (`lastReceivedAtBlock` is explicitly **not** promoted to a family convention)
 

@@ -2,7 +2,7 @@
 
 # 0003 ERC-20 表面约定：复用标准选择器与尾部 payload
 
-- 状态：Accepted
+- 状态：Accepted（第 1、6、7 条由 [0010](0010-erc20-surface-tradeoffs.zh-cn.md) 修订，0010 尚未实现）
 - 日期：2026-09-24
 
 ## 背景

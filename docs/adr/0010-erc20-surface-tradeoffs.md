@@ -2,7 +2,7 @@ English | [中文](0010-erc20-surface-tradeoffs.zh-cn.md)
 
 # 0010 ERC-20 compatibility is decided item by item; transfer stays the shared verb
 
-- Status: Proposed (draft of 2026-10-13, second revision after the owner's review of the open points; no code or other document has been changed for it)
+- Status: Accepted (2026-10-13; not implemented yet: the conventions, contracts and dApp still follow ADR-0003 until the work listed under Consequences is done)
 - Date: 2026-10-13
 - Scope: Family (amends items 1, 6 and 7 of [ADR-0003](0003-erc20-surface-conventions.md); affects [07](../07-family-conventions.md) §1, §5, §6, §7 and §13.1, the fold entry point of [A1-0006](a1-0006-fold-and-received-block.md), and decision M1 of the [A.1 module specification](../tracks/track-a/variant-1/04-modules.md))
 
@@ -105,7 +105,7 @@ What ADR-0003 still says after this ADR: items 2, 3, 4 and 5 unchanged. Item 1 h
 - Negative: a wallet shows the handle as an amount at signing time. Item 9 is a mitigation in our own client and does nothing for other clients.
 - Negative: on a token with the public ledger, a `mint` to a confidential id sent without its payload creates a public balance that nobody controls. This is the rule transfers already follow (ADR-0003, item 4); it now applies to the minter as well.
 - Negative: ERC-2771 forwarders remain unsupported, as in ADR-0003.
-- Work that follows once this is accepted, none of it started:
+- Work that follows, none of it started:
 
   | Where | Change |
   | --- | --- |

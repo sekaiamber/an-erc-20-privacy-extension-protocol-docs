@@ -2,7 +2,7 @@ English | [中文](0003-erc20-surface-conventions.zh-cn.md)
 
 # 0003 ERC-20 surface conventions: reuse standard selectors and trailing payload
 
-- Status: Accepted
+- Status: Accepted (items 1, 6 and 7 amended by [0010](0010-erc20-surface-tradeoffs.md), which is not implemented yet)
 - Date: 2026-09-24
 
 ## Context

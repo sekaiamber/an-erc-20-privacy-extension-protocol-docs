@@ -2,7 +2,7 @@
 
 # A1-0006 纯折叠 `0x80` 与 `lastReceivedAtBlock`
 
-- 状态：Accepted
+- 状态：Accepted（折叠的入口将按 [0010](0010-erc20-surface-tradeoffs.zh-cn.md) 第 5 条改动；尚未实现）
 - 日期：2026-09-26
 - 范围：A.1（`lastReceivedAtBlock` 明确**不**升为家族约定）
 
