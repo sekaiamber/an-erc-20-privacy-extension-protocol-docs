@@ -34,10 +34,10 @@ The base of every Variant is a privacy-only ledger. Whether a token also has a p
 ```
 Track A  Encrypted accounts: one homomorphic-ciphertext balance per account
   └─ A.1  ElGamal on Baby Jubjub + Groth16, account = public key                ← mainline
-       ├─ with the public ledger            contract A1LedgerToken,  pep() A:1:0.5.0   ← prototype on BSC testnet
-       └─ privacy-only, with the Wrapper port   contract A1PrivateToken, pep() A:1:0.5.0   ← prototype on BSC testnet
+       ├─ with the public ledger            contract A1LedgerToken,  casata() A:1:0.6.0   ← prototype on BSC testnet
+       └─ privacy-only, with the Wrapper port   contract A1PrivateToken, casata() A:1:0.6.0   ← prototype on BSC testnet
 Track B  Notes: a tree of commitments and a set of nullifiers, no accounts
-  └─ B.1  Poseidon notes, one join-split circuit, Groth16                       ← deployed on BSC testnet, `B:1:0.1.0` (ADR-0009)
+  └─ B.1  Poseidon notes, one join-split circuit, Groth16                       ← deployed on BSC testnet, `B:1:0.2.0` (ADR-0009)
 Runtime module  generic Wrapper (10-wrapper): issues wTOKEN for tokens without the public ledger   ← deployed (CasataWrapper)
 Family tool     Regulatory Committee (11): threshold regulator key, membership, policies, audit    ← prototype
 ```

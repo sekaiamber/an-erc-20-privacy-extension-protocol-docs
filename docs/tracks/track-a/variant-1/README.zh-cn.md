@@ -2,7 +2,7 @@
 
 # A.1：ElGamal 加密账户 + Groth16
 
-版本：`0.6.0`（内核加模块，见 [ADR-0008](../../../adr/0008-modules.zh-cn.md)；0.6.0 已实现但尚未部署，BSC testnet 上的代币是 0.5.0）　状态：`Draft`
+版本：`0.6.0`（内核加模块，见 [ADR-0008](../../../adr/0008-modules.zh-cn.md)；0.6.0 已实现，2026-10-13 起部署在 BSC testnet 上）　状态：`Draft`
 
 已实现为 `A1LedgerToken` 与 `A1PrivateToken`，并于 2026-10-13 部署到 BSC testnet（[03-deployments](03-deployments.zh-cn.md)）。早于模块结构的两个独立合约 `ConfidentialERC20A1` 0.4.0 与 `ConfidentialERC20B1` 0.2.0 仍留在链上，dApp 已不再打开它们。
 
@@ -27,8 +27,8 @@ A.1 0.6.0 声明支持且只支持这三个模块；以后登记的模块需要�
 
 | 组合 | 模块 | 目前的部署形式 | 记录 |
 | --- | --- | --- | --- |
-| 带公开账本 | 公开账本、角色铸造 | `A1LedgerToken`，`A:1:0.6.0`（已部署的是 `A:1:0.5.0`） | [02-security-review.md](02-security-review.zh-cn.md)、[03-deployments.md](03-deployments.zh-cn.md) |
-| 纯隐私 | 角色铸造、Wrapper 端口 | `A1PrivateToken`，`A:1:0.6.0`（已部署的是 `A:1:0.5.0`） | [03-deployments.md](03-deployments.zh-cn.md)；0.5.0 之前那个独立合约的记录见 [variant-1-privacy-only](../variant-1-privacy-only/README.zh-cn.md) |
+| 带公开账本 | 公开账本、角色铸造 | `A1LedgerToken`，`A:1:0.6.0` | [02-security-review.md](02-security-review.zh-cn.md)、[03-deployments.md](03-deployments.zh-cn.md) |
+| 纯隐私 | 角色铸造、Wrapper 端口 | `A1PrivateToken`，`A:1:0.6.0` | [03-deployments.md](03-deployments.zh-cn.md)；0.5.0 之前那个独立合约的记录见 [variant-1-privacy-only](../variant-1-privacy-only/README.zh-cn.md) |
 
 ## 隐私评估（家族约定 §12）
 

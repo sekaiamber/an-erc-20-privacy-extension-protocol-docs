@@ -6,7 +6,7 @@
 
 Casata 是一个研究项目，维护一族面向以太坊及 EVM 兼容链的隐私代币合约。家族里的代币为持有与转账提供可选的隐私保护（隐藏金额、隐藏收付双方、或二者兼有），保留 ERC-20 中对这类代币仍然为真的部分，并在设计上向监管方开放只读访问。这些合约公开发布，任何人都可以基于它们发行代币，或在其基础上自行定制。项目同时研究隐私与合规、可组合性、Gas 成本之间的权衡。它不是发币项目。
 
-2026-10-13 之前，项目名为「ERC-20 Privacy Extension Protocol」（PEP），见 [ADR-0011](docs/adr/0011-project-name-casata.zh-cn.md)。各仓库和已部署的合约目前仍带着旧名字。
+2026-10-13 之前，项目名为「ERC-20 Privacy Extension Protocol」（PEP），见 [ADR-0011](docs/adr/0011-project-name-casata.zh-cn.md)。各仓库目前仍带着旧名字。
 
 本仓库是整个项目的**主仓库（monorepo 入口）**，包含研究文档与设计规范；合约代码位于独立仓库并以 git submodule 的方式挂载在 `contracts/` 目录。
 

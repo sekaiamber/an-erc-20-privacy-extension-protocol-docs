@@ -6,7 +6,7 @@ Version: `0.6.0`. Status: `Draft`. Date: 2026-10-13
 
 This document is the structure of A.1 under [ADR-0008](../../../adr/0008-modules.md): one core and three modules.
 
-**Status of the implementation (2026-10-13).** This document describes 0.6.0. It is implemented in the contracts repository (`a2c0ae0`, all tests pass) and in the dApp (`e06424a`), and it is not deployed yet; §9.1 lists what it changes. Deployed is 0.5.0: `A1LedgerToken` and `A1PrivateToken`, both on BSC testnet ([03-deployments](03-deployments.md)) and run end to end on chain, with the dApp targeting them. In 0.5.0, `mintConfidential` and the `0x81` burn on the token with the public ledger have only been run locally, and the dApp pages have not been exercised in a browser.
+**Status of the implementation (2026-10-13).** This document describes 0.6.0. It is implemented in the contracts repository (`a2c0ae0`, all tests pass) and in the dApp (`e06424a`); §9.1 lists what it changes. Both compositions are deployed on BSC testnet ([03-deployments](03-deployments.md)) and were run end to end on chain on 2026-10-13, and the dApp targets them. Not done yet: a `mint` to a confidential id and the `0x81` burn on the token with the public ledger have only been run locally, and the dApp pages have not been exercised in a browser.
 
 The core is specified in [01-design](01-design.md). No circuit changes.
 
@@ -181,7 +181,7 @@ Relative to the two deployed contracts. Nothing here changes a circuit, a payloa
 
 ### 9.1 What changes at 0.6.0
 
-Relative to 0.5.0. Decision records: [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.md) and [ADR-0011](../../../adr/0011-project-name-casata.md). No circuit changes, so the proving keys and the verifier contracts stay the same. Items 1 to 6 are implemented (2026-10-13); item 7, the redeployment, is not done.
+Relative to 0.5.0. Decision records: [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.md) and [ADR-0011](../../../adr/0011-project-name-casata.md). No circuit changes, so the proving keys and the verifier contracts stay the same. All seven items are done (2026-10-13). The redeployment put a new set of verifiers and a new window table on chain with the ledger token, and kept the Wrapper.
 
 | # | Change | Affects |
 | --- | --- | --- |

@@ -2,7 +2,7 @@ English | [中文](README.zh-cn.md)
 
 # A.1: ElGamal encrypted accounts + Groth16
 
-Version: `0.6.0` (core plus modules, [ADR-0008](../../../adr/0008-modules.md); 0.6.0 is implemented and not deployed yet, the tokens on BSC testnet are 0.5.0). Status: `Draft`.
+Version: `0.6.0` (core plus modules, [ADR-0008](../../../adr/0008-modules.md); 0.6.0 is implemented and deployed on BSC testnet since 2026-10-13). Status: `Draft`.
 
 Implemented as `A1LedgerToken` and `A1PrivateToken` and deployed on BSC testnet on 2026-10-13 ([03-deployments](03-deployments.md)). The two standalone contracts that predate the module structure, `ConfidentialERC20A1` 0.4.0 and `ConfidentialERC20B1` 0.2.0, remain on chain and are no longer opened by the dApp.
 
@@ -27,8 +27,8 @@ How the parts combine, how supply is accounted for across them, and what changes
 
 | Composition | Modules | Deployed as | Records |
 | --- | --- | --- | --- |
-| With the public ledger | Public ledger, role issuance | `A1LedgerToken`, `A:1:0.6.0` (deployed: `A:1:0.5.0`) | [02-security-review.md](02-security-review.md), [03-deployments.md](03-deployments.md) |
-| Privacy-only | Role issuance, Wrapper port | `A1PrivateToken`, `A:1:0.6.0` (deployed: `A:1:0.5.0`) | [03-deployments.md](03-deployments.md); for the standalone contract before 0.5.0: [variant-1-privacy-only](../variant-1-privacy-only/README.md) |
+| With the public ledger | Public ledger, role issuance | `A1LedgerToken`, `A:1:0.6.0` | [02-security-review.md](02-security-review.md), [03-deployments.md](03-deployments.md) |
+| Privacy-only | Role issuance, Wrapper port | `A1PrivateToken`, `A:1:0.6.0` | [03-deployments.md](03-deployments.md); for the standalone contract before 0.5.0: [variant-1-privacy-only](../variant-1-privacy-only/README.md) |
 
 ## Privacy evaluation (family conventions §12)
 

@@ -48,4 +48,4 @@ Track A        状态模型与信任基础
 
 | Variant | 内核 | 收付方 | 金额 | 监管 | 声明支持的模块 | 状态 |
 | --- | --- | --- | --- | --- | --- | --- |
-| [A.1](variant-1/README.zh-cn.md) | Baby Jubjub 上的 ElGamal + Groth16，账户 = 公钥 | 化名：id 稳定、可关联 | 隐藏 | 每笔转账的第三份密文，在电路里强制 | 0.6.0 声明支持：公开账本、角色铸造、Wrapper 端口 | 0.6.0 已实现；0.5.0：两种组合已部署到 BSC testnet |
+| [A.1](variant-1/README.zh-cn.md) | Baby Jubjub 上的 ElGamal + Groth16，账户 = 公钥 | 化名：id 稳定、可关联 | 隐藏 | 每笔转账的第三份密文，在电路里强制 | 0.6.0 声明支持：公开账本、角色铸造、Wrapper 端口 | 0.6.0；两种组合已部署到 BSC testnet |

@@ -6,7 +6,7 @@ English | [中文](README.zh-cn.md)
 
 Casata is a research project that maintains a family of privacy token contracts for Ethereum and EVM-compatible chains. A token of the family gives its holders optional privacy for holdings and transfers (hiding amounts, hiding payer and payee, or both), keeps the parts of ERC-20 that stay true for such a token, and gives a regulator read access by design. The contracts are published for anyone to issue a token from or to build on. The project also studies the trade-offs against compliance, composability and gas cost. It is not a token launch.
 
-Until 2026-10-13 the project was called "ERC-20 Privacy Extension Protocol" (PEP); see [ADR-0011](docs/adr/0011-project-name-casata.md). The repositories and the deployed contracts still carry the old name.
+Until 2026-10-13 the project was called "ERC-20 Privacy Extension Protocol" (PEP); see [ADR-0011](docs/adr/0011-project-name-casata.md). The repositories still carry the old name.
 
 This repository is the **main repository (monorepo entry point)** of the whole project, containing the research documents and design specifications; the contract code lives in a separate repository mounted as a git submodule under the `contracts/` directory.
 

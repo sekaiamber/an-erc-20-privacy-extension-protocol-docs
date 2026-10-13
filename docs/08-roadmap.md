@@ -41,10 +41,11 @@ Status: `Draft`
 - [x] B.1: token contract `B1NoteToken` with role issuance and the Wrapper port (2026-10-13): about 1.37M gas per operation, measured locally
 - [x] B.1: dApp page `/tracks/b/1` (2026-10-13): key, history walk, notes, proofs in the browser; client library checked against the circuit offline
 - [x] B.1 deployed on BSC testnet (2026-10-13); all five operations run on chain → `tracks/track-b/variant-1/02-deployments.md`
-- [ ] ADR-0010 (accepted 2026-10-13): reword 07 §1, §5, §6, §7 and §13.1; new versions of A.1 and B.1 (`mint` by the transfer rule, fold as its own function, `approve` reverting without the public ledger, no `prepare` / `cancel`); dApp; redeploy
-- [ ] ADR-0011 (accepted 2026-10-13): the project is named Casata (long form Casata Segreta), the guide Cicerone; `pep()` / `IPEP*` / `PEPWrapper` and the EIP-712 domain are renamed in the same Variant versions as ADR-0010
+- [x] ADR-0010 (accepted 2026-10-13, done the same day): reword 07 §1, §5, §6, §7 and §13.1; new versions of A.1 and B.1 (`mint` by the transfer rule, fold as its own function, `approve` reverting without the public ledger, no `prepare` / `cancel`); dApp; redeploy
+- [ ] ADR-0011 (accepted 2026-10-13): the project is named Casata (long form Casata Segreta), the guide Cicerone; `pep()` / `IPEP*` / `PEPWrapper` and the EIP-712 domain are renamed in the same Variant versions as ADR-0010. Done except for renaming the repositories, which the owner does on GitHub
 - [x] ADR-0010 and ADR-0011 in the documents (2026-10-13): 07, A.1 0.6.0 (01-design, 04-modules), B.1 0.2.0, 06, 10, 11, the indexes and the READMEs
-- [x] A.1 0.6.0 and B.1 0.2.0 in the contracts and the dApp (2026-10-13): Casata names, `fold(id, payload)`, `mint` by the payload rule, no `prepare` / `cancel`, `approve` reverting without the public ledger, the handle notice before a signature; 70 contract tests pass. Redeployment of the three testnet tokens still to do
+- [x] A.1 0.6.0 and B.1 0.2.0 in the contracts and the dApp (2026-10-13): Casata names, `fold(id, payload)`, `mint` by the payload rule, no `prepare` / `cancel`, `approve` reverting without the public ledger, the handle notice before a signature; 70 contract tests pass
+- [x] The three testnet tokens redeployed as A.1 0.6.0 and B.1 0.2.0 and run end to end on chain (2026-10-13) → `tracks/track-a/variant-1/03-deployments.md`, `tracks/track-b/variant-1/02-deployments.md`
 - [ ] B.1: browser pass of the dApp page; B.1 decoder for the regulator view; deploy form in the dApp
 - [ ] Threat model review
 - [ ] `Review` versions of the family conventions and the A.1 design

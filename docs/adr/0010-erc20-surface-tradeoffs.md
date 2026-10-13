@@ -2,7 +2,7 @@ English | [中文](0010-erc20-surface-tradeoffs.zh-cn.md)
 
 # 0010 ERC-20 compatibility is decided item by item; transfer stays the shared verb
 
-- Status: Accepted (2026-10-13; implemented the same day in the conventions, the contracts and the dApp as A.1 0.6.0 and B.1 0.2.0; the three testnet tokens are not redeployed yet)
+- Status: Accepted (2026-10-13; implemented the same day in the conventions, the contracts and the dApp as A.1 0.6.0 and B.1 0.2.0, and the three testnet tokens were redeployed)
 - Date: 2026-10-13
 - Scope: Family (amends items 1, 6 and 7 of [ADR-0003](0003-erc20-surface-conventions.md); affects [07](../07-family-conventions.md) §1, §5, §6, §7 and §13.1, the fold entry point of [A1-0006](a1-0006-fold-and-received-block.md), and decision M1 of the [A.1 module specification](../tracks/track-a/variant-1/04-modules.md))
 
