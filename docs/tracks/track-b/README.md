@@ -2,7 +2,7 @@ English | [中文](README.zh-cn.md)
 
 # Track B: notes
 
-Status: `Draft`. Opened by [ADR-0009](../../adr/0009-track-b-notes.md) on 2026-10-13. The contracts and the circuit of B.1 are implemented and tested locally. Nothing is deployed, and there is no client yet.
+Status: `Draft`. Opened by [ADR-0009](../../adr/0009-track-b-notes.md) on 2026-10-13. The contracts and the circuit of B.1 are implemented and tested locally. The dApp has a page for it. Nothing is deployed.
 
 > Until 2026-10-12 the name "Track B" meant a token without a public ledger. That is now a composition of A.1 ([ADR-0008](../../adr/0008-modules.md)); its documents are in [track-a/variant-1-privacy-only](../track-a/variant-1-privacy-only/README.md). The deployed contract that reports `B:1:0.2.0` belongs to it, not to this Track.
 

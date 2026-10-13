@@ -2,7 +2,7 @@ English | [中文](01-design.zh-cn.md)
 
 # B.1 design (0.1.0-draft)
 
-Status: `Draft`. The contracts and the circuit are implemented and tested locally (`contracts/contracts/track-b/variant-1/`, `contracts/circuits/track-b/variant-1/join_split.circom`). Nothing is deployed, and the dApp has no client for it yet. Gas, constraint count and proving time are measured locally (§12).
+Status: `Draft`. The contracts and the circuit are implemented and tested locally (`contracts/contracts/track-b/variant-1/`, `contracts/circuits/track-b/variant-1/join_split.circom`). The dApp has a page for it (`/tracks/b/1`). Nothing is deployed, so the page has not been used against a live token. Gas, constraint count and proving time are measured locally (§12).
 
 Track: [B, notes](../README.md). Opened by [ADR-0009](../../../adr/0009-track-b-notes.md).
 

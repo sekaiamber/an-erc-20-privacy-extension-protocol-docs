@@ -2,7 +2,7 @@
 
 # Track B：note 模型
 
-状态：`Draft`。由 [ADR-0009](../../adr/0009-track-b-notes.zh-cn.md) 于 2026-10-13 开设。B.1 的合约和电路已在本地实现并通过测试。还没有部署，也还没有客户端。
+状态：`Draft`。由 [ADR-0009](../../adr/0009-track-b-notes.zh-cn.md) 于 2026-10-13 开设。B.1 的合约和电路已在本地实现并通过测试。dApp 里已有它的页面。还没有部署。
 
 > 2026-10-12 之前，「Track B」指的是没有公开账本的代币。它现在是 A.1 的一种组合（[ADR-0008](../../adr/0008-modules.zh-cn.md)），文档在 [track-a/variant-1-privacy-only](../track-a/variant-1-privacy-only/README.zh-cn.md)。已部署的、自报 `B:1:0.2.0` 的合约属于那种组合，不属于本 Track。
 

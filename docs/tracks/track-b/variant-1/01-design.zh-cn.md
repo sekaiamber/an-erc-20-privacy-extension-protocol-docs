@@ -2,7 +2,7 @@
 
 # B.1 设计（0.1.0-draft）
 
-状态：`Draft`。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`）。还没有部署，dApp 里也还没有它的客户端。gas、约束数和证明时间都是本地实测（§12）。
+状态：`Draft`。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`）。dApp 里已有它的页面（`/tracks/b/1`）。还没有部署，所以这个页面还没有对着真实代币用过。gas、约束数和证明时间都是本地实测（§12）。
 
 所属 Track：[B，note 模型](../README.zh-cn.md)。由 [ADR-0009](../../../adr/0009-track-b-notes.zh-cn.md) 开设。
 
