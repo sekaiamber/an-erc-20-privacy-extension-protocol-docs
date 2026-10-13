@@ -4,7 +4,7 @@
 
 设计版本：`0.5.0-draft`（内核加模块，见 [ADR-0008](../../../adr/0008-modules.zh-cn.md)）　状态：`Draft`
 
-目前已部署的是两个早于模块结构的独立合约：`ConfidentialERC20A1` 0.4.0（带公开账本）和 `ConfidentialERC20B1` 0.2.0（纯隐私）。
+已在合约仓库实现为 `A1LedgerToken` 与 `A1PrivateToken`（2026-10-13），尚未部署。目前已部署的是两个早于模块结构的独立合约：`ConfidentialERC20A1` 0.4.0（带公开账本）和 `ConfidentialERC20B1` 0.2.0（纯隐私）。
 
 ## 一句话
 

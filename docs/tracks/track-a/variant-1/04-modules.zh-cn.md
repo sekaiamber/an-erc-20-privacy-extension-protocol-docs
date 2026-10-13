@@ -4,7 +4,9 @@
 
 版本：`0.5.0-draft`　状态：`Draft`　日期：2026-10-13
 
-本文是 A.1 按 [ADR-0008](../../../adr/0008-modules.zh-cn.md) 调整后的目标结构：一个内核加三个模块。它是合约重构的规格。**目前还没有实现。** 同样的行为现在由两个独立的合约提供：`ConfidentialERC20A1`（0.4.0）和 `ConfidentialERC20B1`（0.2.0）；重构时会改变什么，见 §9。
+本文是 A.1 按 [ADR-0008](../../../adr/0008-modules.zh-cn.md) 调整后的结构：一个内核加三个模块。
+
+**实现状态（2026-10-13）。** 合约仓库已按本文实现为 `A1LedgerToken` 与 `A1PrivateToken`；全部测试通过，每项实测操作的 gas 与原来的独立合约相差都在 300 以内。**尚未部署**：BSC testnet 上的代币仍是独立合约 `ConfidentialERC20A1`（0.4.0）和 `ConfidentialERC20B1`（0.2.0），dApp 也仍然面向它们。改变了什么见 §9。
 
 内核的规格在 [01-design](01-design.zh-cn.md)。电路不变。
 
@@ -73,7 +75,7 @@ A.1 内核                 加密账户的纯隐私账本
 | wrap | Wrapper 端口 | `−x` | 0 | `+x` | `−x` | 0 |
 | unwrap | Wrapper 端口 | `+x` | 0 | `−x` | `+x` | 0 |
 
-**模块之间唯一的交汇点。** 带公开账本时，机密价值以公开代币的形式托管在代币自身的地址上，所以 `balanceOf(token) == shieldedSupply()`。角色铸造或 Wrapper 端口创建、销毁机密价值时，托管量必须跟着变。因此内核有一对内部钩子：`_onConfidentialCreated(amount)` 与 `_onConfidentialDestroyed(amount)`。它们在内核里什么都不做；公开账本重写它们，用来铸造或销毁托管的代币。这就是公开账本在继承顺序里排第一的原因。
+**模块之间唯一的交汇点。** 带公开账本时，机密价值以公开代币的形式托管在代币自身的地址上，所以 `balanceOf(token) == shieldedSupply()`。角色铸造或 Wrapper 端口创建、销毁机密价值时，托管量必须跟着变。因此内核声明了一对内部钩子：`_onConfidentialCreated(id, amount)` 与 `_onConfidentialDestroyed(id, amount)`，由 ERC-20 表面实现：公开账本用它们铸造或销毁托管的代币；没有公开账本的代币则发出来自或去往零地址的 `Transfer`。这就是公开账本在继承顺序里排第一的原因。
 
 ## 4. 模块
 
@@ -93,7 +95,7 @@ A.1 内核                 加密账户的纯隐私账本
 | | |
 | --- | --- |
 | 种类 | 编译时 |
-| 增加 | `MINTER_ROLE`。`mintConfidential(id, amount)`：调用 `_creditPublic`，发出 `Transfer(0x0, id, amount)` 与 `Minted`。payload 类型 `0x81`，调用形式 `transferFrom(id, 0x0, amount)`：以 `to = 0x0` 调用 `_debitPublic`，发出 `Transfer(id, 0x0, amount)` 与 `Burned`。带公开账本时还有 `mint(to, amount)`，即公开铸造 |
+| 增加 | `MINTER_ROLE`。`mintConfidential(id, amount)`：调用 `_creditPublic`，发出 `Transfer(0x0, id, amount)` 与 `Minted`。payload 类型 `0x81`，调用形式 `transferFrom(id, 0x0, amount)`：以 `to = 0x0` 调用 `_debitPublic`，发出 `Transfer(id, 0x0, amount)` 与 `Burned`。带公开账本时，这两个操作的 `Transfer` 事件是代币地址上托管量的铸造与销毁，另外还有 `mint(to, amount)`，即公开铸造 |
 | 谁能销毁 | 持有人：`0x81` 由持有人的证明授权，不由角色授权 |
 | 限额 | §3 的供应上限 |
 | 接口（草案） | `IPEPRoleIssuance { function mintConfidential(address id, uint256 amount) external; }` |
@@ -106,7 +108,7 @@ A.1 内核                 加密账户的纯隐私账本
 | | |
 | --- | --- |
 | 种类 | 编译时端口；运行时模块是家族的 `PEPWrapper`（[10](../../../10-wrapper.zh-cn.md)） |
-| 增加 | `wrapperMint(recipient, amount)`：`recipient` 是 20 字节的 id；要求 `amount ≤ wrappedOut`，然后 `wrappedOut −= amount` 并调用 `_creditPublic`。`wrapperBurn(from, to, amount, payload)`：以 `to` = 包装代币的接收地址调用 `_debitPublic`，然后 `wrappedOut += amount`。`wrapper()`、`wrappedOut()` |
+| 增加 | `wrapperMint(recipient, amount)`：`recipient` 是 20 字节的 id；要求 `amount ≤ wrappedOut`，然后 `wrappedOut −= amount` 并调用 `_creditPublic`。`wrapperBurn(from, to, amount, payload)`：以 `to` = 包装代币的接收地址调用 `_debitPublic`，然后 `wrappedOut += amount`。`wrapper()`、`wrappedOut()`。事件 `WrapperMinted` 与 `WrapperBurned`；端口不发 `Minted` 或 `Burned` |
 | 谁能调用 | 只有 `wrapper()`。它在构造时设置，或由管理员设置一次，之后不能更换 |
 | 限额 | 记入量永远不超过 `wrappedOut`：被攻破的 Wrapper 最多把经它出去的数量记错人，不能增发（评审 B1-F2） |
 | 接口 | `IPEPWrappable`，不变 |
@@ -135,8 +137,8 @@ A.1 内核                 加密账户的纯隐私账本
 | **纯隐私** | 有 | 无 | 有 | 有 | `ConfidentialERC20B1` 0.2.0（[记录](../variant-1-privacy-only/README.zh-cn.md)） |
 
 - **继承顺序**：内核、公开账本、角色铸造、Wrapper 端口（07 §13.2）。
-- **公开账本与 Wrapper 端口同时存在**：可以，因为两者用的都是 §2 的原语。目前看不到用途，所以不构建也不测试。
-- **合约名**在重构时确定。提议：`A1Core`（抽象）、`A1PublicLedger`、`A1RoleIssuance`、`A1WrapperPort`（抽象模块），以及两个可部署的代币 `A1LedgerToken` 与 `A1PrivateToken`。
+- **公开账本与 Wrapper 端口同时存在**：不构建也不测试。目前看不到用途，而且还差一样东西：unshield 证明绑定了 `to`，但没有绑定这是哪一种出金。现在各种出金不会混淆，是因为它们接受的收款地址互不相交：销毁是零地址，unshield 和 wrap 是非零地址，而已构建的组合里没有同时带后两者的。同时带两者的代币必须把出金的种类也绑进证明。
+- **合约**：`A1Core`（抽象内核）、`A1NoLedger`（没有公开余额的 ERC-20 表面）、`A1PublicLedger`、`A1RoleIssuance`、`A1WrapperPort`（抽象模块），以及两个可部署的代币 `A1LedgerToken` 与 `A1PrivateToken`。一种组合在 `A1NoLedger` 和 `A1PublicLedger` 之间恰好取一个。
 
 ## 7. 探针
 
@@ -158,7 +160,7 @@ A.1 内核                 加密账户的纯隐私账本
 
 ## 9. 0.5.0 会改变什么
 
-相对于已部署的两个合约。下面没有任何一项会改变电路、payload 布局，或客户端为 `0x01` / `0x80` 解析的事件。
+相对于已部署的两个合约。下面没有任何一项会改变电路、payload 布局，或客户端为 `0x01` / `0x80` 解析的事件。第 1 到 6 项和第 9 项已在合约仓库完成；第 7、8 项尚未做。
 
 | # | 变化 | 影响 |
 | --- | --- | --- |
@@ -169,19 +171,21 @@ A.1 内核                 加密账户的纯隐私账本
 | 5 | 带公开账本的组合：新增 `mintConfidential` 和 `0x81` | 合约、测试 |
 | 6 | 两种组合都有 `issuedSupply()` | 合约 |
 | 7 | dApp 按 `pep()` 选页面、按模块开关功能，不再是每个 Track 一条路由 | dApp |
-| 8 | 两个测试网代币重新部署。验证器合约和窗口表按地址复用 | 部署 |
+| 8 | 两个测试网代币重新部署。纯隐私代币复用新一次带公开账本代币部署出来的验证器和窗口表，以及链上已有的 Wrapper | 部署 |
+| 9 | wrap 只发 `WrapperBurned`。原来的独立合约还会同时发 `Burned`，dApp 的监管视图会把它算成第二笔流出 | 合约、监管视图 |
 
 ## 10. 评审与测试
 
 - 已发布的两种组合是作为独立合约评审的（[02-security-review](02-security-review.zh-cn.md)、[纯隐私组合的评审](../variant-1-privacy-only/03-security-review.zh-cn.md)）。重构之后要针对差异重新评审，重点是 §3 的钩子，以及每条铸造路径是否都按 `issuedSupply()` 检查上限。
 - 测试按模块、按实际发布的组合分别运行。每次操作之后都断言供应量守恒（§3 的表）。
-- 目前的字节码：带公开账本 17,060 字节，纯隐私 17,195 字节；上限是 24,576。重构之后每种组合重新测量。
+- 字节码：`A1LedgerToken` 18,339 字节，`A1PrivateToken` 17,345 字节；上限是 24,576。原来的独立合约是 17,060 和 17,195。
+- gas：用同一套测试在本地与独立合约逐项对比，每项操作相差都在 300 gas 以内。新增的一项：带公开账本时的 `0x81` 销毁，账户首次花费时为 528k。
 
-## 11. 待定决策
+## 11. 决策
 
-每一项都有默认值，本文按默认值写。
+四项都在 2026-10-13 按草案采纳，并已实现。
 
-| # | 决策 | 默认 | 另一种做法 |
+| # | 决策 | 采纳 | 未采用的做法 |
 | --- | --- | --- | --- |
 | M1 | 机密铸造叫什么 | 每种组合里都叫 `mintConfidential(id, amount)`；`mint(to, amount)` 永远是公开铸造 | 保留 `mint`，含义随组合而变，和现在一样 |
 | M2 | 带公开账本的组合里要不要有 `mintConfidential` 和 `0x81` | 要 | 不加，让那个合约与已部署的完全一致 |

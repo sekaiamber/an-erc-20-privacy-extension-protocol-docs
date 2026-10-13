@@ -4,7 +4,7 @@
 
 版本：`0.5.0-draft`　状态：`Draft`　日期：2026-10-13
 
-> 0.5.0（草案，**尚未实现**）：**改为内核加模块的结构**（[ADR-0008](../../../adr/0008-modules.zh-cn.md)、[04-modules](04-modules.zh-cn.md)）。本文是内核；属于某个模块的小节都作了标注。电路、payload 布局和实测数字都不变。已部署的合约仍是 0.4.0（`A:1:0.4.0`）和原 B.1 0.2.0。
+> 0.5.0（草案；**已在合约仓库实现，尚未部署**）：**改为内核加模块的结构**（[ADR-0008](../../../adr/0008-modules.zh-cn.md)、[04-modules](04-modules.zh-cn.md)）。本文是内核；属于某个模块的小节都作了标注。电路、payload 布局和实测数字都不变。已部署的合约仍是 0.4.0（`A:1:0.4.0`）和原 B.1 0.2.0。
 
 > 0.4.0：**密码内核改为普通 ElGamal**（ADR-0006 §3、A1-0002 修订）：`pk = s·H`；密文为一个共享 `D = r·H` 加每方一个 `C_X = v·G + r·pk_X`；memo 密钥流由各方共享秘密 `r·pk_X`（= `s_X·D`）派生，删掉 ECDH 点 `E` 与 `e`。目的：监管侧解密与 memo 打开都成为「份额 × 公开点」，可门限拆分（11-regulatory-committee）。副作用：转账电路 35,137 → 29,719 约束，公开输入 15 → 14，payload 710 → 646 字节，证明约 2.1 s → 1.3 s，`0x01` gas 715k → 706k。`pep()` = `A:1:0.4.0`。
 > 0.3.1：**安全修复 F14**——`0x04` 的公开收款地址 `to` 打包进证明（`w2 = amount | signBits<<48 | to<<64`），此前中继者或抢跑者可改写 `to` 偷走整笔 unshield。电路 16,622 → 17,358 约束，公开输入仍为 7 个。`pep()` = `A:1:0.3.1`。
@@ -327,7 +327,8 @@ emit Folded(from, handle, acc.nonce)
 | `Transfer` | `(from, to, x)` | 标准；`x` 最高位区分句柄与金额 |
 | `ConfidentialTransfer` | `(from, to, handle, regKeyId, D, C_recv, C_reg, memo_recv, memo_reg)` | 收款方扫描、监管解密（`C_sender` 不发出：付款方自己知道） |
 | `LedgerCrossing` | `(from, to, type, amount)` | 公开账本模块：`0x03` / `0x04`，索引器维护 `shieldedSupply` |
-| `Minted` / `Burned` | `(id, amount)` | 角色铸造模块与 Wrapper 端口：按公开金额记入某个 id，或从某个 id 扣出 |
+| `Minted` / `Burned` | `(id, amount)` | 角色铸造模块：按公开金额记入某个 id，或从某个 id 扣出 |
+| `WrapperMinted` / `WrapperBurned` | `(id, amount)` / `(id, to, amount)` | Wrapper 端口：unwrap 与 wrap 时同样的记入与扣出 |
 | `Folded` | `(id, handle, nonce)` | `0x80`，`nonce` 为折叠后的新值 |
 | `Prepared` / `Cancelled` | `(from, handle)` | 兜底 |
 | `RegulatorKeyRotated` | `(keyId, pk)` | |
@@ -352,7 +353,7 @@ function pepModules() external view returns (Module[] memory);          // 模�
 
 **收款方**：监听 `ConfidentialTransfer(to = id)` → `k = s⁻¹·E` → 解 memo 得 `(v, r)` → 校验 `C_amt == v·G + r·H` → 本地余额 += v。监听 `LedgerCrossing(to = id, 0x03)` → 本地余额 += amount。不需要任何链上动作。
 
-**监管方**：遍历 `ConfidentialTransfer`，按 `regKeyId` 解 `memo_reg`，校验承诺；结合按公开金额变动的事件（`LedgerCrossing`、`Minted`、`Burned`）重建任意 id 任意时刻的余额。不解离散对数，不需要任何人配合，只读。id 与钱包的对应关系仅能从 `0x03` / `0x04` 的边推断。
+**监管方**：遍历 `ConfidentialTransfer`，按 `regKeyId` 解 `memo_reg`，校验承诺；结合按公开金额变动的事件（`LedgerCrossing`、`Minted`、`Burned`、`WrapperMinted`、`WrapperBurned`）重建任意 id 任意时刻的余额。不解离散对数，不需要任何人配合，只读。id 与钱包的对应关系仅能从 `0x03` / `0x04` 的边推断。
 
 **memo 兜底**：由电路强制，理论上不会错；若实现有 bug，收款方仍可对 `C_amt − s·D_recv = v·G` 做 48 位离散对数（2²⁴ 表）。
 

@@ -73,14 +73,14 @@ Putting the option into the numbering does not work either. As a Variant number 
 
    ```solidity
    interface IPEPModules {
-       struct Module { bytes4 id; address at; }
-       /// `at == address(this)`: compiled in. Another non-zero address: the runtime module plugged into
+       struct Module { bytes4 id; address impl; }
+       /// `impl == address(this)`: compiled in. Another non-zero address: the runtime module plugged into
        /// this port. Zero: the port exists and nothing is plugged in.
        function pepModules() external view returns (Module[] memory);
    }
    ```
 
-   `id` is the ERC-165 interface id of the module's interface, and `supportsInterface(id)` is true for it. Like `pep()`, the list is self-declared. Front ends pick the page from `pep()` and switch features on from the modules. This interface is a draft until the contracts are restructured.
+   `id` is the ERC-165 interface id of the module's interface, and `supportsInterface(id)` is true for it. Like `pep()`, the list is self-declared. Front ends pick the page from `pep()` and switch features on from the modules. This interface is a draft until the contracts are restructured. (Update 2026-10-13: implemented; the address field is named `impl`, because `at` collides with a built-in array method in JavaScript clients.)
 
 8. **Numbers and versions.**
 

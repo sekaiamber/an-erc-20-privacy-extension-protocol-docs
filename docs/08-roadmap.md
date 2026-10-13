@@ -30,7 +30,8 @@ Status: `Draft`
 - [ ] Regulatory Committee design (2026-09-27, draft) → `11-regulatory-committee.md`, ADR-0006; requires A.1 v0.4 / B.1 v0.2 memo amendment
 - [x] Family restructured into Track / Variant / module; the public ledger is a module and the former Track B is a composition of A.1 (2026-10-12) → ADR-0007, ADR-0008, `07-family-conventions.md` §13
 - [x] Track A documents restructured as Track / Variant / modules: A.1 0.5.0-draft, core in `01-design.md`, modules and compositions in `04-modules.md` (2026-10-13)
-- [ ] Restructure the contracts and the dApp to A.1 0.5.0 (`tracks/track-a/variant-1/04-modules.md` §9): shared core with modules, `IPEPModules` probe, one version, redeploy both testnet tokens
+- [x] Contracts restructured to A.1 0.5.0 (2026-10-13): `A1Core` with the public-ledger, role-issuance and Wrapper-port modules, `IPEPModules` probe, one version; tests pass, gas unchanged
+- [ ] dApp follows A.1 0.5.0 (page from `pep()`, features from the modules) and both testnet tokens are redeployed (`tracks/track-a/variant-1/04-modules.md` §9, items 7 and 8)
 - [x] Track B opened for the note model; B.1 design, 0.1.0-draft (2026-10-13) → ADR-0009, `tracks/track-b/`
 - [ ] B.1: measure the on-chain Poseidon tree, then circuit, contract and client (after the ADR-0008 restructuring)
 - [ ] Threat model review

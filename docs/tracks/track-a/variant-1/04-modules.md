@@ -4,7 +4,9 @@ English | [中文](04-modules.zh-cn.md)
 
 Version: `0.5.0-draft`. Status: `Draft`. Date: 2026-10-13
 
-This document is the target structure of A.1 under [ADR-0008](../../../adr/0008-modules.md): one core and three modules. It is the specification for restructuring the contracts. **It is not implemented yet.** Today the same behaviour ships as two standalone contracts, `ConfidentialERC20A1` (0.4.0) and `ConfidentialERC20B1` (0.2.0); §9 lists what changes when they are restructured.
+This document is the structure of A.1 under [ADR-0008](../../../adr/0008-modules.md): one core and three modules.
+
+**Status of the implementation (2026-10-13).** The contracts repository implements it as `A1LedgerToken` and `A1PrivateToken`; all tests pass, and gas is within 300 of the standalone contracts on every measured operation. It is **not deployed**: the tokens on BSC testnet are still the standalone `ConfidentialERC20A1` (0.4.0) and `ConfidentialERC20B1` (0.2.0), and the dApp still targets those. §9 lists what changed.
 
 The core is specified in [01-design](01-design.md). No circuit changes.
 
@@ -73,7 +75,7 @@ The core keeps one counter, the **confidential supply**: the sum of all confiden
 | wrap | Wrapper port | `−x` | 0 | `+x` | `−x` | 0 |
 | unwrap | Wrapper port | `+x` | 0 | `−x` | `+x` | 0 |
 
-**The one place where modules meet.** With the public ledger, confidential value is escrowed as public tokens at the token's own address, so `balanceOf(token) == shieldedSupply()`. When role issuance or the Wrapper port creates or destroys confidential value, the escrow has to follow. The core therefore has a pair of internal hooks, `_onConfidentialCreated(amount)` and `_onConfidentialDestroyed(amount)`. They do nothing in the core; the public ledger overrides them to mint or burn escrow. This is why the public ledger comes first in the inheritance order.
+**The one place where modules meet.** With the public ledger, confidential value is escrowed as public tokens at the token's own address, so `balanceOf(token) == shieldedSupply()`. When role issuance or the Wrapper port creates or destroys confidential value, the escrow has to follow. The core therefore declares a pair of internal hooks, `_onConfidentialCreated(id, amount)` and `_onConfidentialDestroyed(id, amount)`. The ERC-20 surface implements them: the public ledger mints or burns escrow, and a token without it emits `Transfer` from or to the zero address. This is why the public ledger comes first in the inheritance order.
 
 ## 4. Modules
 
@@ -93,7 +95,7 @@ The core keeps one counter, the **confidential supply**: the sum of all confiden
 | | |
 | --- | --- |
 | Kind | Compile-time |
-| Adds | `MINTER_ROLE`. `mintConfidential(id, amount)`: `_creditPublic`, emits `Transfer(0x0, id, amount)` and `Minted`. Payload type `0x81`, called as `transferFrom(id, 0x0, amount)`: `_debitPublic` with `to = 0x0`, emits `Transfer(id, 0x0, amount)` and `Burned`. With the public ledger also `mint(to, amount)`, a public mint |
+| Adds | `MINTER_ROLE`. `mintConfidential(id, amount)`: `_creditPublic`, emits `Transfer(0x0, id, amount)` and `Minted`. Payload type `0x81`, called as `transferFrom(id, 0x0, amount)`: `_debitPublic` with `to = 0x0`, emits `Transfer(id, 0x0, amount)` and `Burned`. With the public ledger, the `Transfer` events of these two are the mint and burn of escrow at the token's address, and there is also `mint(to, amount)`, a public mint |
 | Who may burn | The holder: `0x81` is authorised by the holder's proof, not by a role |
 | Limit | The supply cap of §3 |
 | Interface (draft) | `IPEPRoleIssuance { function mintConfidential(address id, uint256 amount) external; }` |
@@ -106,7 +108,7 @@ Mint and burn amounts are public, and so is the id that receives a mint. A hidde
 | | |
 | --- | --- |
 | Kind | Compile-time port; the runtime module is the family `PEPWrapper` ([10](../../../10-wrapper.md)) |
-| Adds | `wrapperMint(recipient, amount)`: `recipient` is a 20-byte id; requires `amount ≤ wrappedOut`, then `wrappedOut −= amount` and `_creditPublic`. `wrapperBurn(from, to, amount, payload)`: `_debitPublic` with `to` = the recipient of the wrapped token, then `wrappedOut += amount`. `wrapper()`, `wrappedOut()` |
+| Adds | `wrapperMint(recipient, amount)`: `recipient` is a 20-byte id; requires `amount ≤ wrappedOut`, then `wrappedOut −= amount` and `_creditPublic`. `wrapperBurn(from, to, amount, payload)`: `_debitPublic` with `to` = the recipient of the wrapped token, then `wrappedOut += amount`. `wrapper()`, `wrappedOut()`. Events `WrapperMinted` and `WrapperBurned`; the port does not emit `Minted` or `Burned` |
 | Who may call | Only `wrapper()`. It is set at construction or once by the admin and never rotated |
 | Limit | Credits never exceed `wrappedOut`: a compromised Wrapper can mis-credit what left through it, never inflate (review B1-F2) |
 | Interface | `IPEPWrappable`, unchanged |
@@ -135,8 +137,8 @@ In both, `transferFrom(id, id, handle)` with `0x01` or `0x80` behaves as in 01-d
 | **Privacy-only** | Yes | No | Yes | Yes | `ConfidentialERC20B1` 0.2.0 ([records](../variant-1-privacy-only/README.md)) |
 
 - **Inheritance order**: core, public ledger, role issuance, Wrapper port (07 §13.2).
-- **Public ledger together with the Wrapper port**: possible, since both use the primitives of §2. No use is known, so it is not built or tested.
-- **Contract names** are fixed in the restructuring. Proposal: `A1Core` (abstract), `A1PublicLedger`, `A1RoleIssuance`, `A1WrapperPort` (abstract modules), and two deployable tokens, `A1LedgerToken` and `A1PrivateToken`.
+- **Public ledger together with the Wrapper port**: not built or tested. No use is known, and it would need one more thing. The unshield proof binds `to` but not which exit is meant. Today the exits cannot be confused because they accept disjoint recipients: zero for a burn, non-zero for an unshield or a wrap, and no built composition has both of the last two. A token with both would have to bind the kind of exit into the proof.
+- **Contracts**: `A1Core` (abstract core), `A1NoLedger` (the ERC-20 surface without public balances), `A1PublicLedger`, `A1RoleIssuance`, `A1WrapperPort` (abstract modules), and two deployable tokens, `A1LedgerToken` and `A1PrivateToken`. A composition takes exactly one of `A1NoLedger` and `A1PublicLedger`.
 
 ## 7. Probe
 
@@ -158,7 +160,7 @@ The core gives both compositions the same guarantees (01-design; the evaluation 
 
 ## 9. What changes at 0.5.0
 
-Relative to the two deployed contracts. Nothing here changes a circuit, a payload layout or an event that clients parse for `0x01` / `0x80`.
+Relative to the two deployed contracts. Nothing here changes a circuit, a payload layout or an event that clients parse for `0x01` / `0x80`. Items 1 to 6 and 9 are done in the contracts repository; items 7 and 8 are open.
 
 | # | Change | Affects |
 | --- | --- | --- |
@@ -169,19 +171,21 @@ Relative to the two deployed contracts. Nothing here changes a circuit, a payloa
 | 5 | With the public ledger: `mintConfidential` and `0x81` become available | Contracts, tests |
 | 6 | `issuedSupply()` exists in both compositions | Contracts |
 | 7 | The dApp picks the page from `pep()` and switches features from the modules, instead of one route per Track | dApp |
-| 8 | Both testnet tokens are redeployed. Verifier contracts and the window table are reused by address | Deployments |
+| 8 | Both testnet tokens are redeployed. The privacy-only token reuses the verifiers and the window table of the new ledger-token deployment, and the Wrapper that is already on the chain | Deployments |
+| 9 | A wrap emits `WrapperBurned` only. The standalone contract emitted `Burned` as well, which the dApp's regulator view counts as a second outflow | Contracts, regulator view |
 
 ## 10. Review and tests
 
 - The two shipped compositions were reviewed as standalone contracts ([02-security-review](02-security-review.md), [privacy-only review](../variant-1-privacy-only/03-security-review.md)). After the restructuring, the review is repeated against the diff, with attention to the hooks of §3 and to the cap being checked against `issuedSupply()` on every mint path.
 - Tests run per module and per shipped composition. Supply conservation (the table of §3) is asserted after every operation.
-- Bytecode today: 17,060 bytes with the public ledger, 17,195 privacy-only; the limit is 24,576. Each composition is measured again after the restructuring.
+- Bytecode: `A1LedgerToken` 18,339 bytes, `A1PrivateToken` 17,345 bytes; the limit is 24,576. The standalone contracts were 17,060 and 17,195.
+- Gas, measured locally against the standalone contracts with the same tests: every operation is within 300 gas. New: `0x81` burn with the public ledger, 528k on an account's first spend.
 
-## 11. Open decisions
+## 11. Decisions
 
-Each has a default, which this document uses.
+All four were adopted as drafted on 2026-10-13 and are implemented.
 
-| # | Decision | Default | Alternative |
+| # | Decision | Adopted | Alternative not taken |
 | --- | --- | --- | --- |
 | M1 | Name of the confidential mint | `mintConfidential(id, amount)` in every composition; `mint(to, amount)` is always public | Keep `mint` and let its meaning depend on the composition, as today |
 | M2 | `mintConfidential` and `0x81` in the composition with the public ledger | Available | Leave them out to keep that contract exactly as deployed |

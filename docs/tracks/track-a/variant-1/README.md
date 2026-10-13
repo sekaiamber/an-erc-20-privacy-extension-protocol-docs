@@ -4,7 +4,7 @@ English | [中文](README.zh-cn.md)
 
 Design version: `0.5.0-draft` (core plus modules, [ADR-0008](../../../adr/0008-modules.md)). Status: `Draft`.
 
-Deployed today, as two standalone contracts that predate the module structure: `ConfidentialERC20A1` 0.4.0 (with the public ledger) and `ConfidentialERC20B1` 0.2.0 (privacy-only).
+Implemented in the contracts repository as `A1LedgerToken` and `A1PrivateToken` (2026-10-13), not deployed yet. Deployed today are the two standalone contracts that predate the module structure: `ConfidentialERC20A1` 0.4.0 (with the public ledger) and `ConfidentialERC20B1` 0.2.0 (privacy-only).
 
 ## In one sentence
 

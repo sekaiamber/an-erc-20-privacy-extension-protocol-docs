@@ -73,14 +73,14 @@ Track A 与 Track B 是按一个问题分开的：代币有没有公开账本。
 
    ```solidity
    interface IPEPModules {
-       struct Module { bytes4 id; address at; }
-       /// `at == address(this)`：已编译进代币。其它非零地址：插在该端口上的运行时模块。
+       struct Module { bytes4 id; address impl; }
+       /// `impl == address(this)`：已编译进代币。其它非零地址：插在该端口上的运行时模块。
        /// 零地址：端口存在，但没有插任何模块。
        function pepModules() external view returns (Module[] memory);
    }
    ```
 
-   `id` 是该模块接口的 ERC-165 接口标识，`supportsInterface(id)` 对它返回 true。与 `pep()` 一样，这份清单是自我声明。前端按 `pep()` 决定进哪个页面，按模块决定开哪些功能。合约重构之前，这个接口只是草案。
+   `id` 是该模块接口的 ERC-165 接口标识，`supportsInterface(id)` 对它返回 true。与 `pep()` 一样，这份清单是自我声明。前端按 `pep()` 决定进哪个页面，按模块决定开哪些功能。合约重构之前，这个接口只是草案。（2026-10-13 更新：已实现；地址字段命名为 `impl`，因为 `at` 与 JavaScript 客户端里数组自带的方法重名。）
 
 8. **编号与版本。**
 

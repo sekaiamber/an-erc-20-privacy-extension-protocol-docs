@@ -4,7 +4,7 @@ English | [中文](01-design.zh-cn.md)
 
 Version: `0.5.0-draft`. Status: `Draft`. Date: 2026-10-13
 
-> 0.5.0 (draft, **not implemented**): **restructured into a core and modules** ([ADR-0008](../../../adr/0008-modules.md), [04-modules](04-modules.md)). This document is the core; sections that belong to a module are marked. No circuit, payload layout or measured figure changes. The deployed contracts are still 0.4.0 (`A:1:0.4.0`) and the former B.1 0.2.0.
+> 0.5.0 (draft; **implemented in the contracts repository, not deployed**): **restructured into a core and modules** ([ADR-0008](../../../adr/0008-modules.md), [04-modules](04-modules.md)). This document is the core; sections that belong to a module are marked. No circuit, payload layout or measured figure changes. The deployed contracts are still 0.4.0 (`A:1:0.4.0`) and the former B.1 0.2.0.
 
 > 0.4.0: **Crypto core switched to plain ElGamal** (ADR-0006 §3, A1-0002 revision): `pk = s·H`; a ciphertext is one shared `D = r·H` plus one `C_X = v·G + r·pk_X` per party; memo pads are derived from each party's shared secret `r·pk_X` (= `s_X·D`); the ECDH point `E` and scalar `e` are gone. Purpose: regulator-side decryption and memo opening become "share × public point", i.e. threshold-splittable (11-regulatory-committee). Side effects: transfer circuit 35,137 → 29,719 constraints, public inputs 15 → 14, payload 710 → 646 bytes, proving ≈ 2.1 s → 1.3 s, `0x01` gas 715k → 706k. `pep()` = `A:1:0.4.0`.
 > 0.3.1: **Security fix F14** — the public recipient `to` of `0x04` is packed into the proof (`w2 = amount | signBits<<48 | to<<64`); before, a relayer or front-runner could rewrite `to` and take the whole unshield. Circuit 16,622 → 17,358 constraints, still 7 public inputs. `pep()` = `A:1:0.3.1`.
@@ -327,7 +327,8 @@ This circuit is the public-amount exit behind `_debitPublic` (04-modules §2); `
 | `Transfer` | `(from, to, x)` | Standard; the top bit of `x` distinguishes handles from amounts |
 | `ConfidentialTransfer` | `(from, to, handle, regKeyId, D, C_recv, C_reg, memo_recv, memo_reg)` | Payee scanning, regulator decryption (`C_sender` is not emitted: the payer knows it) |
 | `LedgerCrossing` | `(from, to, type, amount)` | Public-ledger module: `0x03` / `0x04`; indexers maintain `shieldedSupply` |
-| `Minted` / `Burned` | `(id, amount)` | Role-issuance module and the Wrapper port: a public amount credited to, or debited from, an id |
+| `Minted` / `Burned` | `(id, amount)` | Role-issuance module: a public amount credited to, or debited from, an id |
+| `WrapperMinted` / `WrapperBurned` | `(id, amount)` / `(id, to, amount)` | Wrapper port: the same for an unwrap and a wrap |
 | `Folded` | `(id, handle, nonce)` | `0x80`; `nonce` is the new value after the fold |
 | `Prepared` / `Cancelled` | `(from, handle)` | Fallback |
 | `RegulatorKeyRotated` | `(keyId, pk)` | |
@@ -352,7 +353,7 @@ function pepModules() external view returns (Module[] memory);          // modul
 
 **Payee**: listens for `ConfidentialTransfer(to = id)` → `k = s⁻¹·E` → decrypts the memo to get `(v, r)` → checks `C_amt == v·G + r·H` → local balance += v. Listens for `LedgerCrossing(to = id, 0x03)` → local balance += amount. No on-chain action is required.
 
-**Regulator**: iterates over `ConfidentialTransfer`, decrypts `memo_reg` by `regKeyId`, verifies the commitment; combined with the public-amount events (`LedgerCrossing`, `Minted`, `Burned`), reconstructs the balance of any id at any point in time. No discrete logarithms, no cooperation from anyone, read-only. The mapping between ids and wallets can only be inferred from the `0x03` / `0x04` edges.
+**Regulator**: iterates over `ConfidentialTransfer`, decrypts `memo_reg` by `regKeyId`, verifies the commitment; combined with the public-amount events (`LedgerCrossing`, `Minted`, `Burned`, `WrapperMinted`, `WrapperBurned`), reconstructs the balance of any id at any point in time. No discrete logarithms, no cooperation from anyone, read-only. The mapping between ids and wallets can only be inferred from the `0x03` / `0x04` edges.
 
 **Memo fallback**: enforced by the circuit, so in theory it cannot be wrong; if the implementation has a bug, the payee can still solve a 48-bit discrete logarithm on `C_amt − s·D_recv = v·G` (a 2²⁴ table).
 

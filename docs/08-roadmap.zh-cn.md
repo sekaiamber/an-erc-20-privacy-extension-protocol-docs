@@ -30,7 +30,8 @@
 - [ ] 监管委员会设计（2026-09-27，草案）→ `11-regulatory-committee.md`、ADR-0006；需要 A.1 v0.4 / B.1 v0.2 的 memo 修订
 - [x] 家族改为 Track / Variant / 模块三层；公开账本是模块，原 Track B 是 A.1 的一种组合（2026-10-12）→ ADR-0007、ADR-0008、`07-family-conventions.md` §13
 - [x] Track A 文档按 Track / Variant / 模块重排：A.1 0.5.0-draft，内核在 `01-design.md`，模块与组合在 `04-modules.md`（2026-10-13）
-- [ ] 按 A.1 0.5.0 重构合约与 dApp（`tracks/track-a/variant-1/04-modules.md` §9）：共享内核加模块、`IPEPModules` 探针、统一版本号、重新部署两个测试网代币
+- [x] 合约已按 A.1 0.5.0 重构（2026-10-13）：`A1Core` 加公开账本、角色铸造、Wrapper 端口三个模块，`IPEPModules` 探针，统一版本号；测试通过，gas 不变
+- [ ] dApp 跟进 A.1 0.5.0（按 `pep()` 选页面、按模块开关功能），并重新部署两个测试网代币（`tracks/track-a/variant-1/04-modules.md` §9 第 7、8 项）
 - [x] 为 note 模型开设 Track B；B.1 设计 0.1.0-draft（2026-10-13）→ ADR-0009、`tracks/track-b/`
 - [ ] B.1：先实测链上 Poseidon 树，再做电路、合约和客户端（在 ADR-0008 的重构之后）
 - [ ] 威胁模型评审

@@ -129,8 +129,8 @@ Decision record: [ADR-0008](adr/0008-modules.md). A module is a contract-level o
 
 | Module | Kind | Interface | Adds | Limit enforced by the token |
 | --- | --- | --- | --- | --- |
-| Public ledger | Compile-time | Draft | Standard ERC-20 balances at the token's address; payload types `0x03` / `0x04`; `shieldedSupply()`; `LedgerCrossing` | None |
-| Role issuance | Compile-time | Draft | Issuance by a minter role with a public amount, and a public-amount burn by the holder. The functions are defined per Variant (A.1: [04-modules §4.2](tracks/track-a/variant-1/04-modules.md)) | The Variant's supply cap |
+| Public ledger | Compile-time | `IPEPPublicLedger` | Standard ERC-20 balances at the token's address; payload types `0x03` / `0x04`; `shieldedSupply()`; `LedgerCrossing` | None |
+| Role issuance | Compile-time | `IPEPRoleIssuance` | Issuance by a minter role with a public amount, and a public-amount burn by the holder. The functions are defined per Variant (A.1: [04-modules §4.2](tracks/track-a/variant-1/04-modules.md)) | The Variant's supply cap |
 | Wrapper port | Port and runtime module | `IPEPWrappable` | `wrapperMint`, `wrapperBurn`, `wrapper()`; used by the family Wrapper ([10](10-wrapper.md)) | Credits never exceed what left through the port (`wrappedOut`) |
 
 Custody issuance (a vault that locks a plain ERC-20 and issues the privacy token) is a reserved name. It is not designed.
@@ -144,7 +144,7 @@ The registry is append-only. Registering a new module changes nothing for existi
 | A.1 0.5.0 (design) | Yes | Yes | Yes |
 | B.1 0.1.0 (design) | No | Yes | Yes |
 
-Interfaces marked "Draft" are fixed when the contracts are restructured (ADR-0008, Transition).
+The interfaces are in `contracts/contracts/family/`.
 
 ### 13.2 Rules
 
@@ -162,8 +162,8 @@ Interfaces marked "Draft" are fixed when the contracts are restructured (ADR-000
 
 ```solidity
 interface IPEPModules {
-    struct Module { bytes4 id; address at; }
-    /// `at == address(this)`: compiled in. Another non-zero address: the runtime module plugged into
+    struct Module { bytes4 id; address impl; }
+    /// `impl == address(this)`: compiled in. Another non-zero address: the runtime module plugged into
     /// this port. Zero: the port exists and nothing is plugged in.
     function pepModules() external view returns (Module[] memory);
 }
@@ -173,7 +173,8 @@ interface IPEPModules {
 - The list is self-declared, like `pep()`.
 - `pep()` tells which Variant version a token is, and therefore which modules it could have; `pepModules()` tells which of them it has.
 - Integrators must not infer from the Track letter whether a token has public balances. They read it from the probe.
-- Draft: neither shipped contract implements `IPEPModules` yet. Today the Wrapper port is detected with `supportsInterface(type(IPEPWrappable).interfaceId)`.
+- Implemented by A.1 0.5.0 in the contracts repository. The tokens deployed before it (0.4.0 and the former B.1 0.2.0) do not have `pepModules()`; on those the Wrapper port is detected with `supportsInterface(type(IPEPWrappable).interfaceId)`.
+- Interface ids: `IPEPModules` `0xad5ad25b`, `IPEPPublicLedger` `0x43dcbbd9`, `IPEPRoleIssuance` `0x60b2d978`, `IPEPWrappable` `0x1464bbec`.
 
 ### 13.4 A token without the public-ledger module
 

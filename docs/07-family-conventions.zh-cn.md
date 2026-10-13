@@ -129,8 +129,8 @@ interface IPEP {
 
 | 模块 | 种类 | 接口 | 增加了什么 | 代币强制的限额 |
 | --- | --- | --- | --- | --- |
-| 公开账本 | 编译时 | 草案 | 代币地址上的标准 ERC-20 余额；payload 类型 `0x03` / `0x04`；`shieldedSupply()`；`LedgerCrossing` | 无 |
-| 角色铸造 | 编译时 | 草案 | 由铸造角色按公开金额发行，由持有人按公开金额销毁。具体函数由各 Variant 定义（A.1：[04-modules §4.2](tracks/track-a/variant-1/04-modules.zh-cn.md)） | 该 Variant 的供应上限 |
+| 公开账本 | 编译时 | `IPEPPublicLedger` | 代币地址上的标准 ERC-20 余额；payload 类型 `0x03` / `0x04`；`shieldedSupply()`；`LedgerCrossing` | 无 |
+| 角色铸造 | 编译时 | `IPEPRoleIssuance` | 由铸造角色按公开金额发行，由持有人按公开金额销毁。具体函数由各 Variant 定义（A.1：[04-modules §4.2](tracks/track-a/variant-1/04-modules.zh-cn.md)） | 该 Variant 的供应上限 |
 | Wrapper 端口 | 端口加运行时模块 | `IPEPWrappable` | `wrapperMint`、`wrapperBurn`、`wrapper()`；由家族 Wrapper（[10](10-wrapper.zh-cn.md)）使用 | 记入量不得超过经该端口出去的数量（`wrappedOut`） |
 
 托管发行（锁定普通 ERC-20、发行隐私代币的金库）是保留名，尚未设计。
@@ -144,7 +144,7 @@ interface IPEP {
 | A.1 0.5.0（设计） | 支持 | 支持 | 支持 |
 | B.1 0.1.0（设计） | 不支持 | 支持 | 支持 |
 
-标为「草案」的接口在合约重构时确定（ADR-0008「过渡」）。
+这些接口在 `contracts/contracts/family/` 下。
 
 ### 13.2 规则
 
@@ -162,8 +162,8 @@ interface IPEP {
 
 ```solidity
 interface IPEPModules {
-    struct Module { bytes4 id; address at; }
-    /// `at == address(this)`：已编译进代币。其它非零地址：插在该端口上的运行时模块。
+    struct Module { bytes4 id; address impl; }
+    /// `impl == address(this)`：已编译进代币。其它非零地址：插在该端口上的运行时模块。
     /// 零地址：端口存在，但没有插任何模块。
     function pepModules() external view returns (Module[] memory);
 }
@@ -173,7 +173,8 @@ interface IPEPModules {
 - 这份清单与 `pep()` 一样是自我声明。
 - `pep()` 说明代币是哪个 Variant 的哪个版本，也就说明了它可能带哪些模块；`pepModules()` 说明它实际带了哪些。
 - 集成方不得从 Track 字母推断代币有没有公开余额，要从探针读取。
-- 草案：已发布的两个合约都还没有实现 `IPEPModules`。目前检测 Wrapper 端口用的是 `supportsInterface(type(IPEPWrappable).interfaceId)`。
+- A.1 0.5.0 已在合约仓库实现。在它之前部署的代币（0.4.0 和原 B.1 0.2.0）没有 `pepModules()`；对它们检测 Wrapper 端口用的是 `supportsInterface(type(IPEPWrappable).interfaceId)`。
+- 接口标识：`IPEPModules` `0xad5ad25b`、`IPEPPublicLedger` `0x43dcbbd9`、`IPEPRoleIssuance` `0x60b2d978`、`IPEPWrappable` `0x1464bbec`。
 
 ### 13.4 没有公开账本模块的代币
 
