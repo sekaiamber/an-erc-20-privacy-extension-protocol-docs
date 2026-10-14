@@ -28,9 +28,9 @@ Four things hold the two registers together.
 1. **Materials.** Paper, ink and wax, and for objects also stone. A sculpture keeps the colour of its stone, toned toward the paper. Wax red stays the only saturated colour on a page.
 2. **One light.** Every object is lit softly from the upper left. The seal is rendered that way (`brand/seal/build.cjs`, azimuth 225). A photograph or a 3D model of a sculpture is chosen or lit to match.
 3. **A label.** Every object carries one line in the monospace face: title, artist, date, collection, licence. It is a museum label, and it is where credit and licence are given.
-4. **Motion.** Only an object may move, and only by turning as the page scrolls. The page does not move: no parallax, no bounce. Where the reader's system asks for reduced motion, the object is a still image.
+4. **Motion.** Only an object may move, and only by turning as the page scrolls. The page does not move: no parallax, no bounce. Where the reader's system asks for reduced motion, the object is a still image. One exception, set by the owner on 2026-10-14: the cards of Cicerone's walk turn in, move to the hand and fade ([13 §5](13-cicerone.md#5-how-it-looks)); with reduced motion they only fade.
 
-An object never enters the page register. In the interface the seal appears only in its flat form (§6).
+An object never enters the page register. In the interface the seal appears only in its flat form (§6), with one exception: the brand in the dApp top bar.
 
 ## 3. Colour
 
@@ -67,7 +67,13 @@ Night is the same page in a study by lamplight. Each day colour has one night co
 
 ### The rule for wax red
 
-Wax red marks **what is sealed**: an amount stored as ciphertext, or a handle that stands for one ([07 §4](07-family-conventions.md)). It is also the colour of the Cicerone label (§5). It is used for nothing else. A primary button is ink, not red.
+Wax red is the one accent colour. It has three uses:
+
+1. **What is sealed**: an amount stored as ciphertext, or a handle that stands for one ([07 §4](07-family-conventions.md)).
+2. **The Cicerone label** (§5).
+3. **A strong call to act**: where the project asks the reader firmly to do something (owner, 2026-10-14). In the dApp today: connecting the wallet in the top bar, the deploy buttons of the A.1 and B.1 deploy pages and of the committee page, and in Cicerone's walk the first step and the way from the recommendation to the deployment ([13 §5](13-cicerone.md#5-how-it-looks)).
+
+It is used for nothing else. Other primary buttons are ink. In the dApp the button for the third use is the `wax` variant.
 
 Text and ground pairs in the tables above have a contrast of at least 4.5:1. The figures were computed by hand from the colour values, not measured on a screen.
 
@@ -89,6 +95,7 @@ Corners are 2 to 3 px. Controls are at least 44 px high.
 - **Rules.** A single rule separates entries. A double rule closes a heading or a total. Nothing else is boxed or shaded for emphasis.
 - **The sealed mark.** A small disc of wax red beside a value says that the value is stored sealed. It is the flat form of the seal (§6).
 - **The margin.** Explanations do not go inside a card. They stand in the margin beside the entry they explain, in italic serif, under the label *Cicerone* in wax red. Cicerone is the name of the guide ([ADR-0011](adr/0011-project-name-casata.md)); the margin is its voice. On a narrow screen the note follows the entry.
+- **Vignettes.** Rooms of the house get a small engraving: an arched niche with one object on its ledge, drawn in ink with hatching, the light from the upper left. They belong to the page register: line and hatching only, in the text colour, so they work by day and by night. The four doors of the dApp entry page are the first set: a lantern (Cicerone, the guide), a bust (the collection of Tracks), books (the library) and dividers before a cipher disk (the workshop of tools). Generator: [`brand/vignettes/build.cjs`](../brand/vignettes/build.cjs).
 
 ## 6. The seal
 
@@ -116,7 +123,7 @@ The fleur-de-lis is used as an ornament between words, which is common. It is th
 
 Between the two, prefer the flat form. Below 32 px the rendered seal is a red spot.
 
-The rendered seal is an object (§2). It is not used inside the interface.
+The rendered seal is an object (§2). It is not used inside the interface, with one exception: in the dApp top bar the rendered seal stands at 40 px beside the full name, Casata Segreta, even though its arms cannot be read at that size (owner, 2026-10-14). The sealed mark beside values and the footer keep the flat form.
 
 ## 7. The home page
 
@@ -135,7 +142,7 @@ Text is plain and exact. Italian is used for proper names only: Casata, Casata S
 | Item | State |
 | --- | --- |
 | Colour, type, the seal | Decided by the owner, 2026-10-13 and 2026-10-14 |
-| dApp | In progress. Done: colour tokens for day and night with a switch, typefaces, corner radius, the mark and the name on the entry page, in the top bar, in the footer and as the browser icon. Ledger rows, the sealed mark, margin notes and line tabs are on the three token pages (A.1 with the public ledger, A.1 privacy-only, B.1); line tabs also on the deploy pages and the regulator view. The entry page carries Cicerone. Not checked with a wallet connected |
+| dApp | In progress. Done: colour tokens for day and night with a switch, typefaces, corner radius, the mark and the name on the entry page, in the top bar, in the footer and as the browser icon. The top bar carries the rendered seal, the full name, a Testnet badge, an About page, icon buttons for day / night and for the language menu, and a wallet menu that holds the network and marks a wrong network. The entry page receives the visitor as a guest and offers four doors with vignettes (§5): Cicerone, Tracks, Learn (the About page) and Tools; the environment is printed to the browser console instead of shown. Ledger rows, the sealed mark, margin notes and line tabs are on the three token pages (A.1 with the public ledger, A.1 privacy-only, B.1); line tabs also on the deploy pages and the regulator view. The entry page carries Cicerone. Not checked with a wallet connected |
 | Errors | Not decided. An error is usually red, which collides with the rule for wax red. Proposed: ochre with a text label |
 | Home page | A separate application; not started. The sculpture is to be made for the project, not taken from an existing work |
 | Arms | Not checked against existing arms |

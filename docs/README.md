@@ -19,6 +19,7 @@ This directory contains all research and design documents of Casata (until 2026-
 | 10 | [Family tool: Wrapper](10-wrapper.md) | The generic Wrapper: the standard DeFi path for tokens without the public-ledger module |
 | 11 | [Family tool: Regulatory Committee](11-regulatory-committee.md) | Threshold regulator key with on-chain membership, policies and view audit trail; per-project tool |
 | 12 | [Visual style](12-visual-style.md) | What Casata looks like: the secret ledger, colour, type, the seal, and how a sculpture on the home page fits in |
+| 13 | [Cicerone, the guide](13-cicerone.md) | How the dApp guide chooses its questions: a catalogue of compositions, an ordered list of two-answer questions, one rule |
 | — | [Glossary](glossary.md) | Definitions of terms used in the project |
 | — | [References](references.md) | Links to EIPs, papers and code repositories |
 | — | [ADR](adr/README.md) | Architecture decision records |
