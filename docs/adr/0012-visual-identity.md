@@ -16,7 +16,7 @@ Two constraints come from earlier decisions. The name's long form, Casata Segret
 
 1. **The style is built on one picture: the family's secret ledger** (*libro segreto*). Paper ground, ink text, one accent colour, wax red. The period is Italy from about 1350 to 1500, Florence as the reference. The values and rules are in [12 Visual style](../12-visual-style.md); that document is normative for appearance.
 
-2. **Wax red marks what is sealed**, that is, a ciphertext amount or a handle, and the Cicerone label. Amended by the owner on 2026-10-14: it also marks a strong call to act, such as connecting the wallet or deploying ([12 §3](../12-visual-style.md#3-colour)). It is used for nothing else.
+2. **Wax red marks what is sealed**, that is, a ciphertext amount or a handle, and the Cicerone label. Amended by the owner on 2026-10-14: it also marks a strong call to act, such as connecting the wallet or deploying ([12 §3](../12-visual-style.md#3-colour)). Amended on 2026-10-15: and the name of a room at the head of that room in the dApp. It is used for nothing else.
 
 3. **Two registers.** The page register (everything that is used) is flat. The object register (the seal, a sculpture) is realistic and appears only on the home page, at section openers and in the README header. One exception, set by the owner on 2026-10-14: the rendered seal beside the name in the dApp top bar ([12 §6](../12-visual-style.md#6-the-seal)). Objects share the page's materials, one light from the upper left, a one-line label and one kind of motion.
 

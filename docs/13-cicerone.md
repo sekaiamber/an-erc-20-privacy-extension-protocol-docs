@@ -98,7 +98,7 @@ Role issuance is in every composition, so no question about issuance is asked. A
 | A Track | Its compositions, and one question at the Track level if the existing ones do not separate it |
 | A module | A question at the module level, and the compositions that carry it |
 
-The catalogue and the questions live in the dApp next to the family registry (`dapp/lib/family/cicerone.ts`). Each question and answer has its text in the dApp's translations. A new Track or module also needs an icon (§5).
+The catalogue and the questions live in the dApp next to the family registry (`dapp/lib/family/cicerone.ts`). Each question and answer has its text in the dApp's translations. A new Track or module also needs an icon (§5), set in the registry (`dapp/lib/family/registry.ts`).
 
 ## 5. How it looks
 
