@@ -70,7 +70,7 @@ A.1 内核                 加密账户的纯隐私账本
 - `initialPayload` 为空：向地址 `initialTo` 公开发行。只在带公开账本时可用；没有公开账本时部署回退 `NoPublicLedger()`。
 - `initialPayload` 为 `0x82`、flags 为 0：调用 `_creditPublic(initialTo, initialAmount)`，即 id `initialTo` 的机密余额。
 - 只有带可增发的代币，`initialAmount` 才可以是零。不带可增发、又什么都没发行的代币永远不可能有余额，所以部署回退 `NoSupply()`。
-- 和铸造一样，它发出 `Transfer(0x0, initialTo, initialAmount)` 与 `Minted`；金额为零时什么都不发。
+- 它发出的事件和铸造相同：`Transfer(0x0, initialTo, initialAmount)`，发给 id 时还有 `Minted`（公开发行只有 ERC-20 的 `Transfer`）。金额为零时什么都不发。payload 既不是空也不是 `0x82 00` 时回滚 `BadInitialPayload()`。
 
 | 操作 | 部分 | 机密供应量 | 公开余额 | `wrappedOut` | `totalSupply` | `issuedSupply` |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -173,7 +173,7 @@ A.1 内核                 加密账户的纯隐私账本
 - **继承顺序**：内核、公开账本、可增发、Wrapper 端口（07 §13.2）。
 - **公开账本与 Wrapper 端口同时存在。** unshield 证明绑定了 `to`，但到 0.6.0 为止没有绑定这是哪一种出口。各出口之所以不会混淆，只是因为已构建的组合里没有同时带 `0x04` 和 `wrapperBurn` 的。从 0.7.0 起证明绑定 `r`（§2），两种出口能区分开，这个组合也就允许了。配 Wrapper 时，在公开余额旁边再有一个包装 ERC-20 用处不大；配网关时有用，因为公开余额和原 ERC-20 是两种不同的资产。
 - **网关组合**（[14](../../../14-gateway.zh-cn.md)）。可增发加 Wrapper 端口，带不带公开账本都行；网关被设为 `wrapper()` 并持有 `MINTER_ROLE`。网关按锁定的量铸造，并通过 `wrapperBurn` 放出锁定的 ERC-20。只有当网关是 `MINTER_ROLE` 的唯一持有者、管理员已放弃授予该角色、并且初始发行量为零时，供应才是足额抵押的（ADR-0013 第 5 条）。代币不强制这一点，由前端检查。A.1 是 6 位小数（A1-0005），所以底层代币小数位更多时，由网关换算精度。
-- **合约。** 各部分与 0.6.0 相同，只是 `A1RoleIssuance` 改名为 `A1Mintable`：`A1Core`（抽象内核，现在包含初始发行和销毁）、`A1NoLedger`（没有公开余额的 ERC-20 表面）、`A1PublicLedger`、`A1Mintable`、`A1WrapperPort`（抽象模块）。一种组合在 `A1NoLedger` 和 `A1PublicLedger` 之间恰好取一个。0.7.0 为每个子集发布一个可部署合约，由脚本从这些部分生成（M10，§11）。`A1LedgerToken` 和 `A1PrivateToken` 这两个名字留给 0.6.0 已发布的两种组合。
+- **合约。** 各部分与 0.6.0 相同，只是 `A1RoleIssuance` 改名为 `A1Mintable`：`A1Core`（抽象内核，现在包含初始发行和销毁）、`A1NoLedger`（没有公开余额的 ERC-20 表面）、`A1PublicLedger`、`A1Mintable`、`A1WrapperPort`（抽象模块）。一种组合在 `A1NoLedger` 和 `A1PublicLedger` 之间恰好取一个。0.7.0 为每个子集发布一个可部署合约，由脚本从这些部分生成（M10，§11）。`A1LedgerToken` 和 `A1PrivateToken` 这两个名字留给 0.6.0 已发布的两种组合。其余六个是 `A1Token` 加上所含模块的字母（`L` 公开账本、`M` 可增发、`W` Wrapper 端口），从 `A1Token`（只有核心）到 `A1TokenLMW`。生成脚本是 `contracts/scripts/track-a/variant-1/gen-compositions.mjs`，生成的文件在 `contracts/contracts/track-a/variant-1/tokens/`。
 
 ## 7. 探针
 
@@ -232,7 +232,7 @@ A.1 内核                 加密账户的纯隐私账本
 
 ### 9.2 0.7.0 改变什么
 
-相对于 0.6.0。决策记录：[ADR-0013](../../../adr/0013-mintable.zh-cn.md) 和 [A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md)。电路不变，所以证明密钥、验证合约和窗口表都不变。尚未开始。
+相对于 0.6.0。决策记录：[ADR-0013](../../../adr/0013-mintable.zh-cn.md) 和 [A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md)。电路不变，所以证明密钥、验证合约和窗口表都不变。合约已于 2026-10-15 实现并在本地测试（79 项测试通过）；dApp 和部署尚未完成。
 
 | # | 改动 | 影响 |
 | --- | --- | --- |
@@ -252,7 +252,7 @@ A.1 内核                 加密账户的纯隐私账本
 - 已发布的两种组合是作为独立合约评审的（[02-security-review](02-security-review.zh-cn.md)、[纯隐私组合的评审](../variant-1-privacy-only/03-security-review.zh-cn.md)）。重构之后要针对差异重新评审，重点是 §3 的钩子，以及每条铸造路径是否都按 `issuedSupply()` 检查上限。
 - 0.7.0 的评审还要覆盖：初始发行（只发生一次、上限、带公开账本时的托管钩子、`NoSupply()`），每种组合上内核里的销毁，每个出口对 `r` 的组装，同时带公开账本和 Wrapper 端口的组合，以及生成各组合的脚本（M10）。
 - 测试按模块、按实际发布的组合分别运行。每次操作之后都断言供应量守恒（§3 的表）。
-- 0.5.0 的字节码：`A1LedgerToken` 18,339 字节，`A1PrivateToken` 17,345 字节；上限是 24,576。原来的独立合约是 17,060 和 17,195。 0.6.0：13,808 和 14,293；差别来自删掉的兜底路径。
+- 0.5.0 的字节码：`A1LedgerToken` 18,339 字节，`A1PrivateToken` 17,345 字节；上限是 24,576。原来的独立合约是 17,060 和 17,195。 0.6.0：13,808 和 14,293；差别来自删掉的兜底路径。0.7.0 的八种组合：`A1Token` 12,305，`A1TokenM` 13,122，`A1TokenL` 14,237，`A1TokenW` 14,593，`A1LedgerToken` 14,683，`A1PrivateToken` 15,195，`A1TokenLW` 16,205，`A1TokenLMW` 16,765。两种已发布组合各大了约 900 字节，来自可枚举角色和初始发行。
 - gas：用同一套测试在本地与独立合约逐项对比，每项操作相差都在 300 gas 以内。新增的一项：带公开账本时的 `0x81` 销毁，账户首次花费时为 528k。
 
 ## 11. 决策
