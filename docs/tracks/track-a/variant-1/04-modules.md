@@ -68,7 +68,7 @@ The core keeps one counter, the **confidential supply**: the sum of all confiden
 **Initial supply.** The constructor takes `initialTo`, `initialAmount` and `initialPayload` and issues once, by the rule of `mint` (§4.2, 07 §3):
 
 - `initialPayload` empty: a public issuance to the address `initialTo`. Only with the public ledger; without it the deployment reverts `NoPublicLedger()`.
-- `initialPayload` = `0x82` with flags 0: `_creditPublic(initialTo, initialAmount)`, a confidential balance for the id `initialTo`.
+- `initialPayload` = `0x82` with flags 0: `_creditPublic(initialTo, initialAmount)`, a confidential balance for the id `initialTo`. An id is the key a wallet derives for one token's address (07 §8), so a deployer who wants the initial supply in its own id derives it for the address the deployment will get, from its account and nonce. The dApp's deploy form does this; if another transaction moves the nonce first, the supply lands in an id nobody holds. Like any credit to an id, the amount is below 2⁴⁸ (§2).
 - `initialAmount` may be zero only on a token with Mintable. A token without Mintable and with nothing issued could never hold anything, so the deployment reverts `NoSupply()`.
 - It emits what a mint emits: `Transfer(0x0, initialTo, initialAmount)`, and `Minted` when it goes to an id (a public issuance has only the ERC-20 `Transfer`). Nothing when the amount is zero. A payload other than empty or `0x82 00` reverts `BadInitialPayload()`.
 
