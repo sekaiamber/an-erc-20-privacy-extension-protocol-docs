@@ -2,7 +2,7 @@
 
 # B.1：note 模型，一个 join-split 电路
 
-版本：`0.4.0-draft`　状态：`Draft`（0.4.0 于 2026-10-15 按 [ADR-0014](../../../adr/0014-eighteen-decimals.zh-cn.md) 起草：金额 `< 2¹²⁸`，小数位在部署时选；尚未实现。0.3.0 于 2026-10-15 按 [ADR-0013](../../../adr/0013-mintable.zh-cn.md) 起草，当天在合约中实现并部署到 BSC testnet。0.2.0：合约、电路和 dApp 页面已实现；2026-10-13 已部署到 BSC testnet）
+版本：`0.4.0-draft`　状态：`Draft`（0.4.0 于 2026-10-15 按 [ADR-0014](../../../adr/0014-eighteen-decimals.zh-cn.md) 起草：金额 `< 2¹²⁸`，小数位在部署时选；当天已实现并部署到 BSC testnet。0.3.0 于 2026-10-15 按 [ADR-0013](../../../adr/0013-mintable.zh-cn.md) 起草，当天在合约中实现并部署到 BSC testnet。0.2.0：合约、电路和 dApp 页面已实现；2026-10-13 已部署到 BSC testnet）
 
 | 文档 | 内容 |
 | --- | --- |

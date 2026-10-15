@@ -29,9 +29,9 @@ The list is part of the version. A module registered later is not supported by t
 
 | Composition | Public ledger | Mintable | Wrapper port | Contract and descriptor | Documents |
 | --- | --- | --- | --- | --- | --- |
-| A.1 with the public ledger | Yes | Yes, into the public ledger | No | `A1LedgerToken`, `A:1:0.7.0` (0.6.0 still on chain) | [track-a/variant-1](track-a/variant-1/README.md) |
-| A.1 privacy-only | No | Yes, into confidential accounts | Yes | `A1PrivateToken`, `A:1:0.7.0` (0.6.0 still on chain) | [track-a/variant-1](track-a/variant-1/README.md) |
-| B.1 | No | Yes, into notes | Yes | `B1NoteToken`, `B:1:0.3.0` (0.2.0 still on chain) | [track-b/variant-1](track-b/variant-1/README.md) |
+| A.1 with the public ledger | Yes | Yes, into the public ledger | No | `A1LedgerToken`, `A:1:0.8.0` (0.6.0 and 0.7.0 still on chain) | [track-a/variant-1](track-a/variant-1/README.md) |
+| A.1 privacy-only | No | Yes, into confidential accounts | Yes | `A1PrivateToken`, `A:1:0.8.0` (0.6.0 and 0.7.0 still on chain) | [track-a/variant-1](track-a/variant-1/README.md) |
+| B.1 | No | Yes, into notes | Yes | `B1NoteToken`, `B:1:0.4.0` (0.2.0 and 0.3.0 still on chain) | [track-b/variant-1](track-b/variant-1/README.md) |
 
 Addresses are in the [A.1 deployment record](track-a/variant-1/03-deployments.md) and the [B.1 deployment record](track-b/variant-1/02-deployments.md). The two A.1 tokens report the same descriptor and are told apart by `casataModules()`.
 

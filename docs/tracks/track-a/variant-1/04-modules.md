@@ -251,7 +251,7 @@ Relative to 0.6.0. Decision records: [ADR-0013](../../../adr/0013-mintable.md) a
 
 ### 9.3 What changes at 0.8.0
 
-Relative to 0.7.0. Decision record: [ADR-0014](../../../adr/0014-eighteen-decimals.md). Implemented in the contracts and tested locally on 2026-10-15 (94 tests pass); not yet in the dApp or on chain. The window table is the 0.7.0 `G8Table` for bits 0..47, unchanged and reusable on chain, plus `G8TableHigh` for bits 48..127 (20,480 bytes), rather than two new halves.
+Relative to 0.7.0. Decision record: [ADR-0014](../../../adr/0014-eighteen-decimals.md). Implemented in the contracts and tested locally on 2026-10-15 (94 tests pass), followed in the dApp, and the two reference tokens deployed on BSC testnet the same day, with every operation run on chain ([03-deployments](03-deployments.md)). The window table is the 0.7.0 `G8Table` for bits 0..47, unchanged and reusable on chain, plus `G8TableHigh` for bits 48..127 (20,480 bytes), rather than two new halves.
 
 | # | Change | Affects |
 | --- | --- | --- |

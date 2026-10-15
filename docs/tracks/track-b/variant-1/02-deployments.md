@@ -2,7 +2,34 @@ English | [中文](02-deployments.zh-cn.md)
 
 # B.1 Deployment Record
 
-## BSC testnet (chain id 97) — 0.3.0 (current)
+## BSC testnet (chain id 97) — 0.4.0 (current)
+
+Deployed: 2026-10-15. `casata()` = `B:1:0.4.0`, 18 decimals (ADR-0014). Deployment id: `b1-notes-v0_4_0-bsc-testnet`. Contract source: contracts `ba3e807`. The join-split circuit is new (128-bit amounts, 22 public inputs), so its verifier is new; the deploy module also put a hash contract on chain, the same code as before. The dApp opens only this token (it drives only the newest version before release).
+
+| Contract | Address | Deployment gas | Transaction |
+| --- | --- | --- | --- |
+| **`B1NoteToken`** (Notes / NTS, 18 decimals; Mintable + Wrapper port) | [`0xfACc0Cb10E84d5f0db6458c2CcB3d9DD7588B2Dc`](https://testnet.bscscan.com/address/0xfACc0Cb10E84d5f0db6458c2CcB3d9DD7588B2Dc) | 7,519,649 | [0xce50…4bb7](https://testnet.bscscan.com/tx/0xce50e5e0b967d61b49eb95cf31b5b291a42d492bac9a2a8dc00c41cfb4904bb7) |
+| `PoseidonT3`, the hash contract | `0x9D96430941FB31A696F98251eA84a7b5bE2514BB` | 2,157,126 | [0x7683…3d87](https://testnet.bscscan.com/tx/0x76834a95306dea33bdc921406660b3e1161f04e18d3e0f6e135e6ef430413d87) |
+| `JoinSplitVerifier` (22 public inputs) | `0x0117F6CD175912F3b1C5F8873ddA63603d5DB9Cf` | 1,051,662 | [0x2cc6…5cfa](https://testnet.bscscan.com/tx/0x2cc6816e49e98d1358450caa965a58373d0e01f97f4a34437d626b185f995cfa) |
+| The family Wrapper, plugged into the Wrapper port | `0xfA04051c4cC38e439f871cBfA179424a257c5455` | n/a | n/a |
+
+No initial supply, which Mintable allows. Regulator key: the public key the A.1 tokens use, as key id 0.
+
+### On-chain measurements, 0.4.0 (contracts `scripts/track-b/variant-1/e2e-notes.ts`, 2026-10-15)
+
+Amounts in whole tokens of 18 decimals. The first run of the script minted 1,000 and stopped when the RPC refused its log reads (BNB Chain's public endpoint does not serve `eth_getLogs`; the script now reads logs from another endpoint), so the operations below are the second through sixth on the tree.
+
+| Operation | Gas | Transaction |
+| --- | --- | --- |
+| `mint` 1,000 | 1,384,959 | [0x4605…e628](https://testnet.bscscan.com/tx/0x4605a532874c64bd3af0cbea2f793b85a8242f3f51a03e89b2b9380c7326e628) |
+| Note transfer 250 | 1,376,078 | [0xcb41…6c12](https://testnet.bscscan.com/tx/0xcb4132b37c94a7f825da6ec16ba679831362e84b43d16182797e9848079a6c12) |
+| Burn 50 | 1,375,865 | [0x98a4…fff5](https://testnet.bscscan.com/tx/0x98a4d858d2b2bb0e680c1138e3f4984b5681e4dd0d88cadd0e82970d4dc7fff5) |
+| Wrap 300 (creates the wrapped token) | 2,007,963 | [0x918e…14ef](https://testnet.bscscan.com/tx/0x918e0403250d92f386d02b5be603e8796a79db5d148b668590ae4a82e17614ef) |
+| Unwrap 100 into a note | 1,414,121 | [0xa220…bba7](https://testnet.bscscan.com/tx/0xa2203e710cd820568bc459899b69039312bb344480b451e1e27e254c9bc1bba7) |
+
+The wallets find their notes (alice 450, bob 300). `totalSupply()` 1,750 + `wrappedOut()` 200 = `issuedSupply()` 1,950, which includes the first run's mint. Against 0.3.0 the transfer, burn, wrap and unwrap cost 1.5k to 12k more (one more public input, and larger amounts); the mint is not comparable, since 0.3.0 recorded the first operation on the tree.
+
+## BSC testnet (chain id 97) — 0.3.0 (superseded by 0.4.0)
 
 Deployed: 2026-10-15. `casata()` = `B:1:0.3.0`. Deployment id: `b1-notes-v0_3_0-bsc-testnet`. Contract source: contracts `9f3aa98`. The circuit and the proving key are those of 0.1.0. The deploy module puts a hash contract and a verifier on chain with the token; they are the same code as 0.2.0's.
 
@@ -27,7 +54,7 @@ Read back from the chain right after deployment: `casataModules()` lists Mintabl
 
 The wallets find their notes (alice 450, bob 300), and `totalSupply()` 750 + `wrappedOut()` 200 = `issuedSupply()` 950. The gas matches 0.2.0's to within a few hundred: parsing the payload from memory costs nothing measurable.
 
-The 0.2.0 token below stays on the chain and keeps working; the dApp opens both versions.
+The 0.3.0 token stays on the chain; the dApp no longer opens it. The 0.2.0 token below stays as well.
 
 ## BSC testnet (chain id 97) — 0.2.0 (superseded by 0.3.0)
 

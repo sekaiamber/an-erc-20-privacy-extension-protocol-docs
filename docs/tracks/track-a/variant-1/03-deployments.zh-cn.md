@@ -2,7 +2,50 @@
 
 # A.1 部署记录
 
-## BSC testnet（chain id 97）— 0.7.0（当前）
+## BSC testnet（chain id 97）— 0.8.0（当前）
+
+部署于 2026-10-15。`casata()` = `A:1:0.8.0`；两个代币都是 18 位小数（ADR-0014）。合约源码：contracts `ba3e807`。转账和 unshield 电路是新的（金额 128 位），所以它们的验证合约随带公开账本的代币一起部署，同时部署的还有 `G8TableHigh`，即第 48..127 位的窗口表。折叠验证合约和 `G8Table`（第 0..47 位）沿用下面 0.6.0 时上链的那份，没有变化。dApp 只打开这两个代币（发布之前只支持最新版本）。
+
+| 组合 | 部署 id | 合约 | 地址 | 部署 gas | 交易 |
+| --- | --- | --- | --- | --- | --- |
+| 带公开账本 | `a1-v0_8_0-ledger-bsc-testnet` | **`A1LedgerToken`**（Test / TEST，18 位小数） | [`0x051d44D54D9A1df478a50A8c548864de4c307402`](https://testnet.bscscan.com/address/0x051d44D54D9A1df478a50A8c548864de4c307402) | 5,938,268 | [0x8d1b…3df7](https://testnet.bscscan.com/tx/0x8d1b8192618e3dfa1d878cda8c0c5f9359250284be44f593f94297e3a4663df7) |
+| 纯隐私 | `a1-v0_8_0-private-bsc-testnet` | **`A1PrivateToken`**（Closed / CLS，18 位小数） | [`0xbe003F180864B70B3cD0f1Bc2306Ee47d0153480`](https://testnet.bscscan.com/address/0xbe003F180864B70B3cD0f1Bc2306Ee47d0153480) | 6,030,223 | [0xf9e8…56ad](https://testnet.bscscan.com/tx/0xf9e888e515a3d9dd448c5e9525537e2b2748a20a812d76d6428ef59a40c856ad) |
+
+| 共享合约（0.8.0 新部署） | 地址 | 部署 gas | 交易 |
+| --- | --- | --- | --- |
+| `TransferVerifier`（14 个公开输入，128 位范围） | `0x0b997e814Aac94fBff2B2a632bCA36D9910692b2` | 764,925 | [0x439b…3029](https://testnet.bscscan.com/tx/0x439b1e49e003adff491ade0897f15acdfa5973c013bd2d984d70eba7e21c3029) |
+| `UnshieldVerifier`（8 个公开输入） | `0x9010dF96017f3a3dD98E262F6e08092B1d0b4d0f` | 535,497 | [0x617f…b354](https://testnet.bscscan.com/tx/0x617fe6ccb2ce6055dd793b1f651e5ef7ab98180b3ea5982ca66dcf2b7e76b354) |
+| `G8TableHigh`（20,480 字节） | `0x4A8bE23d83ABE40bbd38956639A81f62E47F22f2` | 4,541,011 | [0x1c41…55a2](https://testnet.bscscan.com/tx/0x1c418e174ea69a01318ad0a7a2df1dcdadf153c4207f3658d1631ba2b4f155a2) |
+
+带公开账本的代币在构造函数里给部署者发行了 1,000,000 TEST（10²⁴ 个最小单位）；纯隐私代币没有初始发行。监管密钥：沿用 key id 0。
+
+### 链上实测，0.8.0，`A1PrivateToken`（contracts `scripts/track-a/variant-1/e2e-private-bsc.ts`，2026-10-15）
+
+金额都是 18 位小数的整数个代币，所以每一笔都超过 `2⁴⁸` 个最小单位。
+
+| 操作 | gas | 交易 |
+| --- | --- | --- |
+| `mint` 1,000 到 id（`0x82`） | 228,745 | [0x8798…8ee2](https://testnet.bscscan.com/tx/0x8798f834ae3df99611a2b2e73322194ecc89273c0cc330d881243c56b5cb8ee2) |
+| `0x01` 250，alice 给 bob | 705,453 | [0xda38…5a01](https://testnet.bscscan.com/tx/0xda38a7a61c3c4e987f91655eabbd29129fa62a8df1fb2a675a67a3d732be5a01) |
+| `fold` | 462,821 | [0xb5fd…0e35](https://testnet.bscscan.com/tx/0xb5fdb78de5dbc40ac1c77aba2bce39bd9a21ac0cc4bb72628ac9792548550e35) |
+| `0x81` 销毁 50 | 369,263 | [0x2e7d…c4ca](https://testnet.bscscan.com/tx/0x2e7d037aba7ebf21dccccf618cc858694bcb4635f2f6db172594af103e8ac4ca) |
+| wrap 300；创建 wCLS `0x82557d902Ba23d148F6e77f0b5Dd40EA0246C3C1`（18 位小数） | 996,972 | [0x235a…b8cc](https://testnet.bscscan.com/tx/0x235ad2426809f7e1fb6d66872b262a4881b1ee64f365c1a1426543377572b8cc) |
+| unwrap 100 到 bob 的 id | 178,819 | [0x6f47…1f66](https://testnet.bscscan.com/tx/0x6f473525ba987b64895faee4e5c07302160c50926039fc216f40538dd2831f66) |
+
+脚本解出的每个余额都对得上。和 0.7.0 相比：mint 多 32k，因为 1,000·10¹⁸ 用到了第二张窗口表；转账、折叠、销毁差别在 7k 以内，电路变大影响的是证明，不是验证。脚本前两次运行在头几笔交易后停住（负载均衡的 RPC 用落后一个区块的节点回答读取；脚本现在固定在上一笔回执所在的区块读），所以代币里多了两笔各 1,000 CLS 的铸造。
+
+### 链上实测，0.8.0，`A1LedgerToken`（dApp 客户端库，`dapp/scripts/e2e-bsc.mts`，2026-10-15）
+
+| 操作 | gas | 交易 |
+| --- | --- | --- |
+| `0x03` shield 100（收款方第二次收款；第一次来自一次中断的运行，花了 263,829） | 158,146 | [0x6ee6…cdd2](https://testnet.bscscan.com/tx/0x6ee6917e102821ac4a8b52b571fa7b6e1387addabd14f751660ce0ab581ecdd2) |
+| `0x01` 12.5 | 705,688 | [0x4b17…7a46](https://testnet.bscscan.com/tx/0x4b178edbdbf213021f47e4272a6d7a89e92ba2835ef0e45d2a833e1b82fa7a46) |
+| `fold`，中继提交 | 462,682 | [0x9dac…445d](https://testnet.bscscan.com/tx/0x9daca9e01e60edf798d60ad7aca5d6579da72e1e25d6f5ff289584c1d227445d) |
+| `0x04` unshield 5，中继提交 | 380,840 | [0x906b…bbd2](https://testnet.bscscan.com/tx/0x906be0059c5cb857a5dc75466554f6e891d9792d38933ed5b0cbf35d75eebbd2) |
+
+以上部署和所有运行，按测试网 gas 价格共花掉部署者 0.0047 BNB。
+
+## BSC testnet（chain id 97）— 0.7.0（已被 0.8.0 取代）
 
 部署日期：2026-10-15。两个代币的 `casata()` 都是 `A:1:0.7.0`，靠 `casataModules()` 区分。合约源码：contracts `9f3aa98`（04-modules M10 的生成组合）。电路没有变，所以两个代币都用下面 0.6.0 部署的验证合约和窗口表；除了这两个代币，没有部署别的。
 
@@ -46,7 +89,7 @@
 
 跑完后 `shieldedSupply()` 为 95 TEST，钱包的公开余额为 999,905 TEST。每种操作的 gas 与 0.6.0 相差约 1k 以内。
 
-下面 0.6.0 的代币仍留在链上、照常可用；dApp 两个版本都能打开。
+0.7.0 的代币仍留在链上，dApp 已不再打开它们。下面 0.6.0 的代币也一样留在链上。
 
 ## BSC testnet（chain id 97）— 0.6.0（已被 0.7.0 取代）
 

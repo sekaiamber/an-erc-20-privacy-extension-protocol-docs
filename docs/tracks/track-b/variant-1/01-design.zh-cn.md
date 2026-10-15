@@ -2,7 +2,7 @@
 
 # B.1 设计（0.4.0-draft）
 
-状态：`Draft`。0.4.0 已设计、尚未实现（见下面的说明）；它和 0.3.0 不同的地方，正文会注明。本段其余部分说的是 0.3.0。本文描述的是 0.3.0，它已在合约中实现并在本地测试（2026-10-15：四种组合由 `contracts/scripts/track-b/variant-1/gen-compositions.mjs` 生成，91 项合约测试通过），dApp 已跟进，并已不带初始供应部署到 BSC testnet（2026-10-15，[02-deployments](02-deployments.zh-cn.md)）；0.3.0 与 0.2.0 不同的地方，正文会注明。下面的链上测量都指 0.2.0。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`），dApp 的页面（`/tracks/b/1`）也已跟进。0.2.0 已部署到 BSC testnet，五种操作都在链上跑过（[02-deployments](02-deployments.zh-cn.md)，2026-10-13）。这个页面还没有在浏览器里对着链上的代币实际用过。gas、约束数和证明时间都是本地实测（§12）。
+状态：`Draft`。0.4.0（见下面的说明）已在合约和 dApp 中实现并部署到 BSC testnet，2026-10-15 所有操作都在链上跑过（[02-deployments](02-deployments.zh-cn.md)）；它和 0.3.0 不同的地方，正文会注明。本段其余部分说的是 0.3.0。本文描述的是 0.3.0，它已在合约中实现并在本地测试（2026-10-15：四种组合由 `contracts/scripts/track-b/variant-1/gen-compositions.mjs` 生成，91 项合约测试通过），dApp 已跟进，并已不带初始供应部署到 BSC testnet（2026-10-15，[02-deployments](02-deployments.zh-cn.md)）；0.3.0 与 0.2.0 不同的地方，正文会注明。下面的链上测量都指 0.2.0。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`），dApp 的页面（`/tracks/b/1`）也已跟进。0.2.0 已部署到 BSC testnet，五种操作都在链上跑过（[02-deployments](02-deployments.zh-cn.md)，2026-10-13）。这个页面还没有在浏览器里对着链上的代币实际用过。gas、约束数和证明时间都是本地实测（§12）。
 
 > 0.4.0（草案，2026-10-15）依据 [ADR-0014](../../../adr/0014-eighteen-decimals.zh-cn.md)。所有金额都 `< 2¹²⁸`：note、`v_pub_in` 和 `v_pub_out`；上限为 `2¹²⁸ − 1`（§2、§5.2）。代币的小数位在部署时选，0 到 18，默认 18。join-split 的范围检查加宽到 128 位（§4），因此要新的证明密钥和验证合约。`v_pub_in` 和 `v_pub_out` 各占一个公开输入：从 21 个变成 22 个（§4.1）。监管 memo 的符号位挪到 `2¹²⁸`（§6.2）。树、哈希和载荷格式不变。`casata()` = `B:1:0.4.0`。
 

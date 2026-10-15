@@ -2,7 +2,34 @@
 
 # B.1 部署记录
 
-## BSC testnet（chain id 97）— 0.3.0（当前）
+## BSC testnet（chain id 97）— 0.4.0（当前）
+
+部署于 2026-10-15。`casata()` = `B:1:0.4.0`，18 位小数（ADR-0014）。部署 id：`b1-notes-v0_4_0-bsc-testnet`。合约源码：contracts `ba3e807`。join-split 电路是新的（金额 128 位，22 个公开输入），所以验证合约是新的；部署模块还顺带上链了一个哈希合约，代码和以前相同。dApp 只打开这个代币（发布之前只支持最新版本）。
+
+| 合约 | 地址 | 部署 gas | 交易 |
+| --- | --- | --- | --- |
+| **`B1NoteToken`**（Notes / NTS，18 位小数；可增发 + Wrapper 端口） | [`0xfACc0Cb10E84d5f0db6458c2CcB3d9DD7588B2Dc`](https://testnet.bscscan.com/address/0xfACc0Cb10E84d5f0db6458c2CcB3d9DD7588B2Dc) | 7,519,649 | [0xce50…4bb7](https://testnet.bscscan.com/tx/0xce50e5e0b967d61b49eb95cf31b5b291a42d492bac9a2a8dc00c41cfb4904bb7) |
+| `PoseidonT3`，哈希合约 | `0x9D96430941FB31A696F98251eA84a7b5bE2514BB` | 2,157,126 | [0x7683…3d87](https://testnet.bscscan.com/tx/0x76834a95306dea33bdc921406660b3e1161f04e18d3e0f6e135e6ef430413d87) |
+| `JoinSplitVerifier`（22 个公开输入） | `0x0117F6CD175912F3b1C5F8873ddA63603d5DB9Cf` | 1,051,662 | [0x2cc6…5cfa](https://testnet.bscscan.com/tx/0x2cc6816e49e98d1358450caa965a58373d0e01f97f4a34437d626b185f995cfa) |
+| 家族 Wrapper，插在 Wrapper 端口里 | `0xfA04051c4cC38e439f871cBfA179424a257c5455` | 无 | 无 |
+
+没有初始发行，可增发允许这样。监管密钥：A.1 代币用的那把公钥，key id 0。
+
+### 链上实测，0.4.0（contracts `scripts/track-b/variant-1/e2e-notes.ts`，2026-10-15）
+
+金额都是 18 位小数的整数个代币。脚本第一次运行铸造了 1,000，随后因为 RPC 拒绝读日志而停住（BNB Chain 的公共节点不提供 `eth_getLogs`；脚本现在从另一个节点读日志），所以下面是树上的第二到第六次操作。
+
+| 操作 | gas | 交易 |
+| --- | --- | --- |
+| `mint` 1,000 | 1,384,959 | [0x4605…e628](https://testnet.bscscan.com/tx/0x4605a532874c64bd3af0cbea2f793b85a8242f3f51a03e89b2b9380c7326e628) |
+| note 转账 250 | 1,376,078 | [0xcb41…6c12](https://testnet.bscscan.com/tx/0xcb4132b37c94a7f825da6ec16ba679831362e84b43d16182797e9848079a6c12) |
+| 销毁 50 | 1,375,865 | [0x98a4…fff5](https://testnet.bscscan.com/tx/0x98a4d858d2b2bb0e680c1138e3f4984b5681e4dd0d88cadd0e82970d4dc7fff5) |
+| wrap 300（创建包装代币） | 2,007,963 | [0x918e…14ef](https://testnet.bscscan.com/tx/0x918e0403250d92f386d02b5be603e8796a79db5d148b668590ae4a82e17614ef) |
+| unwrap 100 成一个 note | 1,414,121 | [0xa220…bba7](https://testnet.bscscan.com/tx/0xa2203e710cd820568bc459899b69039312bb344480b451e1e27e254c9bc1bba7) |
+
+两个钱包都找到了自己的 note（alice 450，bob 300）。`totalSupply()` 1,750 + `wrappedOut()` 200 = `issuedSupply()` 1,950，其中包括第一次运行的那笔铸造。和 0.3.0 相比，转账、销毁、wrap、unwrap 各多 1.5k 到 12k（多了一个公开输入，金额也更大）；mint 不可比，0.3.0 记的是树上的第一次操作。
+
+## BSC testnet（chain id 97）— 0.3.0（已被 0.4.0 取代）
 
 部署日期：2026-10-15。`casata()` = `B:1:0.3.0`。部署 id：`b1-notes-v0_3_0-bsc-testnet`。合约源码：contracts `9f3aa98`。电路和证明密钥仍是 0.1.0 的。部署模块会随代币一起部署一个哈希合约和一个验证合约，代码与 0.2.0 的相同。
 
@@ -27,7 +54,7 @@
 
 钱包都找到了自己的 note（alice 450，bob 300），`totalSupply()` 750 + `wrappedOut()` 200 = `issuedSupply()` 950。gas 与 0.2.0 相差不过几百：从内存解析 payload 的开销测不出来。
 
-下面 0.2.0 的代币仍留在链上、照常可用；dApp 两个版本都能打开。
+0.3.0 的代币仍留在链上，dApp 已不再打开它。下面 0.2.0 的代币也一样留在链上。
 
 ## BSC testnet（chain id 97）— 0.2.0（已被 0.3.0 取代）
 
