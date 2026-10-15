@@ -18,7 +18,7 @@ What is hidden is the amount and the balance. What stays visible, in every A.x, 
 ```
 Track A        the state model and the trust base
   └─ Variant   one set of circuits: the cryptographic core (A.1)
-       └─ Modules   contract-level options on unchanged circuits (public ledger, role issuance, Wrapper port)
+       └─ Modules   contract-level options on unchanged circuits (public ledger, Mintable, Wrapper port)
 ```
 
 The base of every Variant is a **privacy-only ledger**. Whether a token also has public balances at its own address, how it is issued, and whether it can be wrapped are modules ([07 §13](../../07-family-conventions.md)). Two tokens of this Track can therefore differ in what `balanceOf` and a payload-less `transfer` do. Integrators read the module probe; they do not infer it from the letter A.
@@ -41,11 +41,11 @@ The base of every Variant is a **privacy-only ledger**. Whether a token also has
 | | Without the module | With the module |
 | --- | --- | --- |
 | **Public ledger** | `balanceOf` is 0 for every address. A payload-less `transfer` reverts `NoPublicLedger()`. `totalSupply()` is the confidential supply | Standard ERC-20 balances at the token's address. `0x03` and `0x04` move value between the two ledgers in one call. `totalSupply()` is public balances plus `shieldedSupply()` |
-| **Role issuance** | No mint | A minter role issues by public amount; holders burn by public amount |
+| **Mintable** (role issuance up to 0.6.0) | Fixed supply: from 0.7.0 the core issues the initial supply at deployment and holders burn by public amount ([ADR-0013](../../adr/0013-mintable.md)); up to 0.6.0 no mint and no burn | A minter role issues by public amount after deployment |
 | **Wrapper port** | The token cannot be wrapped | The family Wrapper can issue a plain ERC-20 `wTOKEN` for it |
 
 ## Variants
 
 | Variant | Core | Payer / recipient | Amount | Regulator | Modules declared | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| [A.1](variant-1/README.md) | ElGamal on Baby Jubjub + Groth16, account = public key | Pseudonymous: ids are stable and linkable | Hidden | Third ciphertext in every transfer, enforced in the circuit | 0.6.0 declares: public ledger, role issuance, Wrapper port | 0.6.0; two compositions deployed on BSC testnet |
+| [A.1](variant-1/README.md) | ElGamal on Baby Jubjub + Groth16, account = public key | Pseudonymous: ids are stable and linkable | Hidden | Third ciphertext in every transfer, enforced in the circuit | 0.6.0 declares: public ledger, role issuance (Mintable), Wrapper port | 0.6.0; two compositions deployed on BSC testnet; 0.7.0 drafted |

@@ -8,6 +8,8 @@
 
 > 2026-10-13：§1、§3 到 §7、§13、§14 按 [ADR-0010](adr/0010-erc20-surface-tradeoffs.zh-cn.md) 改写，名字按 [ADR-0011](adr/0011-project-name-casata.zh-cn.md) 改用新名。A.1 从 0.6.0、B.1 从 0.2.0 起实现本文。更早版本的代币遵循改写之前的文本：它们回答的是 `pep()` 而不是 `casata()`，用 `mintConfidential` 发行，A.1 还带有 `prepare` / `cancel`。
 
+> 2026-10-15：§3、§5、§7、§13、§14 按 [ADR-0013](adr/0013-mintable.zh-cn.md)（2026-10-15 接受）改写：角色铸造改名为可增发，初始发行和持有人的销毁归核心。A.1 从 0.7.0、B.1 从 0.3.0 起实现。更早的版本遵循改写之前的文本，其中这个模块叫角色铸造，并带着销毁。
+
 ## 1. 入口：转账动词 + 尾部 payload
 
 决策记录：[ADR-0003](adr/0003-erc20-surface-conventions.zh-cn.md)，由 [ADR-0010](adr/0010-erc20-surface-tradeoffs.zh-cn.md) 修订。
@@ -45,7 +47,7 @@ byte 2.. 由 type 决定的段
 
 Track B（note 模型）里没有 id。带 note 转账 payload 时，`from` 和 `to` 必须是代币自身的地址；销毁时 `to` 是零地址。见 [Track B 文档](tracks/track-b/README.zh-cn.md)。
 
-对 `mint`：不带 payload 时 `to` 是公开账户；带 payload 时由 Variant 的发行类型决定它的含义，A.1 里是机密 id，B.1 里是代币自身的地址。
+对 `mint`：不带 payload 时 `to` 是公开账户；带 payload 时由 Variant 的发行类型决定它的含义，A.1 里是机密 id，B.1 里是代币自身的地址。部署时的初始发行（§14）按同一规则指定接收方。
 
 ## 4. 句柄
 
@@ -64,7 +66,8 @@ handle = keccak256(payload) | (1 << 255)
 - `transfer`：付款方 = `msg.sender` 的公开账户。
 - `transferFrom`：`from` 为公开账户时是标准 allowance；`from` 为机密 id 时由 Variant 定义（A.1：零知识证明），`msg.sender` 不做检查。
 - `approve` / `allowance`：带公开账本模块的代币上是标准行为。没有公开账本模块的代币上，`approve` 回退 `NoPublicLedger()`，`allowance` 返回 0：没有任何东西可供授权，返回 true 就是假回答。
-- `mint`：角色铸造模块（§13.1）的铸造角色。
+- `mint`：可增发模块（§13.1）的铸造角色。
+- 销毁：持有人本人，按 Variant 自己的授权方式；不需要角色（§14）。
 
 ## 6. 兜底路径（已撤销）
 
@@ -73,7 +76,7 @@ handle = keccak256(payload) | (1 << 255)
 ## 7. 事件
 
 - 凡是移动价值的操作都发标准 `Transfer(from, to, x)`；`x` 为句柄或公开金额。带公开账本模块时，`0x03` / `0x04` 由公开账本托管转移触发 `Transfer(from, this, x)` / `Transfer(this, to, x)`。
-- 发行发出来自零地址的 `Transfer`，销毁发出去往零地址的 `Transfer`。
+- 发行（包括部署时的初始发行）发出来自零地址的 `Transfer`，销毁发出去往零地址的 `Transfer`。
 - 不移动价值的操作不发 `Transfer`，它有自己的事件（A.1：`Folded`）。
 - `0x03` / `0x04` 另发 `LedgerCrossing(from, to, type, amount)`。
 - 机密转账另发 Variant 定义的专用事件（A.1：`ConfidentialTransfer`），供收款方扫描与监管方解密。
@@ -145,21 +148,23 @@ interface ICasata {
 | 模块 | 种类 | 接口 | 增加了什么 | 代币强制的限额 |
 | --- | --- | --- | --- | --- |
 | 公开账本 | 编译时 | `ICasataPublicLedger` | 代币地址上的标准 ERC-20 余额；payload 类型 `0x03` / `0x04`；`shieldedSupply()`；`LedgerCrossing` | 无 |
-| 角色铸造 | 编译时 | `ICasataRoleIssuance` | 供铸造角色使用的 `mint(address to, uint256 amount)`，遵循 §1 的 payload 规则。不带 payload 时是向 `to` 的公开发行。带 payload 时把一笔公开金额发行到机密一侧，`to` 的含义由 Variant 的发行类型决定（A.1：[04-modules §4.2](tracks/track-a/variant-1/04-modules.zh-cn.md)；B.1：[01-design §5](tracks/track-b/variant-1/01-design.zh-cn.md)）。另有由持有人按公开金额销毁：`transferFrom(from, 0x0, amount)` 加 payload | 该 Variant 的供应上限 |
-| Wrapper 端口 | 端口加运行时模块 | `ICasataWrappable` | `wrapperMint`、`wrapperBurn`、`wrapper()`；由家族 Wrapper（[10](10-wrapper.zh-cn.md)）使用 | 记入量不得超过经该端口出去的数量（`wrappedOut`） |
+| 可增发 | 编译时 | `ICasataMintable` | 部署后的发行：供铸造角色使用的 `mint(address to, uint256 amount)`，遵循 §1 的 payload 规则。不带 payload 时是向 `to` 的公开发行。带 payload 时把一笔公开金额发行到机密一侧，`to` 的含义由 Variant 的发行类型决定（A.1：[04-modules §4.2](tracks/track-a/variant-1/04-modules.zh-cn.md)；B.1：[01-design §5](tracks/track-b/variant-1/01-design.zh-cn.md)）。到 A.1 0.6.0 和 B.1 0.2.0 为止叫角色铸造，并带着持有人的销毁（ADR-0013） | 该 Variant 的供应上限 |
+| Wrapper 端口 | 端口加运行时模块 | `ICasataWrappable` | `wrapperMint`、`wrapperBurn`、`wrapper()`；由家族 Wrapper（[10](10-wrapper.zh-cn.md)）或家族网关（[14](14-gateway.zh-cn.md)）使用 | 记入量不得超过经该端口出去的数量（`wrappedOut`） |
 
-托管发行（锁定普通 ERC-20、发行隐私代币的金库）是保留名，尚未设计。
+托管发行到 2026-10-15 为止是保留名，现已撤回（ADR-0013 第 5 条）。已有 ERC-20 的隐私版本，是一个带可增发和 Wrapper 端口、铸造者和 wrapper 都是家族网关（[14](14-gateway.zh-cn.md)）的代币。
 
 登记表只增不减。新登记一个模块，对已有的 Variant 版本没有任何影响。有的模块只对某一个 Track 有意义；它同样登记在这里，只由那个 Track 的 Variant 声明支持。
 
 **支持声明。** 每个 Variant 的每个版本都要声明自己支持哪些模块（§13.2）：
 
-| Variant 版本 | 公开账本 | 角色铸造 | Wrapper 端口 |
+| Variant 版本 | 公开账本 | 可增发（0.7.0 / 0.3.0 之前叫角色铸造） | Wrapper 端口 |
 | --- | --- | --- | --- |
 | A.1 0.5.0 | 支持 | 支持 | 支持 |
 | A.1 0.6.0 | 支持 | 支持 | 支持 |
+| A.1 0.7.0（草案） | 支持 | 支持 | 支持 |
 | B.1 0.1.0 | 不支持 | 支持 | 支持 |
 | B.1 0.2.0 | 不支持 | 支持 | 支持 |
+| B.1 0.3.0（草案） | 不支持 | 支持 | 支持 |
 
 这些接口在 `contracts/contracts/family/` 下。
 
@@ -167,7 +172,7 @@ interface ICasata {
 
 - **种类。** 编译时模块继承进代币合约。运行时模块是插在端口上的外部合约；端口本身是一个很小的编译时模块。
 - **顺序。** 编译时模块按固定顺序继承：内核、公开账本、发行、端口。
-- **供应。** 一种组合至少要有一个供应来源。
+- **供应。** 每个代币在部署时发行初始供应（§14）。可增发是唯一能在部署后发行的模块；端口放回的量不超过从它出去的量。到 A.1 0.6.0 和 B.1 0.2.0 为止，规则是一种组合至少要有一个供应来源，而供应来源只有角色铸造（ADR-0013）。
 - **只走端口。** 运行时模块通过普通调用到达，绝不在代币的存储里运行。
 - **不可安装。** 运行时模块在部署时定死，或只能设置一次。
 - **限额。** 每个端口都带一个由代币强制的限额；代币不依赖模块自己的检查。
@@ -190,7 +195,7 @@ interface ICasataModules {
 - 这份清单与 `casata()` 一样是自我声明。
 - `casata()` 说明代币是哪个 Variant 的哪个版本，也就说明了它可能带哪些模块；`casataModules()` 说明它实际带了哪些。
 - 集成方不得从 Track 字母推断代币有没有公开余额，要从探针读取。
-- 接口标识：`ICasataModules` `0xf71c7351`、`ICasataPublicLedger` `0x43dcbbd9`、`ICasataRoleIssuance` `0x40c10f19`、`ICasataWrappable` `0x1464bbec`。角色铸造的标识就是 `mint(address,uint256)` 的选择器，因为这个接口只有这一个函数。
+- 接口标识：`ICasataModules` `0xf71c7351`、`ICasataPublicLedger` `0x43dcbbd9`、`ICasataMintable` `0x40c10f19`、`ICasataWrappable` `0x1464bbec`。可增发的标识就是 `mint(address,uint256)` 的选择器，因为这个接口只有这一个函数。到 A.1 0.6.0 和 B.1 0.2.0 为止，同一个标识叫 `ICasataRoleIssuance`。
 - 更早的版本：A.1 0.5.0 和 B.1 0.1.0 有同样的探针，名字是 `pepModules()`（`IPEPModules`，`0xad5ad25b`），它们的角色铸造标识是 `0x60b2d978`（`mintConfidential`）。A.1 0.5.0 之前的代币没有探针；对它们检测 Wrapper 端口用的是 `supportsInterface(0x1464bbec)`。
 
 ### 13.4 没有公开账本模块的代币
@@ -201,5 +206,7 @@ interface ICasataModules {
 
 - 每个代币都保留 `name`、`symbol`、`decimals`、`totalSupply`、`balanceOf`。它们在每个代币上给出的回答都是真的。没有公开账本的代币上，`balanceOf` 报告的是公开余额，对用户来说就是零。
 - `totalSupply()` 等于在该代币上已发行且未销毁的数量。
+- **初始发行**（ADR-0013，A.1 0.7.0 与 B.1 0.3.0 起）。每个代币在部署时发行一次初始供应，接收方按 `mint` 的规则指定（§3）。具体做法由 Variant 定。只有带可增发的代币，初始发行量才可以是零；否则部署回滚。不带可增发的代币是固定供应：只能因销毁而减少。
+- **销毁**（同上）。每个代币都允许持有人销毁自己余额里的一笔公开金额：`transferFrom(from, 0x0, amount)` 加 Variant 的销毁类型，按 Variant 的授权方式，不需要角色。在隐私代币里，转给没人控制的 id 金额是隐藏的，所以销毁是唯一能让别人核对的减少供应的方式。
 - 推荐而非强制：代币给出足以让任何人算出机密供应量的数字，即从 `totalSupply()` 里减去公开部分。Variant 怎么呈现由它自己决定。带公开账本的 A.1 有 `shieldedSupply()`；B.1 让代币自身地址在 `balanceOf` 里持有机密供应量。
 - 代币能否隐藏自己的供应量，目前没有决定。没有 Variant 这样做。

@@ -20,14 +20,14 @@ Both Tracks have the same trust base: user-held keys, client-side proofs, no ext
 | Module | A.1 0.6.0 (design) | B.1 0.2.0 (design) |
 | --- | --- | --- |
 | Public ledger | Yes | No |
-| Role issuance | Yes | Yes |
+| Mintable (named role issuance in these versions) | Yes | Yes |
 | Wrapper port | Yes | Yes |
 
-The list is part of the version. A module registered later is not supported by these versions; supporting it takes a new version of the Variant (07 §13.2). Both versions are implemented and deployed on BSC testnet.
+The list is part of the version. A module registered later is not supported by these versions; supporting it takes a new version of the Variant (07 §13.2). Both versions are implemented and deployed on BSC testnet. A.1 0.7.0 and B.1 0.3.0 are drafted with the same lists, the initial supply and the burn in the core ([ADR-0013](../adr/0013-mintable.md)).
 
 ## Deployed compositions
 
-| Composition | Public ledger | Role issuance | Wrapper port | Contract and descriptor | Documents |
+| Composition | Public ledger | Mintable | Wrapper port | Contract and descriptor | Documents |
 | --- | --- | --- | --- | --- | --- |
 | A.1 with the public ledger | Yes | Yes, into the public ledger | No | `A1LedgerToken`, `A:1:0.6.0` | [track-a/variant-1](track-a/variant-1/README.md) |
 | A.1 privacy-only | No | Yes, into confidential accounts | Yes | `A1PrivateToken`, `A:1:0.6.0` | [track-a/variant-1](track-a/variant-1/README.md) |

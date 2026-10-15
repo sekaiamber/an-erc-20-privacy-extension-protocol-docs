@@ -2,7 +2,7 @@ English | [中文](0008-modules.zh-cn.md)
 
 # 0008 Track, Variant and module: the public ledger is a module, not a Track
 
-- Status: Accepted (implemented: contracts and dApp restructured and both testnet tokens redeployed on 2026-10-13, see Transition; Transition updated by [0009](0009-track-b-notes.md))
+- Status: Accepted (implemented: contracts and dApp restructured and both testnet tokens redeployed on 2026-10-13, see Transition; Transition updated by [0009](0009-track-b-notes.md); items 5 and 6 amended by [0013](0013-mintable.md))
 - Date: 2026-10-12
 - Scope: Family (amends items 1–4 of [ADR-0002](0002-track-variant-structure.md), items 2 and 3 of [ADR-0007](0007-track-definition.md) and the wording of [ADR-0005](0005-family-wrapper.md))
 

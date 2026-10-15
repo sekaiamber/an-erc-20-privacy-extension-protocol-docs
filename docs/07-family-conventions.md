@@ -8,6 +8,8 @@ This document is the **normative** family-level convention. Track and Variant do
 
 > 2026-10-13: §1, §3 to §7, §13 and §14 follow [ADR-0010](adr/0010-erc20-surface-tradeoffs.md), and the names follow [ADR-0011](adr/0011-project-name-casata.md). A.1 implements this text from 0.6.0 and B.1 from 0.2.0. Tokens of earlier versions follow the text before it: they answer `pep()` instead of `casata()`, issue with `mintConfidential`, and A.1 still has `prepare` / `cancel`.
 
+> 2026-10-15: §3, §5, §7, §13 and §14 follow [ADR-0013](adr/0013-mintable.md) (accepted 2026-10-15): role issuance is renamed Mintable, and the initial supply and the holder's burn belong to the core. A.1 is to implement this from 0.7.0 and B.1 from 0.3.0. Earlier versions follow the text before it, where the module is called role issuance and carries the burn.
+
 ## 1. Entry point: the transfer verb + trailing payload
 
 Decision records: [ADR-0003](adr/0003-erc20-surface-conventions.md), amended by [ADR-0010](adr/0010-erc20-surface-tradeoffs.md).
@@ -45,7 +47,7 @@ byte 2.. segments determined by type
 
 In Track B (notes) there are no ids. With a note-transfer payload, `from` and `to` MUST be the token's own address; for a burn, `to` is the zero address. See the [Track B document](tracks/track-b/README.md).
 
-For `mint`, `to` is a public account when there is no payload. With a payload it is what the Variant's issuance type says: a confidential id in A.1, the token's own address in B.1.
+For `mint`, `to` is a public account when there is no payload. With a payload it is what the Variant's issuance type says: a confidential id in A.1, the token's own address in B.1. The initial issuance at deployment (§14) names its recipient by the same rule.
 
 ## 4. Handles
 
@@ -64,7 +66,8 @@ Explorers and wallets show a handle as a very large amount. A client states this
 - `transfer`: payer = the public account of `msg.sender`.
 - `transferFrom`: when `from` is a public account, standard allowance applies; when `from` is a confidential id, authorization is defined by the Variant (A.1: zero-knowledge proof) and `msg.sender` is not checked.
 - `approve` / `allowance`: standard on a token with the public-ledger module. On a token without it, `approve` reverts `NoPublicLedger()` and `allowance` returns 0: there is nothing an allowance could authorise, and returning true would be a false answer.
-- `mint`: the minter role of the role-issuance module (§13.1).
+- `mint`: the minter role of the Mintable module (§13.1).
+- Burn: the holder, under the Variant's own authorization; no role (§14).
 
 ## 6. Fallback path (withdrawn)
 
@@ -73,7 +76,7 @@ This section described `prepare` / `cancel`: registering a confidential operatio
 ## 7. Events
 
 - Every operation that moves value emits the standard `Transfer(from, to, x)`; `x` is a handle or a public amount. With the public-ledger module, `0x03` / `0x04` are triggered by the public-ledger custody transfer and emit `Transfer(from, this, x)` / `Transfer(this, to, x)`.
-- Issuance emits `Transfer` from the zero address and a burn emits `Transfer` to the zero address.
+- Issuance, the initial issuance at deployment included, emits `Transfer` from the zero address, and a burn emits `Transfer` to the zero address.
 - An operation that moves no value emits no `Transfer`; it has an event of its own (A.1: `Folded`).
 - `0x03` / `0x04` additionally emit `LedgerCrossing(from, to, type, amount)`.
 - Confidential transfers additionally emit a Variant-defined dedicated event (A.1: `ConfidentialTransfer`) for recipient scanning and regulator decryption.
@@ -145,21 +148,23 @@ Decision record: [ADR-0008](adr/0008-modules.md). A module is a contract-level o
 | Module | Kind | Interface | Adds | Limit enforced by the token |
 | --- | --- | --- | --- | --- |
 | Public ledger | Compile-time | `ICasataPublicLedger` | Standard ERC-20 balances at the token's address; payload types `0x03` / `0x04`; `shieldedSupply()`; `LedgerCrossing` | None |
-| Role issuance | Compile-time | `ICasataRoleIssuance` | `mint(address to, uint256 amount)` for a minter role, with the payload rule of §1. Without a payload it is a public issuance to `to`. With a payload it issues a public amount into the confidential side, and the Variant's issuance type says what `to` means (A.1: [04-modules §4.2](tracks/track-a/variant-1/04-modules.md); B.1: [01-design §5](tracks/track-b/variant-1/01-design.md)). Also a public-amount burn by the holder: `transferFrom(from, 0x0, amount)` + payload | The Variant's supply cap |
-| Wrapper port | Port and runtime module | `ICasataWrappable` | `wrapperMint`, `wrapperBurn`, `wrapper()`; used by the family Wrapper ([10](10-wrapper.md)) | Credits never exceed what left through the port (`wrappedOut`) |
+| Mintable | Compile-time | `ICasataMintable` | Issuance after deployment: `mint(address to, uint256 amount)` for a minter role, with the payload rule of §1. Without a payload it is a public issuance to `to`. With a payload it issues a public amount into the confidential side, and the Variant's issuance type says what `to` means (A.1: [04-modules §4.2](tracks/track-a/variant-1/04-modules.md); B.1: [01-design §5](tracks/track-b/variant-1/01-design.md)). Named role issuance up to A.1 0.6.0 and B.1 0.2.0, where it also carried the holder's burn (ADR-0013) | The Variant's supply cap |
+| Wrapper port | Port and runtime module | `ICasataWrappable` | `wrapperMint`, `wrapperBurn`, `wrapper()`; used by the family Wrapper ([10](10-wrapper.md)) or the family gateway ([14](14-gateway.md)) | Credits never exceed what left through the port (`wrappedOut`) |
 
-Custody issuance (a vault that locks a plain ERC-20 and issues the privacy token) is a reserved name. It is not designed.
+Custody issuance, a reserved name until 2026-10-15, is withdrawn (ADR-0013, item 5). A privacy version of an existing ERC-20 is a token with Mintable and the Wrapper port whose minter and wrapper is the family gateway ([14](14-gateway.md)).
 
 The registry is append-only. Registering a new module changes nothing for existing Variant versions. A module may make sense in one Track only; it is registered here all the same, and only the Variants of that Track declare it.
 
 **Declared support.** Every version of every Variant declares which modules it supports (§13.2):
 
-| Variant version | Public ledger | Role issuance | Wrapper port |
+| Variant version | Public ledger | Mintable (role issuance before 0.7.0 / 0.3.0) | Wrapper port |
 | --- | --- | --- | --- |
 | A.1 0.5.0 | Yes | Yes | Yes |
 | A.1 0.6.0 | Yes | Yes | Yes |
+| A.1 0.7.0 (draft) | Yes | Yes | Yes |
 | B.1 0.1.0 | No | Yes | Yes |
 | B.1 0.2.0 | No | Yes | Yes |
+| B.1 0.3.0 (draft) | No | Yes | Yes |
 
 The interfaces are in `contracts/contracts/family/`.
 
@@ -167,7 +172,7 @@ The interfaces are in `contracts/contracts/family/`.
 
 - **Kinds.** A compile-time module is inherited into the token contract. A runtime module is an external contract plugged into a port; the port is a small compile-time module.
 - **Order.** Compile-time modules are inherited in a fixed order: core, public ledger, issuance, ports.
-- **Supply.** A composition has at least one source of supply.
+- **Supply.** Every token issues its initial supply at deployment (§14). Mintable is the only module that issues afterwards; a port returns at most what left through it. Up to A.1 0.6.0 and B.1 0.2.0 the rule was that a composition has at least one source of supply, which only role issuance was (ADR-0013).
 - **Ports only.** A runtime module is reached with an ordinary call and never runs in the token's storage.
 - **No installing.** A runtime module is fixed at deployment or set once.
 - **Limits.** Every port carries a limit that the token enforces; the token does not rely on the module's own checks.
@@ -190,7 +195,7 @@ interface ICasataModules {
 - The list is self-declared, like `casata()`.
 - `casata()` tells which Variant version a token is, and therefore which modules it could have; `casataModules()` tells which of them it has.
 - Integrators must not infer from the Track letter whether a token has public balances. They read it from the probe.
-- Interface ids: `ICasataModules` `0xf71c7351`, `ICasataPublicLedger` `0x43dcbbd9`, `ICasataRoleIssuance` `0x40c10f19`, `ICasataWrappable` `0x1464bbec`. The role-issuance id is the selector of `mint(address,uint256)`, since that is the interface's only function.
+- Interface ids: `ICasataModules` `0xf71c7351`, `ICasataPublicLedger` `0x43dcbbd9`, `ICasataMintable` `0x40c10f19`, `ICasataWrappable` `0x1464bbec`. The Mintable id is the selector of `mint(address,uint256)`, since that is the interface's only function. Up to A.1 0.6.0 and B.1 0.2.0 the same id was named `ICasataRoleIssuance`.
 - Earlier versions: A.1 0.5.0 and B.1 0.1.0 have the same probe under the name `pepModules()` (`IPEPModules`, `0xad5ad25b`), and their role-issuance id is `0x60b2d978` (`mintConfidential`). Tokens before A.1 0.5.0 have no probe; on those the Wrapper port is detected with `supportsInterface(0x1464bbec)`.
 
 ### 13.4 A token without the public-ledger module
@@ -201,5 +206,7 @@ Its ERC-20 surface is specified by the Variant: for A.1 in [04-modules §5](trac
 
 - Every token keeps `name`, `symbol`, `decimals`, `totalSupply` and `balanceOf`. Their answers are true on every token. On a token without the public ledger, `balanceOf` reports the public balance, which is zero for a user.
 - `totalSupply()` equals what has been issued at the token and not burned.
+- **Initial supply** (ADR-0013, from A.1 0.7.0 and B.1 0.3.0). Every token issues an initial supply once, as part of its deployment, to a recipient named by the rule of `mint` (§3). How is the Variant's. It may be zero only on a token with Mintable; otherwise the deployment reverts. A token without Mintable has a fixed supply: it can only shrink by burns.
+- **Burn** (same). Every token lets a holder destroy a public amount of their own balance, `transferFrom(from, 0x0, amount)` with the Variant's burn type, under the Variant's authorization and without a role. In a privacy token a transfer to an id nobody controls hides its amount, so a burn is the only reduction of the supply that others can verify.
 - Recommended, not required: a token reports figures from which anyone can compute its confidential supply, by subtracting the public part from `totalSupply()`. How a Variant presents this is its own choice. A.1 with the public ledger has `shieldedSupply()`; B.1 lets the token's own address hold the confidential supply in `balanceOf`.
 - Whether a token may hide its supply is not decided. No Variant does so.

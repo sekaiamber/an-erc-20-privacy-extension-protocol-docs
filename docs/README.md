@@ -20,6 +20,7 @@ This directory contains all research and design documents of Casata (until 2026-
 | 11 | [Family tool: Regulatory Committee](11-regulatory-committee.md) | Threshold regulator key with on-chain membership, policies and view audit trail; per-project tool |
 | 12 | [Visual style](12-visual-style.md) | What Casata looks like: the secret ledger, colour, type, the seal, and how a sculpture on the home page fits in |
 | 13 | [Cicerone, the guide](13-cicerone.md) | How the dApp guide chooses its questions: a catalogue of compositions, an ordered list of two-answer questions, one rule |
+| 14 | [Family tool: gateway](14-gateway.md) | A privacy version of an existing ERC-20: lock it in the gateway, hold it confidentially, take it out again; draft |
 | — | [Glossary](glossary.md) | Definitions of terms used in the project |
 | — | [References](references.md) | Links to EIPs, papers and code repositories |
 | — | [ADR](adr/README.md) | Architecture decision records |

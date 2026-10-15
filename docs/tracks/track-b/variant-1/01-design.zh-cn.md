@@ -1,8 +1,10 @@
 [English](01-design.md) | 中文
 
-# B.1 设计（0.2.0-draft）
+# B.1 设计（0.3.0-draft）
 
-状态：`Draft`。本文描述的是 0.2.0。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`），dApp 的页面（`/tracks/b/1`）也已跟进。0.2.0 已部署到 BSC testnet，五种操作都在链上跑过（[02-deployments](02-deployments.zh-cn.md)，2026-10-13）。这个页面还没有在浏览器里对着链上的代币实际用过。gas、约束数和证明时间都是本地实测（§12）。
+状态：`Draft`。本文描述的是 0.3.0，它已起草、尚未实现；0.3.0 与 0.2.0 不同的地方，正文会注明。下面关于实现、部署和测量的内容都指 0.2.0。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`），dApp 的页面（`/tracks/b/1`）也已跟进。0.2.0 已部署到 BSC testnet，五种操作都在链上跑过（[02-deployments](02-deployments.zh-cn.md)，2026-10-13）。这个页面还没有在浏览器里对着链上的代币实际用过。gas、约束数和证明时间都是本地实测（§12）。
+
+> 0.3.0（草案，2026-10-15）依据 [ADR-0013](../../../adr/0013-mintable.zh-cn.md)。角色铸造模块改名为**可增发**（`ICasataMintable`；接口 id `0x40c10f19` 不变）。`0x81` 销毁移进核心，所以每个 B.1 代币都能销毁。核心在代币部署时发行初始供应（§7.1），所以不带可增发的代币就是固定供应的代币。声明的模块是可增发和 Wrapper 端口（§5.1）。电路、payload 布局、证明密钥和验证器都不变。`casata()` = `B:1:0.3.0`。[A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md) 的出口绑定不适用于 B.1（§5）。
 
 > 0.2.0（2026-10-13）只改表面，依据是 [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.zh-cn.md) 和 [ADR-0011](../../../adr/0011-project-name-casata.zh-cn.md)。发行改为 `mint(token, amount)`，join-split 作为尾部 payload，取代 `mintConfidential`。`approve` 回退 `NoPublicLedger()`。`pep()` 改为 `casata()`，密钥派生的域名改为 `"Casata"`，所以密钥与 0.1.0 的不同。电路、payload 和事件都不变。这个版本回答的是 `casata()` = `B:1:0.2.0`；它不是 2026-10-12 之前回答 `pep()` = `B:1:0.2.0` 的那个代币，那个是 A.1 的纯隐私组合。
 
@@ -132,8 +134,9 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 | 调用 | payload 类型 | 公开金额 | 含义 |
 | --- | --- | --- | --- |
 | `transferFrom(token, token, handle)` | `0x01` | 无 | note 之间转账 |
-| `transferFrom(token, 0x0, amount)` | `0x81` | `v_pub_out = amount`，`to = 0x0` | 销毁 |
-| `mint(token, amount)` | `0x82` | `v_pub_in = amount` | 角色铸造；仅 `MINTER_ROLE` |
+| `transferFrom(token, 0x0, amount)` | `0x81` | `v_pub_out = amount`，`to = 0x0` | 持有人销毁。0.3.0 起属于核心；到 0.2.0 为止属于角色铸造 |
+| 构造函数，`initialSupply` 与 `initialPayload` | `0x82` | `v_pub_in = initialSupply` | 初始发行，部署时一次。0.3.0 起属于核心（§7.1） |
+| `mint(token, amount)` | `0x82` | `v_pub_in = amount` | 可增发（到 0.2.0 为止叫角色铸造）；仅 `MINTER_ROLE` |
 | `wrapperBurn(0x0, to, amount, payload)` | `0x81` | `v_pub_out = amount`，绑定 `to` | Wrapper 端口：出到包装代币 |
 | `wrapperMint(recipient, amount)` | `0x82` | `v_pub_in = amount` | Wrapper 端口：`recipient` 就是整个 payload |
 | 不带 payload 的 `transfer`、`transferFrom`、`mint` | 无 | 无 | 回退 `NoPublicLedger()` |
@@ -143,23 +146,33 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 - `token` 指代币自身的地址。note 转账里 `from` 和 `to` 不携带任何信息，所以固定为它。标准事件于是读作池子内部的一次移动，不会被当成铸造或销毁。
 - 重放由作废符阻止：一份 payload 只能执行一次。
 - B.1 没有 `prepare` / `cancel`。家族已经撤销了这条路径（约定 §6）。
-- `mint` 就是家族角色铸造接口（约定 §13.1）里的那个函数，join-split 作为尾部 payload 附在后面，从 `msg.data[68:]` 读取。这里没有账户可指，所以 `to` 必须是代币自身的地址。不带 payload 的 `mint` 是公开发行，B.1 没有这种发行。0.1.0 里这个函数叫 `mintConfidential`。
+- `mint` 就是家族可增发接口（约定 §13.1；到 0.2.0 为止叫角色铸造）里的那个函数，join-split 作为尾部 payload 附在后面，从 `msg.data[68:]` 读取。这里没有账户可指，所以 `to` 必须是代币自身的地址。不带 payload 的 `mint` 是公开发行，B.1 没有这种发行。0.1.0 里这个函数叫 `mintConfidential`。
 - **payload。** 所有操作共用一种布局，838 字节：类型（1）、flags（1，必须为 0）、`root`（32）、`nf[2]`（64）、`cm[2]`（64）、`D`（64）、`memo_recv`（192）、`memo_reg`（160）、`regKeyId`（4）、证明（256）。公开金额和 `to` 是调用的参数，由证明绑定。
-- **payload 类型。** `0x01` 是 note 转账；`0x81` 是公开金额流出（销毁、wrap）；`0x82` 是公开金额流入（铸造、unwrap）。证明不绑定类型。销毁和 wrap 靠 `to` 区分：销毁时为零地址，wrap 时不为零。
+- **payload 类型。** `0x01` 是 note 转账；`0x81` 是公开金额流出（销毁、wrap）；`0x82` 是公开金额流入（初始发行、铸造、unwrap）。证明不绑定类型。销毁和 wrap 靠 `to` 区分：销毁时为零地址，wrap 时不为零。
+- **不需要出口绑定。** A.1 0.7.0 把出口类型绑进证明的收款人值，因为同时有公开账本和 Wrapper 端口的代币有两个收款人非零的出口（[A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md)）。B.1 只有一个：wrap。销毁的零收款人把另一个隔开，所以 B.1 0.3.0 照旧绑定 `to`。加入公开账本的 B.1 版本需要同样的绑定。
 
 ### 5.1 模块
 
-| 模块 | B.1 0.2.0（与 0.1.0 相同） |
-| --- | --- |
-| 角色铸造 | 支持：`mint` 与 `0x81` 销毁 |
-| Wrapper 端口 | 支持：`ICasataWrappable`，限额 `wrappedOut` |
-| 公开账本 | 不支持。以后可以在同一对 `v_pub_in` / `v_pub_out` 上加 |
+| 模块 | B.1 0.3.0 | B.1 0.2.0（与 0.1.0 相同） |
+| --- | --- | --- |
+| 可增发 | 支持：`mint` | 以角色铸造之名支持：`mint` 与 `0x81` 销毁 |
+| Wrapper 端口 | 支持：`ICasataWrappable`，限额 `wrappedOut` | 相同 |
+| 公开账本 | 不支持。以后可以在同一对 `v_pub_in` / `v_pub_out` 上加 | 不支持 |
 
-这是 B.1 0.2.0 声明的清单（07 §13.2），与 0.1.0 的相同。要支持别的模块，包括公开账本，都得出新的 B.1 版本。
+这是声明的清单（07 §13.2）。要支持别的模块，包括公开账本，都得出新的 B.1 版本。
+
+0.3.0 起，清单的任意子集都是代币（[ADR-0013](../../../adr/0013-mintable.zh-cn.md) 第 4 条）：
+
+| 可增发 | Wrapper 端口 | 是什么 |
+| --- | --- | --- |
+| | | 固定供应：构造函数发行的量，只会因销毁而减少 |
+| | 有 | 固定供应，也可以作为家族 Wrapper 的 `wTOKEN` 持有 |
+| 有 | | 发行方持续增发；没有公开形态 |
+| 有 | 有 | 0.2.0 部署的组合。以家族网关作为 Wrapper 时，是已有 ERC-20 的隐私版本（§7.4） |
 
 ### 5.2 供应量
 
-`totalSupply()` 是池子里持有的数量：已铸造，减已销毁，减当前经 Wrapper 出去的数量。`issuedSupply() = totalSupply() + wrappedOut`，上限 `2⁶⁴ − 1` 针对的是它。这与 A.1 纯隐私组合的记账方式相同。
+`totalSupply()` 是池子里持有的数量：部署时发行的与铸造的，减已销毁，减当前经 Wrapper 出去的数量。`issuedSupply() = totalSupply() + wrappedOut`，上限 `2⁶⁴ − 1` 针对的是它，初始供应也计算在内。这与 A.1 纯隐私组合的记账方式相同。
 
 ## 6. memo
 
@@ -189,11 +202,24 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 
 ## 7. 流程
 
-### 7.1 铸造
+### 7.1 发行
 
-铸造方知道收款人的收款码。它构造一个 join-split：两个占位输入，`v_pub_in = amount`，一个输出给收款人，一个零金额输出，然后调用 `mint(token, amount)`，把 payload 附在后面。
+**铸造（可增发）。** 铸造方知道收款人的收款码。它构造一个 join-split：两个占位输入，`v_pub_in = amount`，一个输出给收款人，一个零金额输出，然后调用 `mint(token, amount)`，把 payload 附在后面。
 
-金额虽然公开，仍然需要证明，因为监管方必须在新 note 创建的那一刻就知道它的所有者。
+金额虽然公开，仍然需要证明，因为监管方必须在新 note 创建的那一刻就知道它的所有者（§14 D6）。
+
+**初始发行（核心，0.3.0 起）。** 同样的 join-split，在代币存在之前做好，由它的构造函数检查。
+
+1. 部署者算出代币将来的地址。用 `CREATE` 部署时，地址由部署账户和部署交易的 nonce 决定。
+2. 它对着空树的树根构造 join-split；空树的树根只取决于深度和哈希，事先就知道。`v_pub_in = initialSupply`；两个输出给一个或两个收款码，所以初始供应可以分给两个所有者，比如金库和团队。监管 memo 加密给构造函数将作为 key id 0 装入的监管公钥。
+3. 它把 `initialSupply` 和 payload 作为构造参数部署。构造函数在建好树和监管公钥之后检查上限，执行 join-split（证明绑定 `contract` 和 `chainId`，§4.1），把这一对承诺追加到叶子 0 和 1，发出 `Transfer(0x0, token, initialSupply)`、`Minted(initialSupply)` 和第一条 `NoteTransfer`。
+
+- **只有一次。** 这条路径只存在于构造函数里。
+- **地址算错只损失 gas，不损失价值。** 如果账户先发了别的交易，nonce 变了，地址就不同，证明验不过，部署回滚。
+- **不用 `CREATE2`。** 它的地址取决于 init code，init code 里会有证明，而证明又绑定地址。工厂合约可以在构造期间通过一次调用把 payload 交过去，打破这个循环；0.3.0 不需要它。
+- **零。** `initialSupply = 0` 加空 payload 只在带可增发的组合上允许。不带可增发时部署回滚，因为这个代币永远不可能有余额（ADR-0013 第 2 条）。
+- **实现说明。** 验证器和哈希合约是 immutable，Solidity 不允许构造期间被调用的函数读取 immutable。构造路径把它们作为参数传入。
+- **成本。** 部署多出约一次新树上首次铸造的 gas，183 万（02-deployments）；部署者的钱包生成一次证明，约 3 秒。还没有作为部署的一部分实测过。
 
 ### 7.2 转账
 
@@ -201,7 +227,7 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 
 ### 7.3 销毁
 
-与转账相同，只是 `v_pub_out = amount`、`to = 0x0`。找零以 note 的形式返回。
+与转账相同，只是 `v_pub_out = amount`、`to = 0x0`。找零以 note 的形式返回。0.3.0 起销毁属于核心：每个 B.1 代币的每个持有人都能销毁，不论有没有可增发。在 note 池里，这是别人能核对的唯一减少供应的方式：发给一把没人持有的公钥的 note，金额仍是隐藏的（ADR-0013「背景」）。
 
 ### 7.4 wrap 与 unwrap
 
@@ -209,6 +235,12 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 - **unwrap**（包装 ERC-20 换回 note）：`CasataWrapper.unwrap(token, recipient, amount)`，其中 `recipient` 是一份 `v_pub_in = amount` 的 join-split payload。代币检查 `amount ≤ wrappedOut`。
 
 Wrapper 合约原样使用，不需要改动。
+
+**经家族网关（0.3.0 起）。** 带可增发和 Wrapper 端口的 B.1 代币可以是已有 ERC-20 的隐私形态：[网关](../../../14-gateway.zh-cn.md)是它的 `wrapper()`，也是 `MINTER_ROLE` 的唯一持有者。
+
+- **存入。** 存入者的钱包像铸造那样构造 join-split：两个占位输入，`v_pub_in = amount`，输出给它选的收款码。它把 payload 和 ERC-20 一起交给网关。网关把 payload 作为 `mint(token, amount)` 的尾部 payload 转交；放回经它出去的量时，则交给 `wrapperMint`。两条路径给证明的公开输入相同（`v_pub_in = amount`，`to = 0`），所以一份证明两条路都能用。证明绑定金额，网关没法记入别的金额。别人复制这份 payload，只能带着同样的存入提交，产生的也是同样的 note。
+- **取回。** 持有人证明一个 `0x81` join-split，`v_pub_out = amount`，`to` = 收取 ERC-20 的地址。网关调用 `wrapperBurn(0x0, to, amount, payload)`，把 ERC-20 放给 `to`。
+- **精度。** note 是 6 位小数，`v < 2⁶⁴`。小数位更多的 ERC-20 由网关换算（14）。
 
 ### 7.5 A.1 里会出的问题，这里不会出
 
@@ -221,7 +253,7 @@ Wrapper 合约原样使用，不需要改动。
 | --- | --- | --- |
 | `Transfer` | `(token, token, handle)`；`(0x0, token, amount)`；`(token, 0x0, amount)` | note 转账；铸造与 unwrap；销毁与 wrap |
 | `NoteTransfer` | 第一个叶子位置、新树根、`nf[2]`、`cm[2]`、`regKeyId`、`D`、两份收款方 memo、监管 memo、`v_pub_in`、`v_pub_out`、`to`、`prevBlock` | 每一次操作 |
-| `Minted`、`Burned` | `amount` | 铸造、销毁 |
+| `Minted`、`Burned` | `amount` | 初始发行与铸造、销毁。0.3.0 起两者都由核心声明 |
 | `WrapperMinted`、`WrapperBurned` | `amount`；`to` 与 `amount` | unwrap、wrap |
 | `RegulatorKeyRotated` | 与 A.1 相同 | 轮换 |
 
@@ -321,9 +353,11 @@ Alice 付款，Bob 是商户，Carol 和 Dave 是其他顾客。
 
 0.2 的范围相同。它只改表面（见文首的说明）。
 
+0.3 在核心里加入初始发行和销毁，并把角色铸造改名为可增发。电路不变。0.3.0 的部署表单要先证明初始发行，再发送部署交易。
+
 ## 14. 待定决策
 
-每一项都有默认值，本文按默认值写。D1、D7 和 D8 已由 owner 在 2026-10-13 确定。
+每一项都有默认值，本文按默认值写。D1、D7 和 D8 已由 owner 在 2026-10-13 确定，D9 和 D10 在 2026-10-15 确定。
 
 | # | 决策 | 默认 | 可能改变的理由 |
 | --- | --- | --- | --- |
@@ -335,3 +369,5 @@ Alice 付款，Bob 是商户，Carol 和 Dave 是其他顾客。
 | D6 | 铸造需要证明 | 需要 | 不要证明的话，监管方要等这张 note 被花掉才知道它的所有者 |
 | D7 | 在哪里更新树 | 链上，在交易内（0.1 已定） | 承诺树占一笔交易 gas 的六到七成。用单独的证明批量插入可以省掉其中大部分，代价是 note 要等批次处理后才能花，而且需要有人提交批次 |
 | D8 | 链上的 Poseidon 用哪个实现 | circomlibjs 生成的字节码（已定） | 它是电路里那个哈希的参考实现，每一层贵约 10k。手工优化的实现在深度 24 时每笔交易省约 25 万，但它是未经审计的第三方代码，体积也贴近上限。哈希合约属于 Variant 本身（ADR-0008 第 3 条）：换用另一个实现是 B.1 的新版本或新的 Variant，不是部署时的选项 |
+| D9 | 初始发行怎么交给代币（0.3.0） | 在构造函数里，证明针对按部署者 nonce 预测的地址（§7.1）（已定） | 部署后由管理员一次性调用 `initialIssue(amount, payload)`，不需要预测地址，构造函数也小。但代币会有一段时间没有任何供应，而且发行不是部署的一部分，而 ADR-0013 第 2 条要求它是 |
+| D10 | 列出角色持有者（0.3.0） | `AccessControlEnumerable`（已定），与 A.1 0.7.0 相同（04-modules M12），网关的条件用 view 调用就能核对（[14](../../../14-gateway.zh-cn.md) §4） | 普通 `AccessControl`，靠扫描角色事件 |

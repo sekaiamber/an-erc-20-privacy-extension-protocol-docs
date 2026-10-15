@@ -2,7 +2,7 @@
 
 # 0008 Track、Variant 与模块：公开账本是模块，不是 Track
 
-- 状态：Accepted（已实现：合约与 dApp 已重构，两个测试网代币已于 2026-10-13 重新部署，见「过渡」；「过渡」由 [0009](0009-track-b-notes.zh-cn.md) 更新）
+- 状态：Accepted（已实现：合约与 dApp 已重构，两个测试网代币已于 2026-10-13 重新部署，见「过渡」；「过渡」由 [0009](0009-track-b-notes.zh-cn.md) 更新；第 5、6 条由 [0013](0013-mintable.zh-cn.md) 修订）
 - 日期：2026-10-12
 - 范围：家族（修订 [ADR-0002](0002-track-variant-structure.zh-cn.md) 第 1–4 条、[ADR-0007](0007-track-definition.zh-cn.md) 第 2、3 条，以及 [ADR-0005](0005-family-wrapper.zh-cn.md) 的措辞）
 

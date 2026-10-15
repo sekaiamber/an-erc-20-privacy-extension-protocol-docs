@@ -8,7 +8,7 @@ Status: `Prototype` (2026-09-27). Decision record: [ADR-0005](adr/0005-family-wr
 
 A single, family-level contract that gives **privacy tokens without a public ledger** (any composition without the public-ledger module, and any future Variant that is not ERC-20-shaped) a standard ERC-20 face for DeFi. For each underlying token it issues a plain ERC-20 *wrapped token* (`wTOKEN`); wrapping moves value from the confidential ledger to the public wrapped token, unwrapping moves it back.
 
-It is a **tool, not a requirement**: a token with the public-ledger module never uses it; a privacy-only token that never needs DeFi never registers with it. In the terms of [ADR-0008](adr/0008-modules.md) the Wrapper is a runtime module and `ICasataWrappable` is its port. The relationship is that of WETH to ETH.
+It is a **tool, not a requirement**: a token with the public-ledger module never uses it; a privacy-only token that never needs DeFi never registers with it. In the terms of [ADR-0008](adr/0008-modules.md) the Wrapper is a runtime module and `ICasataWrappable` is its port. The relationship is that of WETH to ETH. The other family contract on the same port is the [gateway](14-gateway.md), which goes the other way: it makes a privacy version of an existing ERC-20.
 
 ## 2. Control inversion
 

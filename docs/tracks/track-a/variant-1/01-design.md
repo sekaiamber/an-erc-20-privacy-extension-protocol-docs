@@ -2,7 +2,9 @@ English | [中文](01-design.zh-cn.md)
 
 # A.1 Detailed Design: the core
 
-Version: `0.6.0`. Status: `Draft`. Date: 2026-10-13
+Version: `0.7.0`. Status: `Draft`. Date: 2026-10-15
+
+> 0.7.0 (**designed, not implemented**; 0.6.0 is what runs on BSC testnet): follows [ADR-0013](../../../adr/0013-mintable.md) and [A1-0007](../../../adr/a1-0007-exit-kind-binding.md). The core gains the initial issuance, made once in the constructor by the rule of `mint` (04-modules §3), and the `0x81` burn, which moves out of the former role-issuance module; that module is renamed Mintable and keeps only `mint` and `0x82`. The unshield proof binds `r = uint160(keccak256("Casata A.1 exit", kind, to))` instead of `to` for the exits to a non-zero recipient: `kind = 1` for `0x04`, `kind = 2` for `wrapperBurn`; the burn keeps 0 (§5.2). All eight subsets of the modules are tokens. No circuit changes, so the proving keys and verifiers stay the same; a 0.6.0 exit proof does not verify on a 0.7.0 token. `casata()` = `A:1:0.7.0`. The list of changes is 04-modules §9.2.
 
 > 0.6.0 (**implemented and deployed on BSC testnet 2026-10-13**; on-chain runs of both tokens in 03-deployments): follows [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.md) and [ADR-0011](../../../adr/0011-project-name-casata.md). The fold becomes a function of its own, `fold(id, payload)` (§4.6). `prepare` / `cancel` are removed (§3.4). Issuance is `mint(to, amount)` with the payload rule, type `0x82` for a confidential id, replacing `mintConfidential` (04-modules §4.2). `approve` reverts on a token without the public ledger. `pep()` becomes `casata()` and the key-derivation domain becomes `"Casata"`, so keys differ from the ones of 0.5.0. No circuit changes and no change to the payload layouts of `0x01`, `0x04`, `0x80` and `0x81`. `casata()` = `A:1:0.6.0`.
 
@@ -25,8 +27,9 @@ Since 0.5.0 A.1 is a **core** plus optional **modules** ([ADR-0008](../../../adr
 | Sections | Belong to |
 | --- | --- |
 | §1, §2.1, §2.2 (accounts, regulator keys), §2.3 I2–I5, §2.4, §3 (`0x01`, `fold`), §4.2, §4.3, §4.6, §5, §8 | Core |
+| The initial issuance, `0x81`, `Burned` | Core from 0.7.0 (04-modules §3, §4.0); role issuance up to 0.6.0 |
 | §2.2 (`shieldedSupply`, the ERC-20 ledger), §2.3 I1, §3 (payload-less calls, `0x03`, `0x04`), §4.1, §4.4, §4.5, `LedgerCrossing` in §6 | Public-ledger module |
-| `0x81`, `0x82`, `mint`, `Minted`, `Burned` | Role-issuance module (04-modules §4.2) |
+| `0x82`, `mint`, `Minted` | Mintable module (04-modules §4.2), named role issuance up to 0.6.0. The initial issuance emits `Minted` too |
 | `wrapperMint`, `wrapperBurn` | Wrapper port (04-modules §4.3) |
 
 The core alone is a privacy-only ledger: without the public-ledger module `balanceOf` is 0 for every address, and a payload-less `transfer` and `approve` revert.
@@ -125,7 +128,7 @@ function transferFrom(address from, address to, uint256 x) external returns (boo
 function fold(address id, bytes calldata payload) external;
     // §4.6. Moves no value, so it is not a transfer; the payload is an ordinary argument
 function mint(address to, uint256 x) external;
-    // role-issuance module, minter role. No payload: public mint to to; payload 0x82: into to's confidential ledger
+    // Mintable module (role issuance up to 0.6.0), minter role. No payload: public mint to to; payload 0x82: into to's confidential ledger
 ```
 
 There is no `register`, `shield`, `unshield` or `applyPending`, and since 0.6.0 no `prepare` or `cancel`. The payload-less forms and `0x03` / `0x04` exist only with the public-ledger module; without it they revert, and so does `approve` (04-modules §5).
@@ -150,8 +153,8 @@ byte 2..    sections (determined by type and flags, fixed order)
 | `0x03` | Public → confidential | Public account | Confidential id | Plaintext amount | No | `+x` | Public ledger |
 | `0x04` | Confidential → public | Confidential id | Public account | Plaintext amount | Yes | `−x` | Public ledger |
 | `0x80` | Pure fold (A.1-private) | Confidential id (the `id` argument of `fold`) | — | — | Yes (private-key knowledge only) | 0 | Core |
-| `0x81` | Burn (A.1-private) | Confidential id | `0x0` | Plaintext amount | Yes (the `0x04` proof) | `−x` | Role issuance |
-| `0x82` | Issuance to an id (A.1-private) | — (the minter role calls `mint`) | Confidential id | Plaintext amount | No | `+x` | Role issuance |
+| `0x81` | Burn (A.1-private) | Confidential id | `0x0` | Plaintext amount | Yes (the `0x04` proof) | `−x` | Core (role issuance up to 0.6.0) |
+| `0x82` | Issuance to an id (A.1-private) | — (the minter role calls `mint`; also the initial issuance) | Confidential id | Plaintext amount | No | `+x` | Mintable (role issuance up to 0.6.0); the initial issuance is core |
 
 `0x02` only reserves its number in 0.2, see §11.
 
@@ -315,6 +318,8 @@ Measured constraint count: **29,719 non-linear constraints** (35,137 in 0.3.x; 3
 
 This circuit is the public-amount exit behind `_debitPublic` (04-modules §2); `0x04`, the `0x81` burn and `wrapperBurn` all use it, with `to` as the public recipient, the zero address or the recipient of the wrapped token. Drops 3, the last two items of 9, 10 and 11; 7 public inputs: `w0 = from | nonce<<160`, `w1 = contract | chainId<<160`, `w2 = amount | signBits<<48 | to<<64` (`to` = public recipient, bound since 0.3.1, see security review F14), `xs[4]`. Measured 17,358 constraints.
 
+From 0.7.0 the value in the place of `to` is `r` ([A1-0007](../../../adr/a1-0007-exit-kind-binding.md)), assembled by the contract: `r = 0` for the `0x81` burn, and `r = uint160(uint256(keccak256(abi.encodePacked("Casata A.1 exit", kind, to))))` for `0x04` (`kind = 1`) and `wrapperBurn` (`kind = 2`). The circuit range-checks it to 160 bits as before and gives it no meaning, so the circuit, the keys and the verifiers are unchanged. The client computes the same `r` when it proves. Events and call arguments keep the plain `to`.
+
 ### 5.3 `0x80`
 
 2 public inputs: `w0 = from | nonce<<160`, `w1 = contract | chainId<<160`. Private: `from, nonce, chainId, contractAddr, s, pk`. Constraints: unpacking + range checks, `s·pk = H`, `low160(Poseidon(pk)) = from`. Measured **4,027 constraints**, proving about 0.3 s.
@@ -326,7 +331,7 @@ This circuit is the public-amount exit behind `_debitPublic` (04-modules §2); `
 | `Transfer` | `(from, to, x)` | Standard; the top bit of `x` distinguishes handles from amounts |
 | `ConfidentialTransfer` | `(from, to, handle, regKeyId, D, C_recv, C_reg, memo_recv, memo_reg)` | Payee scanning, regulator decryption (`C_sender` is not emitted: the payer knows it) |
 | `LedgerCrossing` | `(from, to, type, amount)` | Public-ledger module: `0x03` / `0x04`; indexers maintain `shieldedSupply` |
-| `Minted` / `Burned` | `(id, amount)` | Role-issuance module: a public amount credited to, or debited from, an id |
+| `Minted` / `Burned` | `(id, amount)` | A public amount credited to, or debited from, an id: `Minted` for the initial issuance (core) and `mint` (Mintable), `Burned` for `0x81` (core from 0.7.0) |
 | `WrapperMinted` / `WrapperBurned` | `(id, amount)` / `(id, to, amount)` | Wrapper port: the same for an unwrap and a wrap |
 | `Folded` | `(id, nonce)` | `fold`; `nonce` is the new value after the fold |
 | `RegulatorKeyRotated` | `(keyId, pk)` | |

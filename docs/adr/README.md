@@ -16,7 +16,7 @@ ADR-0001 to ADR-0010 were written before the project was named Casata ([0011](00
 | [0001](0001-use-hardhat3-for-contracts.md) | Use Hardhat 3 as the contract development environment | Accepted |
 | [0002](0002-track-variant-structure.md) | Organize the protocol family by Track / Variant | Accepted (amended by 0007 and 0008) |
 | [0007](0007-track-definition.md) | What makes a Track: not substitutable and externally visible | Accepted (amended by 0008) |
-| [0008](0008-modules.md) | Track, Variant and module: the public ledger is a module, not a Track | Accepted (implemented 2026-10-13) |
+| [0008](0008-modules.md) | Track, Variant and module: the public ledger is a module, not a Track | Accepted (implemented 2026-10-13; items 5 and 6 amended by 0013) |
 | [0009](0009-track-b-notes.md) | Open Track B: the note model | Accepted (design only; precondition met) |
 | [0003](0003-erc20-surface-conventions.md) | ERC-20 surface conventions: reuse standard selectors and trailing payload | Accepted (amended by 0010) |
 | [0010](0010-erc20-surface-tradeoffs.md) | ERC-20 compatibility is decided item by item; transfer stays the shared verb | Accepted (implemented 2026-10-13) |
@@ -25,6 +25,7 @@ ADR-0001 to ADR-0010 were written before the project was named Casata ([0011](00
 | [0004](0004-regulatory-access-principles.md) | Regulatory access principles | Accepted |
 | [0011](0011-project-name-casata.md) | The project is named Casata; the acronym PEP is retired | Accepted (implemented 2026-10-13; repository rename pending) |
 | [0012](0012-visual-identity.md) | Visual identity: the secret ledger, and a wax seal as the mark | Accepted (style only; the dApp follows later) |
+| [0013](0013-mintable.md) | Mintable: issuance after deployment is a module; the initial supply and the burn belong to the core | Accepted (to be implemented in A.1 0.7.0, B.1 0.3.0) |
 
 ## A.1
 
@@ -36,6 +37,7 @@ ADR-0001 to ADR-0010 were written before the project was named Casata ([0011](00
 | [A1-0004](a1-0004-pending-lazy-fold.md) | available / pending split and lazy fold | Accepted |
 | [A1-0005](a1-0005-numeric-parameters.md) | Numeric parameters: bit widths, decimals, supply cap | Accepted |
 | [A1-0006](a1-0006-fold-and-received-block.md) | Pure fold `0x80` and `lastReceivedAtBlock` (A.1 only) | Accepted |
+| [A1-0007](a1-0007-exit-kind-binding.md) | The unshield proof binds which exit it is for, through the recipient value | Accepted (to be implemented in 0.7.0) |
 
 ## Template
 

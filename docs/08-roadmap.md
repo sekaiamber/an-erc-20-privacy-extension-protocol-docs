@@ -48,6 +48,7 @@ Status: `Draft`
 - [x] A.1 0.6.0 and B.1 0.2.0 in the contracts and the dApp (2026-10-13): Casata names, `fold(id, payload)`, `mint` by the payload rule, no `prepare` / `cancel`, `approve` reverting without the public ledger, the handle notice before a signature; 70 contract tests pass
 - [x] The three testnet tokens redeployed as A.1 0.6.0 and B.1 0.2.0 and run end to end on chain (2026-10-13) → `tracks/track-a/variant-1/03-deployments.md`, `tracks/track-b/variant-1/02-deployments.md`
 - [ ] B.1: browser pass of the dApp page; B.1 decoder for the regulator view; deploy form in the dApp
+- [ ] ADR-0013 and A1-0007 (accepted 2026-10-15): role issuance renamed Mintable; the initial supply and the holder's burn move into the core; the unshield proof binds the kind of exit; the family gateway for existing ERC-20s. Documents drafted (07, A.1 0.7.0, B.1 0.3.0, `14-gateway.md`); contracts, dApp and deployments not started
 - [ ] Threat model review
 - [ ] `Review` versions of the family conventions and the A.1 design
 

@@ -1,8 +1,10 @@
 English | [中文](01-design.zh-cn.md)
 
-# B.1 design (0.2.0-draft)
+# B.1 design (0.3.0-draft)
 
-Status: `Draft`. This document describes 0.2.0. The contracts and the circuit are implemented and tested locally (`contracts/contracts/track-b/variant-1/`, `contracts/circuits/track-b/variant-1/join_split.circom`), and the dApp page (`/tracks/b/1`) follows them. 0.2.0 is deployed on BSC testnet and all five operations were run on chain ([02-deployments](02-deployments.md), 2026-10-13). The page has not yet been exercised in a browser against the live token. Gas, constraint count and proving time are measured locally (§12).
+Status: `Draft`. This document describes 0.3.0, which is drafted and not implemented; where 0.3.0 differs from 0.2.0 the text says so. Everything below about implementation, deployment and measurements refers to 0.2.0. The contracts and the circuit are implemented and tested locally (`contracts/contracts/track-b/variant-1/`, `contracts/circuits/track-b/variant-1/join_split.circom`), and the dApp page (`/tracks/b/1`) follows them. 0.2.0 is deployed on BSC testnet and all five operations were run on chain ([02-deployments](02-deployments.md), 2026-10-13). The page has not yet been exercised in a browser against the live token. Gas, constraint count and proving time are measured locally (§12).
+
+> 0.3.0 (draft, 2026-10-15) follows [ADR-0013](../../../adr/0013-mintable.md). The role-issuance module is renamed **Mintable** (`ICasataMintable`; the interface id `0x40c10f19` is unchanged). The `0x81` burn moves into the core, so every B.1 token can burn. The core issues an initial supply when the token is deployed (§7.1), so a token without Mintable is a token with a fixed supply. The declared modules are Mintable and the Wrapper port (§5.1). The circuit, the payload layout, the proving key and the verifier are unchanged. `casata()` = `B:1:0.3.0`. The exit binding of [A1-0007](../../../adr/a1-0007-exit-kind-binding.md) does not apply to B.1 (§5).
 
 > 0.2.0 (2026-10-13) changes the surface only, following [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.md) and [ADR-0011](../../../adr/0011-project-name-casata.md). Issuance is `mint(token, amount)` with the join-split as trailing payload, replacing `mintConfidential`. `approve` reverts `NoPublicLedger()`. `pep()` becomes `casata()` and the key-derivation domain becomes `"Casata"`, so keys differ from the ones of 0.1.0. The circuit, the payload and the events are unchanged. This version answers `casata()` = `B:1:0.2.0`; it is not the token that answered `pep()` = `B:1:0.2.0` before 2026-10-12, which was the privacy-only composition of A.1.
 
@@ -132,8 +134,9 @@ Family conventions §1–§5 apply: the standard selectors, a trailing payload, 
 | Call | Payload type | Public amounts | Meaning |
 | --- | --- | --- | --- |
 | `transferFrom(token, token, handle)` | `0x01` | none | Transfer between notes |
-| `transferFrom(token, 0x0, amount)` | `0x81` | `v_pub_out = amount`, `to = 0x0` | Burn |
-| `mint(token, amount)` | `0x82` | `v_pub_in = amount` | Role issuance; `MINTER_ROLE` only |
+| `transferFrom(token, 0x0, amount)` | `0x81` | `v_pub_out = amount`, `to = 0x0` | Burn by the holder. Core from 0.3.0; up to 0.2.0, role issuance |
+| Constructor, `initialSupply` and `initialPayload` | `0x82` | `v_pub_in = initialSupply` | Initial issuance, once, at deployment. Core, from 0.3.0 (§7.1) |
+| `mint(token, amount)` | `0x82` | `v_pub_in = amount` | Mintable (role issuance up to 0.2.0); `MINTER_ROLE` only |
 | `wrapperBurn(0x0, to, amount, payload)` | `0x81` | `v_pub_out = amount`, `to` bound | Wrapper port: exit to the wrapped token |
 | `wrapperMint(recipient, amount)` | `0x82` | `v_pub_in = amount` | Wrapper port: `recipient` is the whole payload |
 | `transfer`, `transferFrom` or `mint` without payload | n/a | n/a | Reverts `NoPublicLedger()` |
@@ -143,23 +146,33 @@ Family conventions §1–§5 apply: the standard selectors, a trailing payload, 
 - `token` stands for the token's own address. `from` and `to` carry no information in a note transfer, so they are fixed to it. The standard event then reads as a movement inside the pool and does not look like a mint or a burn.
 - Replay is stopped by the nullifiers: a payload can be executed once.
 - B.1 has no `prepare` / `cancel`. The family withdrew that path (conventions §6).
-- `mint` is the function of the family's role-issuance interface (conventions §13.1), with the join-split as a trailing payload read from `msg.data[68:]`. There is no account to name, so `to` must be the token's own address. A `mint` without a payload would be a public issuance, which B.1 does not have. In 0.1.0 the function was `mintConfidential`.
+- `mint` is the function of the family's Mintable interface (conventions §13.1; named role issuance up to 0.2.0), with the join-split as a trailing payload read from `msg.data[68:]`. There is no account to name, so `to` must be the token's own address. A `mint` without a payload would be a public issuance, which B.1 does not have. In 0.1.0 the function was `mintConfidential`.
 - **Payload.** One layout for every operation, 838 bytes: type (1), flags (1, must be 0), `root` (32), `nf[2]` (64), `cm[2]` (64), `D` (64), `memo_recv` (192), `memo_reg` (160), `regKeyId` (4), proof (256). The public amounts and `to` are arguments of the call, and the proof binds them.
-- **Payload types.** `0x01` note transfer; `0x81` a public amount out (burn, wrap); `0x82` a public amount in (mint, unwrap). The proof does not bind the type. A burn and a wrap are kept apart by `to`, which is zero for a burn and non-zero for a wrap.
+- **Payload types.** `0x01` note transfer; `0x81` a public amount out (burn, wrap); `0x82` a public amount in (initial issuance, mint, unwrap). The proof does not bind the type. A burn and a wrap are kept apart by `to`, which is zero for a burn and non-zero for a wrap.
+- **No exit binding.** A.1 0.7.0 binds the kind of exit into the proof's recipient value, because a token with both the public ledger and the Wrapper port has two exits with non-zero recipients ([A1-0007](../../../adr/a1-0007-exit-kind-binding.md)). B.1 has one: the wrap. The burn's zero recipient keeps the other apart, so B.1 0.3.0 binds `to` as before. A B.1 version that adds the public ledger would need the same binding.
 
 ### 5.1 Modules
 
-| Module | B.1 0.2.0 (the same as 0.1.0) |
-| --- | --- |
-| Role issuance | Supported: `mint` and the `0x81` burn |
-| Wrapper port | Supported: `ICasataWrappable`, limit `wrappedOut` |
-| Public ledger | Not supported. It could be added later on the same `v_pub_in` / `v_pub_out` |
+| Module | B.1 0.3.0 | B.1 0.2.0 (the same as 0.1.0) |
+| --- | --- | --- |
+| Mintable | Supported: `mint` | Supported under the name role issuance: `mint` and the `0x81` burn |
+| Wrapper port | Supported: `ICasataWrappable`, limit `wrappedOut` | The same |
+| Public ledger | Not supported. It could be added later on the same `v_pub_in` / `v_pub_out` | Not supported |
 
-This is the declared list of B.1 0.2.0 (07 §13.2), the same as that of 0.1.0. Supporting another module, the public ledger included, takes a new B.1 version.
+These are the declared lists (07 §13.2). Supporting another module, the public ledger included, takes a new B.1 version.
+
+From 0.3.0 every subset of the list is a token ([ADR-0013](../../../adr/0013-mintable.md), item 4):
+
+| Mintable | Wrapper port | What it is |
+| --- | --- | --- |
+| | | A fixed supply: what the constructor issued, reduced only by burns |
+| | Yes | A fixed supply that can also be held as the family Wrapper's `wTOKEN` |
+| Yes | | An issuer keeps minting; no public form |
+| Yes | Yes | The composition deployed as 0.2.0. With the family gateway as the Wrapper, a private version of an existing ERC-20 (§7.4) |
 
 ### 5.2 Supply
 
-`totalSupply()` is what the pool holds: minted, minus burned, minus what is currently out through the Wrapper. `issuedSupply() = totalSupply() + wrappedOut`, and the cap `2⁶⁴ − 1` applies to it. This is the accounting of the privacy-only composition of A.1.
+`totalSupply()` is what the pool holds: issued at deployment and minted, minus burned, minus what is currently out through the Wrapper. `issuedSupply() = totalSupply() + wrappedOut`, and the cap `2⁶⁴ − 1` applies to it, the initial supply included. This is the accounting of the privacy-only composition of A.1.
 
 ## 6. Memos
 
@@ -189,11 +202,24 @@ From these the regulator rebuilds a table of all notes: owner, amount, the trans
 
 ## 7. Flows
 
-### 7.1 Mint
+### 7.1 Issuance
 
-The minter knows the recipient's receiving code. It builds a join-split with two dummy inputs, `v_pub_in = amount`, one output to the recipient and one zero-value output, and calls `mint(token, amount)` with the payload appended.
+**Mint (Mintable).** The minter knows the recipient's receiving code. It builds a join-split with two dummy inputs, `v_pub_in = amount`, one output to the recipient and one zero-value output, and calls `mint(token, amount)` with the payload appended.
 
-A proof is required although the amount is public, because the regulator must learn the owner of the new note at the moment it is created.
+A proof is required although the amount is public, because the regulator must learn the owner of the new note at the moment it is created (§14 D6).
+
+**Initial issuance (core, from 0.3.0).** The same join-split, made before the token exists and checked by its constructor.
+
+1. The deployer computes the address the token will have. With `CREATE` it follows from the deploying account and the nonce of the deployment transaction.
+2. It builds the join-split against the root of the empty tree, which depends only on the depth and the hash and is known in advance. `v_pub_in = initialSupply`; the two outputs go to one or two receiving codes, so the initial supply can be split between two owners, a treasury and a team for example. The regulator memo is encrypted to the regulator key the constructor will install as key id 0.
+3. It deploys with `initialSupply` and the payload as constructor arguments. After the tree and the regulator key are set up, the constructor checks the cap, runs the join-split (the proof binds `contract` and `chainId`, §4.1), appends the pair at leaves 0 and 1, and emits `Transfer(0x0, token, initialSupply)`, `Minted(initialSupply)` and the first `NoteTransfer`.
+
+- **Only once.** The constructor is the only place this path exists.
+- **A wrong prediction costs gas, not value.** If the account sends another transaction first, the nonce moves, the address differs, the proof fails and the deployment reverts.
+- **Not `CREATE2`.** Its address depends on the init code, which would contain the proof, which binds the address. A factory could break the circle by handing the payload over in a call during construction; 0.3.0 does not need one.
+- **Zero.** `initialSupply = 0` with an empty payload is allowed only on a composition with Mintable. Without it the deployment reverts, since the token could never hold anything (ADR-0013, item 2).
+- **Implementation note.** The verifier and the hasher are immutables, and Solidity does not let a function called during construction read an immutable. The construction path takes them as arguments.
+- **Cost.** About the gas of a first mint on a fresh tree, 1.83M (02-deployments), added to the deployment; one proof in the deployer's wallet, about 3 s. Not measured as part of a deployment yet.
 
 ### 7.2 Transfer
 
@@ -201,7 +227,7 @@ The payer's wallet picks one or two of its notes, creates the payee's note and a
 
 ### 7.3 Burn
 
-As a transfer, with `v_pub_out = amount` and `to = 0x0`. Change returns as a note.
+As a transfer, with `v_pub_out = amount` and `to = 0x0`. Change returns as a note. From 0.3.0 the burn is part of the core: every holder of every B.1 token can burn, with or without Mintable. In a note pool this is the only way to reduce the supply that others can check: a note sent to a key nobody holds keeps its amount hidden (ADR-0013, Context).
 
 ### 7.4 Wrap and unwrap
 
@@ -209,6 +235,12 @@ As a transfer, with `v_pub_out = amount` and `to = 0x0`. Change returns as a not
 - **Unwrap** (wrapped ERC-20 to notes): `CasataWrapper.unwrap(token, recipient, amount)`, where `recipient` is a join-split payload with `v_pub_in = amount`. The token checks `amount ≤ wrappedOut`.
 
 The Wrapper contract is used unchanged.
+
+**Through the family gateway (from 0.3.0).** A B.1 token with Mintable and the Wrapper port can be the private form of an existing ERC-20: the [gateway](../../../14-gateway.md) is its `wrapper()` and the only holder of `MINTER_ROLE`.
+
+- **Deposit.** The depositor's wallet builds the join-split, as for a mint: two dummy inputs, `v_pub_in = amount`, outputs to the receiving codes it chooses. It hands the payload to the gateway together with the ERC-20. The gateway forwards it as the trailing payload of `mint(token, amount)`, or to `wrapperMint` when it returns value that left through it. Both paths give the proof the same public inputs (`v_pub_in = amount`, `to = 0`), so one proof fits either. The proof binds the amount, so the gateway cannot credit another one. A copied payload can only be submitted with the same deposit and creates the same notes.
+- **Withdrawal.** The holder proves a `0x81` join-split with `v_pub_out = amount` and `to` = the address that receives the ERC-20. The gateway calls `wrapperBurn(0x0, to, amount, payload)` and releases the ERC-20 to `to`.
+- **Precision.** Notes have 6 decimals and `v < 2⁶⁴`. An ERC-20 with more decimals is scaled by the gateway (14).
 
 ### 7.5 Things that cannot go wrong the way they do in A.1
 
@@ -221,7 +253,7 @@ The Wrapper contract is used unchanged.
 | --- | --- | --- |
 | `Transfer` | `(token, token, handle)`; `(0x0, token, amount)`; `(token, 0x0, amount)` | Note transfer; mint and unwrap; burn and wrap |
 | `NoteTransfer` | first leaf index, new root, `nf[2]`, `cm[2]`, `regKeyId`, `D`, the two recipient memos, the regulator memo, `v_pub_in`, `v_pub_out`, `to`, `prevBlock` | Every operation |
-| `Minted`, `Burned` | `amount` | Mint, burn |
+| `Minted`, `Burned` | `amount` | Initial issuance and mint, burn. From 0.3.0 both are declared by the core |
 | `WrapperMinted`, `WrapperBurned` | `amount`; `to` and `amount` | Unwrap, wrap |
 | `RegulatorKeyRotated` | As A.1 | Rotation |
 
@@ -321,9 +353,11 @@ Not in: the public-ledger module, `prepare` / `cancel`, a relayer, a separate vi
 
 0.2 has the same scope. It changes the surface only (see the note at the top).
 
+0.3 adds to the core the initial issuance and the burn, and renames role issuance to Mintable. The circuit is unchanged. A deploy form for 0.3.0 has to prove the initial issuance before it sends the deployment.
+
 ## 14. Open decisions
 
-Each has a default, which this document uses. D1, D7 and D8 were decided by the owner on 2026-10-13.
+Each has a default, which this document uses. D1, D7 and D8 were decided by the owner on 2026-10-13, D9 and D10 on 2026-10-15.
 
 | # | Decision | Default | Why it might change |
 | --- | --- | --- | --- |
@@ -335,3 +369,5 @@ Each has a default, which this document uses. D1, D7 and D8 were decided by the 
 | D6 | Mint needs a proof | Yes | Without it the regulator would not know the owner of a minted note until it is spent |
 | D7 | Where the tree is updated | On chain, in the transaction (decided for 0.1) | The tree is 60% to 70% of the transaction's gas. Batched insertion under a separate proof would remove most of it, at the price of notes that are spendable only after the batch and of someone who posts batches |
 | D8 | Poseidon on chain | The bytecode circomlibjs generates (decided) | It is the reference implementation of the circuit's hash and costs about 10k more per level. A hand-optimised implementation saves about 250k per transaction at depth 24 but is unaudited third-party code close to the size limit. The hash contract is part of the Variant (ADR-0008, item 3): adopting another one is a new version of B.1 or a new Variant, not a choice at deployment |
+| D9 | How the initial issuance reaches the token (0.3.0) | In the constructor, with a proof made for the address predicted from the deployer's nonce (§7.1) (decided) | A one-time `initialIssue(amount, payload)` by the admin after deployment needs no prediction and keeps the constructor small. But the token then exists for a while with no supply, and the issuance is not part of the deployment, as ADR-0013 item 2 asks |
+| D10 | Listing role holders (0.3.0) | `AccessControlEnumerable` (decided), as A.1 0.7.0 (04-modules M12), so that the conditions of the gateway are checked by views ([14](../../../14-gateway.md) §4) | Plain `AccessControl`, with a scan of the role events |

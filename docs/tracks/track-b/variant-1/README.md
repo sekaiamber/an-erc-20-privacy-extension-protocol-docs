@@ -2,7 +2,7 @@ English | [中文](README.zh-cn.md)
 
 # B.1: notes with one join-split circuit
 
-Version: `0.2.0-draft`  Status: `Draft` (contracts, circuit and dApp page implemented; deployed on BSC testnet on 2026-10-13)
+Version: `0.3.0-draft`  Status: `Draft` (0.3.0 drafted on 2026-10-15 under [ADR-0013](../../../adr/0013-mintable.md), not implemented. 0.2.0: contracts, circuit and dApp page implemented; deployed on BSC testnet on 2026-10-13)
 
 | Document | Content |
 | --- | --- |

@@ -2,7 +2,9 @@
 
 # A.1 细节设计：内核
 
-版本：`0.6.0`　状态：`Draft`　日期：2026-10-13
+版本：`0.7.0`　状态：`Draft`　日期：2026-10-15
+
+> 0.7.0（**已设计，尚未实现**；BSC testnet 上运行的是 0.6.0）：按 [ADR-0013](../../../adr/0013-mintable.zh-cn.md) 和 [A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md) 修订。内核增加初始发行（在构造函数里按 `mint` 的规则发行一次，04-modules §3）和 `0x81` 销毁；销毁从原来的角色铸造模块移出，该模块改名为可增发，只保留 `mint` 和 `0x82`。收款人非零的出口，unshield 证明绑定 `r = uint160(keccak256("Casata A.1 exit", kind, to))` 而不是 `to`：`0x04` 的 `kind = 1`，`wrapperBurn` 的 `kind = 2`；销毁仍是 0（§5.2）。模块的八个子集都是代币。电路不变，所以证明密钥和验证器不变；0.6.0 的出口证明在 0.7.0 代币上验不过。`casata()` = `A:1:0.7.0`。改动清单见 04-modules §9.2。
 
 > 0.6.0（**已实现，2026-10-13 部署到 BSC testnet**；两个代币的链上实测见 03-deployments）：按 [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.zh-cn.md) 和 [ADR-0011](../../../adr/0011-project-name-casata.zh-cn.md) 修订。折叠改为独立函数 `fold(id, payload)`（§4.6）。删除 `prepare` / `cancel`（§3.4）。发行改为带 payload 规则的 `mint(to, amount)`，发给机密 id 时用类型 `0x82`，取代 `mintConfidential`（04-modules §4.2）。没有公开账本的代币上 `approve` 回退。`pep()` 改为 `casata()`，密钥派生的域名改为 `"Casata"`，所以密钥与 0.5.0 的不同。电路不变，`0x01`、`0x04`、`0x80`、`0x81` 的 payload 布局不变。`casata()` = `A:1:0.6.0`。
 
@@ -25,8 +27,9 @@
 | 小节 | 属于 |
 | --- | --- |
 | §1、§2.1、§2.2（账户、监管密钥）、§2.3 的 I2–I5、§2.4、§3（`0x01`、`fold`）、§4.2、§4.3、§4.6、§5、§8 | 内核 |
+| 初始发行、`0x81`、`Burned` | 0.7.0 起属于内核（04-modules §3、§4.0）；到 0.6.0 为止属于角色铸造 |
 | §2.2（`shieldedSupply`、ERC-20 账本）、§2.3 的 I1、§3（不带 payload 的调用、`0x03`、`0x04`）、§4.1、§4.4、§4.5、§6 里的 `LedgerCrossing` | 公开账本模块 |
-| `0x81`、`0x82`、`mint`、`Minted`、`Burned` | 角色铸造模块（04-modules §4.2） |
+| `0x82`、`mint`、`Minted` | 可增发模块（04-modules §4.2），到 0.6.0 为止叫角色铸造。初始发行也发 `Minted` |
 | `wrapperMint`、`wrapperBurn` | Wrapper 端口（04-modules §4.3） |
 
 只有内核时，它是一个纯隐私账本：没有公开账本模块，`balanceOf` 对所有地址返回 0，不带 payload 的 `transfer` 和 `approve` 回退。
@@ -125,7 +128,7 @@ function transferFrom(address from, address to, uint256 x) external returns (boo
 function fold(address id, bytes calldata payload) external;
     // §4.6。不移动价值，所以不是转账；payload 是普通参数
 function mint(address to, uint256 x) external;
-    // 角色铸造模块，铸造角色。无 payload：向 to 公开铸造；payload 0x82：进 to 的机密账本
+    // 可增发模块（到 0.6.0 为止叫角色铸造），铸造角色。无 payload：向 to 公开铸造；payload 0x82：进 to 的机密账本
 ```
 
 没有 `register`、`shield`、`unshield`、`applyPending`，自 0.6.0 起也没有 `prepare`、`cancel`。不带 payload 的调用形式以及 `0x03` / `0x04` 只在带公开账本模块时存在；没有该模块时它们回退，`approve` 也回退（04-modules §5）。
@@ -150,8 +153,8 @@ byte 2..    sections（按 type 与 flags 决定，顺序固定）
 | `0x03` | 公开 → 机密 | 公开账户 | 机密 id | 明文金额 | 否 | `+x` | 公开账本 |
 | `0x04` | 机密 → 公开 | 机密 id | 公开账户 | 明文金额 | 是 | `−x` | 公开账本 |
 | `0x80` | 纯折叠（A.1 私有） | 机密 id（`fold` 的 `id` 参数） | — | — | 是（仅私钥知识） | 0 | 内核 |
-| `0x81` | 销毁（A.1 私有） | 机密 id | `0x0` | 明文金额 | 是（`0x04` 的证明） | `−x` | 角色铸造 |
-| `0x82` | 发行给某个 id（A.1 私有） | —（由铸造角色调用 `mint`） | 机密 id | 明文金额 | 否 | `+x` | 角色铸造 |
+| `0x81` | 销毁（A.1 私有） | 机密 id | `0x0` | 明文金额 | 是（`0x04` 的证明） | `−x` | 内核（到 0.6.0 为止属于角色铸造） |
+| `0x82` | 发行给某个 id（A.1 私有） | —（由铸造角色调用 `mint`；初始发行也用） | 机密 id | 明文金额 | 否 | `+x` | 可增发（到 0.6.0 为止叫角色铸造）；初始发行属于内核 |
 
 `0x02` 在 0.2 中仅保留编号，见 §11。
 
@@ -315,6 +318,8 @@ emit Folded(id, acc.nonce)
 
 这个电路是 `_debitPublic`（04-modules §2）背后的「按公开金额扣出」；`0x04`、`0x81` 销毁和 `wrapperBurn` 都用它，`to` 分别是公开收款地址、零地址、包装代币的接收地址。去掉 3、9 的后两项、10、11；公开输入 7 个：`w0 = from | nonce<<160`，`w1 = contract | chainId<<160`，`w2 = amount | signBits<<48 | to<<64`（`to` 为公开收款地址，0.3.1 起绑定，见安全自审 F14），`xs[4]`。实测 17,358 个约束。
 
+从 0.7.0 起，`to` 位置上的值是 `r`（[A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md)），由合约组装：`0x81` 销毁时 `r = 0`；`0x04`（`kind = 1`）和 `wrapperBurn`（`kind = 2`）时 `r = uint160(uint256(keccak256(abi.encodePacked("Casata A.1 exit", kind, to))))`。电路照旧把它范围检查到 160 位、不赋予含义，所以电路、密钥和验证器都不变。客户端证明时算出同样的 `r`。事件和调用参数里仍是原来的 `to`。
+
 ### 5.3 `0x80`
 
 公开输入 2 个：`w0 = from | nonce<<160`，`w1 = contract | chainId<<160`。私有：`from, nonce, chainId, contractAddr, s, pk`。约束：拆包 + 范围检查、`s·pk = H`、`low160(Poseidon(pk)) = from`。实测 **4,027 个约束**，证明约 0.3 s。
@@ -326,7 +331,7 @@ emit Folded(id, acc.nonce)
 | `Transfer` | `(from, to, x)` | 标准；`x` 最高位区分句柄与金额 |
 | `ConfidentialTransfer` | `(from, to, handle, regKeyId, D, C_recv, C_reg, memo_recv, memo_reg)` | 收款方扫描、监管解密（`C_sender` 不发出：付款方自己知道） |
 | `LedgerCrossing` | `(from, to, type, amount)` | 公开账本模块：`0x03` / `0x04`，索引器维护 `shieldedSupply` |
-| `Minted` / `Burned` | `(id, amount)` | 角色铸造模块：按公开金额记入某个 id，或从某个 id 扣出 |
+| `Minted` / `Burned` | `(id, amount)` | 按公开金额记入某个 id，或从某个 id 扣出：`Minted` 用于初始发行（内核）和 `mint`（可增发），`Burned` 用于 `0x81`（0.7.0 起属于内核） |
 | `WrapperMinted` / `WrapperBurned` | `(id, amount)` / `(id, to, amount)` | Wrapper 端口：unwrap 与 wrap 时同样的记入与扣出 |
 | `Folded` | `(id, nonce)` | `fold`，`nonce` 为折叠后的新值 |
 | `RegulatorKeyRotated` | `(keyId, pk)` | |
