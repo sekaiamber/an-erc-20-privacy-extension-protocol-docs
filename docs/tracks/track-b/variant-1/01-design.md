@@ -51,7 +51,7 @@ It reuses A.1's toolbox where it can: Baby Jubjub, Poseidon, Groth16, keys deriv
 | Tree | Incremental binary Merkle tree, Poseidon, depth 24 | Append-only. 2²⁴ leaves; a transaction appends two, so the tree holds about 8 million transactions (§14 D1) |
 | Roots | Every root the tree has ever had is accepted | §3.3 |
 | Amount width | `v < 2⁶⁴` for notes and public amounts | Guaranteed by the supply cap `2⁶⁴ − 1` |
-| decimals | 6 | As A.1 |
+| decimals | 6 | As A.1. Chosen at deployment (18 by default) with amounts `< 2¹²⁸` from 0.4.0 is proposed in [ADR-0014](../../../adr/0014-eighteen-decimals.md) |
 
 ## 3. Notes
 

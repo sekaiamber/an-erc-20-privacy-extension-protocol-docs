@@ -61,7 +61,7 @@ The core alone is a privacy-only ledger: without the public-ledger module `balan
 | Public-input packing | Scalars packed into 3 words (`from|nonce`, `to|chainId`, `contract|regKeyId|signBits`); points expose only x, with y as a private input bound by "on curve + parity bit" | Public inputs 25 → 15 (14 since 0.4), verification gas 386k → 316k. The SHA-256 compression scheme was rejected: ~400k constraints in circuit |
 | Amount width | Per transfer `v < 2⁴⁸` | |
 | Balance width | `b < 2⁶⁴` | Guaranteed by the `totalSupply` cap |
-| decimals | 6 | |
+| decimals | 6 | Chosen at deployment (18 by default) with amounts `< 2¹²⁸` from 0.8.0 is proposed in [ADR-0014](../../../adr/0014-eighteen-decimals.md) |
 
 ## 2. Accounts and State
 

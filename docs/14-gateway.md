@@ -66,7 +66,7 @@ contract CasataGateway {
 
 ## 3. Decimals and limits
 
-Both Variants have 6 decimals ([A1-0005](adr/a1-0005-numeric-parameters.md); B.1 01-design §2). So `scale = 10^(d − 6)` for an underlying with `d` decimals.
+Both Variants have 6 decimals ([A1-0005](adr/a1-0005-numeric-parameters.md); B.1 01-design §2). So `scale = 10^(d − 6)` for an underlying with `d` decimals. [ADR-0014](adr/0014-eighteen-decimals.md) (proposed) would let a token choose its decimals at deployment (18 by default) from the next versions of both Variants; a gateway token would then take its underlying's, with a scale of 1, and the open point on fewer decimals would go.
 
 | Underlying | `d` | `scale` | Smallest deposit | Largest single deposit, A.1 (`< 2⁴⁸` units) | Largest single deposit, B.1 (`< 2⁶⁴` units) | Most locked at once (cap `2⁶⁴ − 1` units) |
 | --- | --- | --- | --- | --- | --- | --- |

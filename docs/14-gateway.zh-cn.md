@@ -66,7 +66,7 @@ contract CasataGateway {
 
 ## 3. 精度与上限
 
-两个 Variant 都是 6 位小数（[A1-0005](adr/a1-0005-numeric-parameters.zh-cn.md)；B.1 01-design §2）。所以对 `d` 位小数的底层代币，`scale = 10^(d − 6)`。
+两个 Variant 都是 6 位小数（[A1-0005](adr/a1-0005-numeric-parameters.zh-cn.md)；B.1 01-design §2）。所以对 `d` 位小数的底层代币，`scale = 10^(d − 6)`。[ADR-0014](adr/0014-eighteen-decimals.zh-cn.md)（提议中）会让两个 Variant 从下个版本起由代币在部署时选小数位（默认 18）；网关代币照抄底层代币的小数位，`scale` 为 1，「小数位更少」那条待定项也就没了。
 
 | 底层代币 | `d` | `scale` | 最小存入 | A.1 单笔最大（`< 2⁴⁸` 单位） | B.1 单笔最大（`< 2⁶⁴` 单位） | 同一时刻最多锁定（上限 `2⁶⁴ − 1` 单位） |
 | --- | --- | --- | --- | --- | --- | --- |

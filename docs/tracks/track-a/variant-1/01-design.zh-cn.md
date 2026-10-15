@@ -61,7 +61,7 @@
 | 公开输入打包 | 标量打包进 3 个字（`from|nonce`、`to|chainId`、`contract|regKeyId|signBits`），点只公开 x，y 为私有输入并由"在曲线上 + 奇偶位"绑定 | 公开输入 25 → 15（0.4 起 14），验证 gas 386k → 316k。SHA-256 压缩方案已否决：电路内需 ~40 万约束 |
 | 金额位宽 | 单笔 `v < 2⁴⁸` | |
 | 余额位宽 | `b < 2⁶⁴` | 由 `totalSupply` 上限保证 |
-| decimals | 6 | |
+| decimals | 6 | [ADR-0014](../../../adr/0014-eighteen-decimals.zh-cn.md) 提议从 0.8.0 起改为部署时选（默认 18），金额 `< 2¹²⁸` |
 
 ## 2. 账户与状态
 
