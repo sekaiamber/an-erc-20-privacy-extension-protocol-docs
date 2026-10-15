@@ -2,9 +2,9 @@
 
 # A.1：ElGamal 加密账户 + Groth16
 
-版本：`0.7.0`（已设计，尚未实现；[ADR-0013](../../../adr/0013-mintable.zh-cn.md)、[A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md)）。`0.6.0` 已实现，2026-10-13 起部署在 BSC testnet 上（内核加模块，见 [ADR-0008](../../../adr/0008-modules.zh-cn.md)）　状态：`Draft`
+版本：`0.7.0`（已实现，2026-10-15 部署到 BSC testnet；[ADR-0013](../../../adr/0013-mintable.zh-cn.md)、[A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md)）。`0.6.0` 自 2026-10-13 起仍部署在链上（内核加模块，见 [ADR-0008](../../../adr/0008-modules.zh-cn.md)）　状态：`Draft`
 
-0.6.0 已实现为 `A1LedgerToken` 与 `A1PrivateToken`，并于 2026-10-13 部署到 BSC testnet（[03-deployments](03-deployments.zh-cn.md)）。早于模块结构的两个独立合约 `ConfidentialERC20A1` 0.4.0 与 `ConfidentialERC20B1` 0.2.0 仍留在链上，dApp 已不再打开它们。
+0.7.0 实现为八个生成的合约，模块的每个子集一个；它的两个参考代币 `A1LedgerToken` 与 `A1PrivateToken` 于 2026-10-15 部署到 BSC testnet，与 2026-10-13 的 0.6.0 代币并存（[03-deployments](03-deployments.zh-cn.md)）。早于模块结构的两个独立合约 `ConfidentialERC20A1` 0.4.0 与 `ConfidentialERC20B1` 0.2.0 仍留在链上，dApp 已不再打开它们。
 
 ## 一句话
 

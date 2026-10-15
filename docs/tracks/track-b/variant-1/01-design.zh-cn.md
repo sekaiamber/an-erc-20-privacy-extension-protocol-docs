@@ -2,7 +2,7 @@
 
 # B.1 设计（0.3.0-draft）
 
-状态：`Draft`。本文描述的是 0.3.0，它已在合约中实现并在本地测试（2026-10-15：四种组合由 `contracts/scripts/track-b/variant-1/gen-compositions.mjs` 生成，91 项合约测试通过），尚未部署；0.3.0 与 0.2.0 不同的地方，正文会注明。下面关于部署和链上测量的内容都指 0.2.0。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`），dApp 的页面（`/tracks/b/1`）也已跟进。0.2.0 已部署到 BSC testnet，五种操作都在链上跑过（[02-deployments](02-deployments.zh-cn.md)，2026-10-13）。这个页面还没有在浏览器里对着链上的代币实际用过。gas、约束数和证明时间都是本地实测（§12）。
+状态：`Draft`。本文描述的是 0.3.0，它已在合约中实现并在本地测试（2026-10-15：四种组合由 `contracts/scripts/track-b/variant-1/gen-compositions.mjs` 生成，91 项合约测试通过），dApp 已跟进，并已不带初始供应部署到 BSC testnet（2026-10-15，[02-deployments](02-deployments.zh-cn.md)）；0.3.0 与 0.2.0 不同的地方，正文会注明。下面的链上测量都指 0.2.0。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`），dApp 的页面（`/tracks/b/1`）也已跟进。0.2.0 已部署到 BSC testnet，五种操作都在链上跑过（[02-deployments](02-deployments.zh-cn.md)，2026-10-13）。这个页面还没有在浏览器里对着链上的代币实际用过。gas、约束数和证明时间都是本地实测（§12）。
 
 > 0.3.0（草案，2026-10-15）依据 [ADR-0013](../../../adr/0013-mintable.zh-cn.md)。角色铸造模块改名为**可增发**（`ICasataMintable`；接口 id `0x40c10f19` 不变）。`0x81` 销毁移进核心，所以每个 B.1 代币都能销毁。核心在代币部署时发行初始供应（§7.1），所以不带可增发的代币就是固定供应的代币。声明的模块是可增发和 Wrapper 端口（§5.1）。电路、payload 布局、证明密钥和验证器都不变。`casata()` = `B:1:0.3.0`。[A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md) 的出口绑定不适用于 B.1（§5）。
 

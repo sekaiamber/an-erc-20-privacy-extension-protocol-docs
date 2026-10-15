@@ -2,7 +2,53 @@ English | [中文](03-deployments.zh-cn.md)
 
 # A.1 Deployment Record
 
-## BSC testnet (chain id 97) — 0.6.0 (current)
+## BSC testnet (chain id 97) — 0.7.0 (current)
+
+Deployed: 2026-10-15. `casata()` = `A:1:0.7.0` for both tokens; they are told apart by `casataModules()`. Contract source: contracts `9f3aa98` (the generated compositions of 04-modules M10). No circuit changed, so both tokens use the verifiers and the window table of the 0.6.0 deployment below; nothing else was deployed.
+
+| Composition | Deployment id | Contract | Address | Deployment gas | Transaction |
+| --- | --- | --- | --- | --- | --- |
+| With the public ledger | `a1-v0_7_0-ledger-bsc-testnet` | **`A1LedgerToken`** (Test / TEST) | [`0xA287205B6E6638BE271F24aD82Ac9d73eB7244Bf`](https://testnet.bscscan.com/address/0xA287205B6E6638BE271F24aD82Ac9d73eB7244Bf) | 5,891,416 | [0xe815…7bbd](https://testnet.bscscan.com/tx/0xe815418511e3ae657a5cdd662b232db5776e7302e465a82c50fe3ce829bd7bbd) |
+| Privacy-only | `a1-v0_7_0-private-bsc-testnet` | **`A1PrivateToken`** (Closed / CLS) | [`0x7df7de993882819BDC27d1085814becEF12d6101`](https://testnet.bscscan.com/address/0x7df7de993882819BDC27d1085814becEF12d6101) | 5,979,185 | [0xfacc…7a5d](https://testnet.bscscan.com/tx/0xfaccc607d2c6f30bf23131263fb7b90aae88fe18e48ae820ba5efda72f177a5d) |
+
+Read back from the chain right after deployment:
+
+| | `A1LedgerToken` | `A1PrivateToken` |
+| --- | --- | --- |
+| `casataModules()` | public ledger (`0x43dcbbd9`) and Mintable (`0x40c10f19`), both at the token | Mintable (`0x40c10f19`) at the token; Wrapper port (`0x1464bbec`) at the family Wrapper `0xfA04…5455` |
+| `totalSupply()` | 1,000,000 TEST: the initial supply, issued publicly to the deployer by the constructor (ADR-0013) | 0: no initial supply, which Mintable allows |
+| Roles (`getRoleMember`, enumerable from 0.7.0) | admin, minter and regulator admin: the deployer | the same |
+| Bytecode | 14,683 bytes | 15,195 bytes |
+
+Regulator key: the same key id 0 as before. The deployment gas is about 450k more than 0.6.0's: the enumerable roles, and for the ledger token the initial issuance, which 0.6.0 made as a separate `mint` (70,714 gas).
+
+### On-chain measurements, 0.7.0, `A1PrivateToken` (contracts `scripts/track-a/variant-1/e2e-private-bsc.ts`, 2026-10-15)
+
+| Operation | Gas | Transaction |
+| --- | --- | --- |
+| `mint` 1,000 to an id (`0x82`) | 196,591 | [0x205b…494f](https://testnet.bscscan.com/tx/0x205b4a03978d540862c2df90f11b19020bd9dd63728d66f7a38cb7a4ed7f494f) |
+| `0x01` 250, alice to bob | 705,383 | [0xe088…d497](https://testnet.bscscan.com/tx/0xe088c2e7dbdd47c66a9f3413265028fee28999d59572a0edee4ea329e306d497) |
+| `fold` | 462,799 | [0xea54…a2d4](https://testnet.bscscan.com/tx/0xea54bbf60f320e96710f030c51f4e55fecbf8a03cf6710800e4255b11715a2d4) |
+| `0x81` burn 50 (the core's burn) | 362,563 | [0xc811…f16f](https://testnet.bscscan.com/tx/0xc811be7845b6e5694a21a87b73085571de76b99fce00d99a5dfac4331133f16f) |
+| wrap 300, the proof bound to the Wrapper exit (A1-0007); creates wCLS `0xaF5Cb948B51E076B0523Cf5916533CbE41f1B6eb` | 990,064 | [0xc3b1…6cbb](https://testnet.bscscan.com/tx/0xc3b1d5616aad95d717b5f0d249eaec0bb8912914900f16f5f257424ef92c6cbb) |
+| unwrap 100 into bob's id | 129,680 | [0x38e7…f97e](https://testnet.bscscan.com/tx/0x38e72fe5fe6f2782d00a8ac317b5a960277168d50d52508cd956e56bd6dbf97e) |
+
+Every balance the script decrypts matches, and the supply adds up: `totalSupply()` 750 CLS + wCLS 200 = 1,000 issued − 50 burned.
+
+### On-chain measurements, 0.7.0, `A1LedgerToken` (dApp client library, `dapp/scripts/e2e-bsc.mts`, 2026-10-15)
+
+| Operation | Gas | Transaction |
+| --- | --- | --- |
+| `0x03` shield 100 | 214,678 | [0x5f37…4af5](https://testnet.bscscan.com/tx/0x5f37b1ce5f08720c7793dd54222a1ee0978c4befe18bf563718743565e154af5) |
+| `0x01` 12.5 | 705,654 | [0x3ad0…56b0](https://testnet.bscscan.com/tx/0x3ad001e48e74267d38360a6546ef3a7aff6e8dd2a3dd0e47f5ee7d33906a56b0) |
+| `fold`, relayed | 462,672 | [0x102d…b26f](https://testnet.bscscan.com/tx/0x102d505bbb97a7a7b40b60a1feadf471c47a62e059c6c8a41c35e5268570b26f) |
+| `0x04` unshield 5, relayed, the proof bound to the unshield exit (A1-0007) | 374,123 | [0xc1e8…959f](https://testnet.bscscan.com/tx/0xc1e8c32d8bb96df4335bf2d3ef7876b95321d4cf11cb6762152b8c9f64ad959f) |
+
+Afterwards `shieldedSupply()` is 95 TEST and the wallet's public balance 999,905 TEST. The gas of each operation is within about 1k of 0.6.0's.
+
+The 0.6.0 tokens below stay on the chain and keep working; the dApp opens both versions.
+
+## BSC testnet (chain id 97) — 0.6.0 (superseded by 0.7.0)
 
 Deployed: 2026-10-13. `casata()` = `A:1:0.6.0` for both tokens; they are told apart by `casataModules()`. Contract source: contracts `a2c0ae0`. The circuits and proving keys are those of 0.4.0, unchanged.
 

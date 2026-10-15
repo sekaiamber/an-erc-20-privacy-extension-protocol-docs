@@ -2,9 +2,9 @@ English | [中文](README.zh-cn.md)
 
 # A.1: ElGamal encrypted accounts + Groth16
 
-Version: `0.7.0` (designed, not implemented; [ADR-0013](../../../adr/0013-mintable.md), [A1-0007](../../../adr/a1-0007-exit-kind-binding.md)). `0.6.0` is implemented and deployed on BSC testnet since 2026-10-13 (core plus modules, [ADR-0008](../../../adr/0008-modules.md)). Status: `Draft`.
+Version: `0.7.0` (implemented and deployed on BSC testnet on 2026-10-15; [ADR-0013](../../../adr/0013-mintable.md), [A1-0007](../../../adr/a1-0007-exit-kind-binding.md)). `0.6.0` stays deployed since 2026-10-13 (core plus modules, [ADR-0008](../../../adr/0008-modules.md)). Status: `Draft`.
 
-0.6.0 is implemented as `A1LedgerToken` and `A1PrivateToken` and deployed on BSC testnet on 2026-10-13 ([03-deployments](03-deployments.md)). The two standalone contracts that predate the module structure, `ConfidentialERC20A1` 0.4.0 and `ConfidentialERC20B1` 0.2.0, remain on chain and are no longer opened by the dApp.
+0.7.0 is implemented as eight generated contracts, one per subset of the modules; its two reference tokens, `A1LedgerToken` and `A1PrivateToken`, were deployed on BSC testnet on 2026-10-15, beside the 0.6.0 ones of 2026-10-13 ([03-deployments](03-deployments.md)). The two standalone contracts that predate the module structure, `ConfidentialERC20A1` 0.4.0 and `ConfidentialERC20B1` 0.2.0, remain on chain and are no longer opened by the dApp.
 
 ## In one sentence
 

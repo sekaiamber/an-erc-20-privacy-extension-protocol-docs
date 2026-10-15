@@ -29,9 +29,9 @@
 
 | 组合 | 公开账本 | 可增发 | Wrapper 端口 | 合约与描述符 | 文档 |
 | --- | --- | --- | --- | --- | --- |
-| A.1 带公开账本 | 有 | 有，铸到公开账本 | 无 | `A1LedgerToken`，`A:1:0.6.0` | [track-a/variant-1](track-a/variant-1/README.zh-cn.md) |
-| A.1 纯隐私 | 无 | 有，铸到机密账户 | 有 | `A1PrivateToken`，`A:1:0.6.0` | [track-a/variant-1](track-a/variant-1/README.zh-cn.md) |
-| B.1 | 无 | 有，铸成 note | 有 | `B1NoteToken`，`B:1:0.2.0` | [track-b/variant-1](track-b/variant-1/README.zh-cn.md) |
+| A.1 带公开账本 | 有 | 有，铸到公开账本 | 无 | `A1LedgerToken`，`A:1:0.7.0`（0.6.0 仍在链上） | [track-a/variant-1](track-a/variant-1/README.zh-cn.md) |
+| A.1 纯隐私 | 无 | 有，铸到机密账户 | 有 | `A1PrivateToken`，`A:1:0.7.0`（0.6.0 仍在链上） | [track-a/variant-1](track-a/variant-1/README.zh-cn.md) |
+| B.1 | 无 | 有，铸成 note | 有 | `B1NoteToken`，`B:1:0.3.0`（0.2.0 仍在链上） | [track-b/variant-1](track-b/variant-1/README.zh-cn.md) |
 
 地址见 [A.1 部署记录](track-a/variant-1/03-deployments.zh-cn.md)和 [B.1 部署记录](track-b/variant-1/02-deployments.zh-cn.md)。A.1 的两个代币自报的描述符相同，靠 `casataModules()` 区分。
 

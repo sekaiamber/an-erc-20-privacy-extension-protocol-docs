@@ -2,7 +2,34 @@ English | [中文](02-deployments.zh-cn.md)
 
 # B.1 Deployment Record
 
-## BSC testnet (chain id 97) — 0.2.0 (current)
+## BSC testnet (chain id 97) — 0.3.0 (current)
+
+Deployed: 2026-10-15. `casata()` = `B:1:0.3.0`. Deployment id: `b1-notes-v0_3_0-bsc-testnet`. Contract source: contracts `9f3aa98`. The circuit and the proving key are those of 0.1.0. The deploy module puts a hash contract and a verifier on chain with the token; they are the same code as 0.2.0's.
+
+| Contract | Address | Deployment gas | Transaction |
+| --- | --- | --- | --- |
+| **`B1NoteToken`** (Notes / NTS, 6 decimals; Mintable + Wrapper port) | [`0x9D9b162AEbb26F829e9C0f84430FDc38a680F95F`](https://testnet.bscscan.com/address/0x9D9b162AEbb26F829e9C0f84430FDc38a680F95F) | 7,498,598 | [0x8b1c…ed94](https://testnet.bscscan.com/tx/0x8b1c059fe87edc680a6f7fd7529d0ad1ab37d3ae6382a63e2226a4833fc5ed94) |
+| `PoseidonT3`, the hash contract | `0xf11FDaDD67b78f6a5D07E162d2F2D8CD9B63C64F` | 2,157,126 | [0x4569…339a](https://testnet.bscscan.com/tx/0x456912875e8c96345fd6174c28013a13502afe6f3a0173b3fbadf689251a339a) |
+| `JoinSplitVerifier` | `0x83b32165903100AebF3B5611E62f5B67842af8a0` | 1,016,217 | [0x880f…4644](https://testnet.bscscan.com/tx/0x880f6b8c4e9374af8e3d4291aed3414cb60bda424639f33cda9187234fec4644) |
+| The family Wrapper, plugged into the Wrapper port | `0xfA04051c4cC38e439f871cBfA179424a257c5455` | n/a | n/a |
+
+Read back from the chain right after deployment: `casataModules()` lists Mintable (`0x40c10f19`) at the token and the Wrapper port (`0x1464bbec`) at the Wrapper; `totalSupply()` is 0, since the deployment carries no initial supply, which Mintable allows; admin, minter and regulator admin are the deployer, read with `getRoleMember` (roles are enumerable from 0.3.0); the bytecode is 15,510 bytes. The deployment gas is about 310k more than 0.2.0's, for the enumerable roles and the constructor's initial-issuance path. Regulator key: the public key the A.1 tokens use, as key id 0. No deployment with an initial supply proved for its address has been made on chain yet (measured locally: 8,142,825 gas, 01-design §7.1).
+
+### On-chain measurements, 0.3.0 (contracts `scripts/track-b/variant-1/e2e-notes.ts`, 2026-10-15)
+
+| Operation | Gas | Transaction |
+| --- | --- | --- |
+| `mint` 1,000 (the first operation on the fresh tree) | 1,828,027 | [0xc1bc…dd90](https://testnet.bscscan.com/tx/0xc1bc35d4a200ceded9cb092a86a85999c6b6ab62587d9a6bdf57a3e4ec1cdd90) |
+| Note transfer 250 | 1,369,300 | [0x6beb…d870](https://testnet.bscscan.com/tx/0x6beb1f2fd0b930c561397178007fceac6f2344df8088e97a54860d2477abd870) |
+| Burn 50 (the core's burn) | 1,374,365 | [0xe9b7…fe52](https://testnet.bscscan.com/tx/0xe9b77fddd5b77c4652f82a9c7b5e5fcc8b6c2a8345b0fa302635e310ca5dfe52) |
+| Wrap 300 (creates wNTS `0x3F4Da57B93abE8e3c1Bc94e959C25e4E34E12fB3`) | 1,995,791 | [0x529f…72f6](https://testnet.bscscan.com/tx/0x529fd84638f999d5bf386a72c5eb20c4ae64469203d8e58d059faa0a909972f6) |
+| Unwrap 100 into a note | 1,412,637 | [0xfd3f…8b10](https://testnet.bscscan.com/tx/0xfd3f2693408e283d306351755f1e2bdccacc80841c896a4d3d8087a04c5f8b10) |
+
+The wallets find their notes (alice 450, bob 300), and `totalSupply()` 750 + `wrappedOut()` 200 = `issuedSupply()` 950. The gas matches 0.2.0's to within a few hundred: parsing the payload from memory costs nothing measurable.
+
+The 0.2.0 token below stays on the chain and keeps working; the dApp opens both versions.
+
+## BSC testnet (chain id 97) — 0.2.0 (superseded by 0.3.0)
 
 Deployed: 2026-10-13. `casata()` = `B:1:0.2.0`. Deployment id: `b1-notes-v0_2_0-bsc-testnet`. Contract source: contracts `a2c0ae0`. The circuit and the proving key are those of 0.1.0.
 

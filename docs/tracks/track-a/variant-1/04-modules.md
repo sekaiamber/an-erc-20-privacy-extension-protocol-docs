@@ -6,7 +6,7 @@ Version: `0.7.0`. Status: `Draft`. Date: 2026-10-15
 
 This document is the structure of A.1 under [ADR-0008](../../../adr/0008-modules.md): one core and three modules. From 0.7.0 it follows [ADR-0013](../../../adr/0013-mintable.md) (Mintable; the initial supply and the burn in the core) and [A1-0007](../../../adr/a1-0007-exit-kind-binding.md) (the exit kind bound through the recipient value).
 
-**Status of the implementation (2026-10-15).** This document describes 0.7.0, which is designed and not implemented; §9.2 lists what it changes. What runs today is 0.6.0. It is implemented in the contracts repository (`a2c0ae0`, all tests pass) and in the dApp (`e06424a`), and both of its compositions are deployed on BSC testnet ([03-deployments](03-deployments.md)) and were run end to end on chain on 2026-10-13. For 0.6.0, read "role issuance" wherever this document says Mintable, and read §1 to §8 with the differences listed in §9.2. Not done for 0.6.0: a `mint` to a confidential id and the `0x81` burn on the token with the public ledger have only been run locally, and the dApp pages have not been exercised in a browser.
+**Status of the implementation (2026-10-15).** This document describes 0.7.0, which is implemented in the contracts and the dApp, and whose two reference tokens are deployed on BSC testnet (2026-10-15, [03-deployments](03-deployments.md)), where every operation ran end to end on chain the same day. §9.2 lists what it changes. 0.6.0 is implemented in the contracts repository (`a2c0ae0`, all tests pass) and in the dApp (`e06424a`), and both of its compositions are deployed on BSC testnet ([03-deployments](03-deployments.md)) and were run end to end on chain on 2026-10-13. For 0.6.0, read "role issuance" wherever this document says Mintable, and read §1 to §8 with the differences listed in §9.2. Not done for 0.6.0: a `mint` to a confidential id and the `0x81` burn on the token with the public ledger have only been run locally, and the dApp pages have not been exercised in a browser.
 
 The core is specified in [01-design](01-design.md). No circuit changes.
 
@@ -232,7 +232,7 @@ Relative to 0.5.0. Decision records: [ADR-0010](../../../adr/0010-erc20-surface-
 
 ### 9.2 What changes at 0.7.0
 
-Relative to 0.6.0. Decision records: [ADR-0013](../../../adr/0013-mintable.md) and [A1-0007](../../../adr/a1-0007-exit-kind-binding.md). No circuit changes, so the proving keys, the verifier contracts and the window table stay the same. Implemented in the contracts and tested locally on 2026-10-15 (79 tests pass); the dApp and the deployments are not done.
+Relative to 0.6.0. Decision records: [ADR-0013](../../../adr/0013-mintable.md) and [A1-0007](../../../adr/a1-0007-exit-kind-binding.md). No circuit changes, so the proving keys, the verifier contracts and the window table stay the same. Implemented in the contracts and tested locally on 2026-10-15 (79 tests pass), followed in the dApp, and the two reference tokens deployed on BSC testnet the same day.
 
 | # | Change | Affects |
 | --- | --- | --- |

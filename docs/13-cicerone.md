@@ -70,24 +70,33 @@ Questions:
 | --- | --- | --- | --- |
 | `parties` | Track | What must stay hidden? | The amount, and every trace of who pays whom / The amount, with payer and payee under a pen name (an account id computed from a key, not from a wallet address, and the same from one payment to the next) |
 | `ledger` | Module | Where do wallets and DeFi meet the token? | At its own address (public ledger) / Only through the family Wrapper (confidential ledger only) |
+| `issuance` | Module | Can the supply grow after deployment? | No: what is issued at deployment is all there will be (no Mintable) / Yes: a minter keeps issuing (Mintable) |
 
 Catalogue:
 
-| Composition | Modules | `parties` | `ledger` | Deployment |
-| --- | --- | --- | --- | --- |
-| A.1 with the public ledger | Public ledger, role issuance | Pen name | At its own address | `/tracks/a/1/deploy?compose=ledger` |
-| A.1 privacy-only | Role issuance, Wrapper port | Pen name | Through the Wrapper | `/tracks/a/1/deploy?compose=private` |
-| B.1 | Role issuance, Wrapper port | No trace | Through the Wrapper | `/tracks/b/1/deploy` |
+| Composition | Modules | `parties` | `ledger` | `issuance` | Deployment |
+| --- | --- | --- | --- | --- | --- |
+| A.1 with the public ledger, fixed supply | Public ledger | Pen name | At its own address | Fixed | `/tracks/a/1/deploy?compose=L` |
+| A.1 with the public ledger, mintable | Public ledger, Mintable | Pen name | At its own address | Mintable | `/tracks/a/1/deploy?compose=LM` |
+| A.1 privacy-only, fixed supply | Wrapper port | Pen name | Through the Wrapper | Fixed | `/tracks/a/1/deploy?compose=W` |
+| A.1 privacy-only, mintable | Mintable, Wrapper port | Pen name | Through the Wrapper | Mintable | `/tracks/a/1/deploy?compose=MW` |
+| B.1, fixed supply | Wrapper port | No trace | Through the Wrapper | Fixed | `/tracks/b/1/deploy?compose=W` |
+| B.1, mintable | Mintable, Wrapper port | No trace | Through the Wrapper | Mintable | `/tracks/b/1/deploy?compose=MW` |
 
 The walk that follows from them:
 
 ```
-publish ─┬─ no trace of who pays whom ─────────────────────────── B.1
-         └─ pen names ─────┬─ at its own address ─────────────── A.1 with the public ledger
-                           └─ through the Wrapper ────────────── A.1 privacy-only
+publish ─┬─ no trace of who pays whom ──────────────────────┬─ fixed ──── B.1, fixed supply
+         │                                                  └─ mintable ─ B.1, mintable
+         └─ pen names ─────┬─ at its own address ───────────┬─ fixed ──── A.1 with the public ledger, fixed supply
+                           │                                └─ mintable ─ A.1 with the public ledger, mintable
+                           └─ through the Wrapper ──────────┬─ fixed ──── A.1 privacy-only, fixed supply
+                                                            └─ mintable ─ A.1 privacy-only, mintable
 ```
 
-Role issuance is in every composition, so no question about issuance is asked. A.1 with both the public ledger and the Wrapper port is not built ([A.1 04 §6](tracks/track-a/variant-1/04-modules.md)), so it is not in the catalogue.
+On the B.1 branch the `ledger` question splits nothing, since B.1 has no public ledger, so it is not asked there (§2).
+
+From A.1 0.7.0 and B.1 0.3.0 every subset of a Variant's modules is a token ([ADR-0013](adr/0013-mintable.md)), so issuance became a choice and the `issuance` question was added (2026-10-15). Before, role issuance was in every composition and no question about issuance was asked. The catalogue holds the compositions that meet wallets and DeFi in exactly one way; the others (both the public ledger and the Wrapper port, or neither) are built and can be picked on the deploy pages, and so can a privacy version of an existing ERC-20 through the family gateway ([14](14-gateway.md)).
 
 ## 4. Adding to the family
 
@@ -104,7 +113,7 @@ The catalogue and the questions live in the dApp next to the family registry (`d
 
 The cards follow [12](12-visual-style.md): ink on paper, double rules, EB Garamond for titles.
 
-- **Icons.** Every Track and every module has an icon, a vignette in the manner of 12 §5. A Variant has none: on the cards it is written, not drawn. Today: Track A a purse, Track B a mask; the public ledger a pair of scales, role issuance a seal matrix, the Wrapper port a key. The first pair of cards, which is not about the family, has a quill (publish) and a lens (look at a token).
+- **Icons.** Every Track and every module has an icon, a vignette in the manner of 12 §5. A Variant has none: on the cards it is written, not drawn. Today: Track A a purse, Track B a mask; the public ledger a pair of scales, Mintable a seal matrix, the Wrapper port a key. An answer that leaves a module out has a picture of its own: a closed coffer for a fixed supply. The first pair of cards, which is not about the family, has a quill (publish) and a lens (look at a token).
 - **A card** is drawn like a Renaissance tarot card (*tarocchi*, the Italian cards of the fifteenth century): tall, with a double border, a Roman numeral for the step, the icon of what the answer settles, the answer as its title, one line of explanation and one line of what the answer costs.
 - **The hand** is a fan of small cards at the bottom of the page.
 - **Motion.** The two cards of a step turn in; the card taken shrinks into the hand; the other fades out. Cards in the hand move apart when one is pointed at. This is the one place where the page itself moves (12 §2). Where the reader's system asks for reduced motion, cards only fade. The motion is written with anime.js and moves only transforms and opacity.

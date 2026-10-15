@@ -2,7 +2,34 @@
 
 # B.1 部署记录
 
-## BSC testnet（chain id 97）— 0.2.0（当前）
+## BSC testnet（chain id 97）— 0.3.0（当前）
+
+部署日期：2026-10-15。`casata()` = `B:1:0.3.0`。部署 id：`b1-notes-v0_3_0-bsc-testnet`。合约源码：contracts `9f3aa98`。电路和证明密钥仍是 0.1.0 的。部署模块会随代币一起部署一个哈希合约和一个验证合约，代码与 0.2.0 的相同。
+
+| 合约 | 地址 | 部署 gas | 交易 |
+| --- | --- | --- | --- |
+| **`B1NoteToken`**（Notes / NTS，6 位小数；可增发 + Wrapper 端口） | [`0x9D9b162AEbb26F829e9C0f84430FDc38a680F95F`](https://testnet.bscscan.com/address/0x9D9b162AEbb26F829e9C0f84430FDc38a680F95F) | 7,498,598 | [0x8b1c…ed94](https://testnet.bscscan.com/tx/0x8b1c059fe87edc680a6f7fd7529d0ad1ab37d3ae6382a63e2226a4833fc5ed94) |
+| `PoseidonT3`，哈希合约 | `0xf11FDaDD67b78f6a5D07E162d2F2D8CD9B63C64F` | 2,157,126 | [0x4569…339a](https://testnet.bscscan.com/tx/0x456912875e8c96345fd6174c28013a13502afe6f3a0173b3fbadf689251a339a) |
+| `JoinSplitVerifier` | `0x83b32165903100AebF3B5611E62f5B67842af8a0` | 1,016,217 | [0x880f…4644](https://testnet.bscscan.com/tx/0x880f6b8c4e9374af8e3d4291aed3414cb60bda424639f33cda9187234fec4644) |
+| 家族 Wrapper，插在 Wrapper 端口上 | `0xfA04051c4cC38e439f871cBfA179424a257c5455` | 不适用 | 不适用 |
+
+部署后立即从链上读回：`casataModules()` 列出可增发（`0x40c10f19`，在代币本身）和 Wrapper 端口（`0x1464bbec`，指向 Wrapper）；`totalSupply()` 为 0，因为这次部署没有初始供应，带可增发时允许；admin、铸造者和监管管理员都是部署者，用 `getRoleMember` 读出（0.3.0 起角色可枚举）；字节码 15,510 字节。部署 gas 比 0.2.0 多约 31 万，来自可枚举角色和构造函数里的初始发行路径。监管密钥：A.1 代币用的那把公钥，作为 key id 0。带初始发行（针对预测地址证明）的部署还没在链上做过（本地实测 8,142,825 gas，01-design §7.1）。
+
+### 链上实测，0.3.0（contracts `scripts/track-b/variant-1/e2e-notes.ts`，2026-10-15）
+
+| 操作 | Gas | 交易 |
+| --- | --- | --- |
+| `mint` 1,000（新树上的第一次操作） | 1,828,027 | [0xc1bc…dd90](https://testnet.bscscan.com/tx/0xc1bc35d4a200ceded9cb092a86a85999c6b6ab62587d9a6bdf57a3e4ec1cdd90) |
+| note 转账 250 | 1,369,300 | [0x6beb…d870](https://testnet.bscscan.com/tx/0x6beb1f2fd0b930c561397178007fceac6f2344df8088e97a54860d2477abd870) |
+| 销毁 50（内核的销毁） | 1,374,365 | [0xe9b7…fe52](https://testnet.bscscan.com/tx/0xe9b77fddd5b77c4652f82a9c7b5e5fcc8b6c2a8345b0fa302635e310ca5dfe52) |
+| wrap 300（创建 wNTS `0x3F4Da57B93abE8e3c1Bc94e959C25e4E34E12fB3`） | 1,995,791 | [0x529f…72f6](https://testnet.bscscan.com/tx/0x529fd84638f999d5bf386a72c5eb20c4ae64469203d8e58d059faa0a909972f6) |
+| unwrap 100 成一个 note | 1,412,637 | [0xfd3f…8b10](https://testnet.bscscan.com/tx/0xfd3f2693408e283d306351755f1e2bdccacc80841c896a4d3d8087a04c5f8b10) |
+
+钱包都找到了自己的 note（alice 450，bob 300），`totalSupply()` 750 + `wrappedOut()` 200 = `issuedSupply()` 950。gas 与 0.2.0 相差不过几百：从内存解析 payload 的开销测不出来。
+
+下面 0.2.0 的代币仍留在链上、照常可用；dApp 两个版本都能打开。
+
+## BSC testnet（chain id 97）— 0.2.0（已被 0.3.0 取代）
 
 部署日期：2026-10-13。`casata()` = `B:1:0.2.0`。部署 id：`b1-notes-v0_2_0-bsc-testnet`。合约源码：contracts `a2c0ae0`。电路和证明密钥与 0.1.0 相同。
 

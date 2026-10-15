@@ -74,7 +74,7 @@ Both Variants have 6 decimals ([A1-0005](adr/a1-0005-numeric-parameters.md); B.1
 | USDT, USDC on Ethereum | 6 | 1 | 1 unit | about 281 million | the cap | about 18.4 trillion |
 
 - **Precision.** With `d = 18`, amounts below 10⁻⁶ of a token cannot be deposited. A wallet rounds down and leaves the rest in the user's account; it never sends it to the gateway.
-- **Fewer than 6 decimals.** The constructor reverts. A token with 6 decimals cannot represent a unit smaller than the underlying's without a scale below 1, and such underlyings are rare (GUSD has 2). Supporting them is an open point (§8).
+- **Fewer than 6 decimals.** The constructor reverts. A token with 6 decimals cannot represent a unit smaller than the underlying's without a scale below 1, and such underlyings are rare (GUSD has 2). Supporting them is an open point (§9).
 - **The A.1 per-operation bound** (`< 2⁴⁸`) applies to `deposit` and `withdraw` as to any public amount (04-modules §2). A larger amount is split by the wallet.
 
 ## 4. Backing and trust
@@ -143,7 +143,14 @@ On A.1 this composition has two exits to a non-zero recipient, `0x04` and `wrapp
 
 Both are plugged into the same port, and a token has one `wrapper()`, set once. So a gateway token has no `wTOKEN`. It does not need one: the underlying is already the public form, and with the public ledger so is the token itself.
 
-## 8. Open points
+## 8. In the dApp
+
+Two places, both added on 2026-10-15.
+
+- **The workshop tool** (`/tools/gateway`). Setting up: the reader names a Casata token and an existing ERC-20; the page checks that the token is A.1 0.7.0 or B.1 0.3.0 with Mintable and the Wrapper port and an empty port, deploys a gateway for the pair, and then offers the steps of §4 one by one, each shown done or not from the chain: plug the gateway into the port, grant it `MINTER_ROLE`, revoke the role from everyone else, renounce the admin role. Checking: for any gateway address the page shows the pair, the scale, the conditions G1 to G4 and the invariant, and calls the token backed only when all of them hold.
+- **The token page.** When the module in a token's Wrapper port is a gateway (its `token()` is the token), the wrap and unwrap tabs become withdraw and deposit of the underlying. A withdrawal is the wrap's proof, sent to `withdraw`; a deposit approves the underlying and calls `deposit` with the reader's id (A.1) or a join-split for the reader's key (B.1). The A.1 page with the public ledger has no wrap tabs, so a gateway token with the public ledger cannot yet be deposited into or withdrawn from on its page.
+
+## 9. Open points
 
 - **Listing role members.** Decided on 2026-10-15: A.1 0.7.0 and B.1 0.3.0 use OpenZeppelin `AccessControlEnumerable` (A.1 04-modules M12, B.1 01-design D10), so G2 and G3 are view calls there (`getRoleMemberCount`, `getRoleMember`). Tokens of earlier versions still need the log scan.
 - **Underlyings with fewer than 6 decimals** (§3).

@@ -271,7 +271,7 @@ function key() {
   ].join("");
 }
 
-// ---------- 11. the seal matrix (role issuance) ----------
+// ---------- 11. the seal matrix (Mintable; role issuance up to A.1 0.6.0 / B.1 0.2.0) ----------
 function stamp() {
   const knob = "M100 104C110 104 116 112 114 124C112 134 106 140 106 150C106 160 112 168 112 176H88C88 168 94 160 94 150C94 140 88 134 86 124C84 112 90 104 100 104Z";
   const collar = "M86 176H114V184H86Z";
@@ -290,7 +290,27 @@ function stamp() {
   ].join("");
 }
 
-const ART = { lantern, bust, books, tools, quill, lens, mask, purse, scales, key, stamp };
+// ---------- 12. the coffer (a fixed supply: issued once, closed for good) ----------
+function coffer() {
+  const lid = `M66 160C66 138 134 138 134 160Z`;
+  const body = `M66 160H134V${LEDGE}H66Z`;
+  const band = `M66 174H134V182H66Z`;
+  const plate = "M92 170H108V196H92Z";
+  const right = `M0 0H100V${H}H0Z`;
+  return [
+    hatch(`M134 164C142 170 146 190 146 ${LEDGE}H134Z`, { angle: 40, gap: 2 }),
+    solid(body), hatch(body, { angle: 45, minus: `M0 0H104V${H}H0Z` }), ink(body),
+    solid(lid), hatch(lid, { angle: 45, gap: 1.8, minus: right }), ink(lid),
+    ink("M82 150C88 146 94 145 100 145", 1.1),
+    solid(band), ink(band, 1),
+    ink(`M78 160V${LEDGE}M122 160V${LEDGE}`, 0.8),
+    solid(plate), ink(plate, 1.1),
+    ink("M100 180m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0", 1), ink("M100 183V190", 1.4),
+    ink(`M70 ${LEDGE - 6}H130`, 0.6),
+  ].join("");
+}
+
+const ART = { lantern, bust, books, tools, quill, lens, mask, purse, scales, key, stamp, coffer };
 
 function svg(name) {
   return el("svg", { viewBox: `0 0 ${W} ${H}`, xmlns: MODE === "html" ? "http://www.w3.org/2000/svg" : undefined }, frame(ART[name]()));

@@ -2,7 +2,53 @@
 
 # A.1 部署记录
 
-## BSC testnet（chain id 97）— 0.6.0（当前）
+## BSC testnet（chain id 97）— 0.7.0（当前）
+
+部署日期：2026-10-15。两个代币的 `casata()` 都是 `A:1:0.7.0`，靠 `casataModules()` 区分。合约源码：contracts `9f3aa98`（04-modules M10 的生成组合）。电路没有变，所以两个代币都用下面 0.6.0 部署的验证合约和窗口表；除了这两个代币，没有部署别的。
+
+| 组合 | 部署 id | 合约 | 地址 | 部署 gas | 交易 |
+| --- | --- | --- | --- | --- | --- |
+| 带公开账本 | `a1-v0_7_0-ledger-bsc-testnet` | **`A1LedgerToken`**（Test / TEST） | [`0xA287205B6E6638BE271F24aD82Ac9d73eB7244Bf`](https://testnet.bscscan.com/address/0xA287205B6E6638BE271F24aD82Ac9d73eB7244Bf) | 5,891,416 | [0xe815…7bbd](https://testnet.bscscan.com/tx/0xe815418511e3ae657a5cdd662b232db5776e7302e465a82c50fe3ce829bd7bbd) |
+| 纯隐私 | `a1-v0_7_0-private-bsc-testnet` | **`A1PrivateToken`**（Closed / CLS） | [`0x7df7de993882819BDC27d1085814becEF12d6101`](https://testnet.bscscan.com/address/0x7df7de993882819BDC27d1085814becEF12d6101) | 5,979,185 | [0xfacc…7a5d](https://testnet.bscscan.com/tx/0xfaccc607d2c6f30bf23131263fb7b90aae88fe18e48ae820ba5efda72f177a5d) |
+
+部署后立即从链上读回：
+
+| | `A1LedgerToken` | `A1PrivateToken` |
+| --- | --- | --- |
+| `casataModules()` | 公开账本（`0x43dcbbd9`）和可增发（`0x40c10f19`），都在代币本身 | 可增发（`0x40c10f19`）在代币本身；Wrapper 端口（`0x1464bbec`）指向家族 Wrapper `0xfA04…5455` |
+| `totalSupply()` | 1,000,000 TEST：构造函数公开发给部署者的初始供应（ADR-0013） | 0：没有初始供应，带可增发时允许 |
+| 角色（`getRoleMember`，0.7.0 起可枚举） | admin、铸造者和监管管理员都是部署者 | 同左 |
+| 字节码 | 14,683 字节 | 15,195 字节 |
+
+监管密钥：与之前相同的 key id 0。部署 gas 比 0.6.0 多约 45 万：来自可枚举角色；带公开账本的代币还包括初始发行，0.6.0 时它是一笔单独的 `mint`（70,714 gas）。
+
+### 链上实测，0.7.0，`A1PrivateToken`（contracts `scripts/track-a/variant-1/e2e-private-bsc.ts`，2026-10-15）
+
+| 操作 | Gas | 交易 |
+| --- | --- | --- |
+| `mint` 1,000 到一个 id（`0x82`） | 196,591 | [0x205b…494f](https://testnet.bscscan.com/tx/0x205b4a03978d540862c2df90f11b19020bd9dd63728d66f7a38cb7a4ed7f494f) |
+| `0x01` 250，alice 给 bob | 705,383 | [0xe088…d497](https://testnet.bscscan.com/tx/0xe088c2e7dbdd47c66a9f3413265028fee28999d59572a0edee4ea329e306d497) |
+| `fold` | 462,799 | [0xea54…a2d4](https://testnet.bscscan.com/tx/0xea54bbf60f320e96710f030c51f4e55fecbf8a03cf6710800e4255b11715a2d4) |
+| `0x81` 销毁 50（内核的销毁） | 362,563 | [0xc811…f16f](https://testnet.bscscan.com/tx/0xc811be7845b6e5694a21a87b73085571de76b99fce00d99a5dfac4331133f16f) |
+| wrap 300，证明绑定 Wrapper 出口（A1-0007）；创建 wCLS `0xaF5Cb948B51E076B0523Cf5916533CbE41f1B6eb` | 990,064 | [0xc3b1…6cbb](https://testnet.bscscan.com/tx/0xc3b1d5616aad95d717b5f0d249eaec0bb8912914900f16f5f257424ef92c6cbb) |
+| unwrap 100 到 bob 的 id | 129,680 | [0x38e7…f97e](https://testnet.bscscan.com/tx/0x38e72fe5fe6f2782d00a8ac317b5a960277168d50d52508cd956e56bd6dbf97e) |
+
+脚本解出的每个余额都对得上，供应量也对得上：`totalSupply()` 750 CLS + wCLS 200 = 发行 1,000 − 销毁 50。
+
+### 链上实测，0.7.0，`A1LedgerToken`（dApp 客户端库，`dapp/scripts/e2e-bsc.mts`，2026-10-15）
+
+| 操作 | Gas | 交易 |
+| --- | --- | --- |
+| `0x03` shield 100 | 214,678 | [0x5f37…4af5](https://testnet.bscscan.com/tx/0x5f37b1ce5f08720c7793dd54222a1ee0978c4befe18bf563718743565e154af5) |
+| `0x01` 12.5 | 705,654 | [0x3ad0…56b0](https://testnet.bscscan.com/tx/0x3ad001e48e74267d38360a6546ef3a7aff6e8dd2a3dd0e47f5ee7d33906a56b0) |
+| `fold`，代发 | 462,672 | [0x102d…b26f](https://testnet.bscscan.com/tx/0x102d505bbb97a7a7b40b60a1feadf471c47a62e059c6c8a41c35e5268570b26f) |
+| `0x04` unshield 5，代发，证明绑定 unshield 出口（A1-0007） | 374,123 | [0xc1e8…959f](https://testnet.bscscan.com/tx/0xc1e8c32d8bb96df4335bf2d3ef7876b95321d4cf11cb6762152b8c9f64ad959f) |
+
+跑完后 `shieldedSupply()` 为 95 TEST，钱包的公开余额为 999,905 TEST。每种操作的 gas 与 0.6.0 相差约 1k 以内。
+
+下面 0.6.0 的代币仍留在链上、照常可用；dApp 两个版本都能打开。
+
+## BSC testnet（chain id 97）— 0.6.0（已被 0.7.0 取代）
 
 部署日期：2026-10-13。两个代币的 `casata()` 都是 `A:1:0.6.0`，靠 `casataModules()` 区分。合约源码：contracts `a2c0ae0`。电路和证明密钥仍是 0.4.0 的，没有变化。
 
