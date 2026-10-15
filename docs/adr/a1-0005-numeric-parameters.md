@@ -2,7 +2,7 @@ English | [中文](a1-0005-numeric-parameters.zh-cn.md)
 
 # A1-0005 Numeric parameters: bit widths, decimals, supply cap
 
-- Status: Accepted ([0014](0014-eighteen-decimals.md), proposed 2026-10-15, would replace these widths and the decimals from A.1 0.8.0: every amount `< 2¹²⁸`, decimals chosen at deployment, 18 by default; the 128-bit circuits are measured there)
+- Status: Accepted; the widths, the cap and the decimals are superseded from A.1 0.8.0 by [0014](0014-eighteen-decimals.md) (accepted 2026-10-15): every amount `< 2¹²⁸`, cap `2¹²⁸ − 1`, decimals chosen at deployment, 18 by default. This record holds for A.1 up to 0.7.0
 - Date: 2026-09-24
 - Scope: A.1
 

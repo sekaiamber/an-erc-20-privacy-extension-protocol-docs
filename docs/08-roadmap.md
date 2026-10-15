@@ -49,7 +49,7 @@ Status: `Draft`
 - [x] The three testnet tokens redeployed as A.1 0.6.0 and B.1 0.2.0 and run end to end on chain (2026-10-13) → `tracks/track-a/variant-1/03-deployments.md`, `tracks/track-b/variant-1/02-deployments.md`
 - [ ] B.1: browser pass of the dApp page; B.1 decoder for the regulator view; deploy form in the dApp
 - [ ] ADR-0013 and A1-0007 (accepted 2026-10-15): role issuance renamed Mintable; the initial supply and the holder's burn move into the core; the unshield proof binds the kind of exit; the family gateway for existing ERC-20s. Documents (07, A.1 0.7.0, B.1 0.3.0, `14-gateway.md`), contracts (eight A.1 and four B.1 generated compositions, `CasataGateway`; 91 tests) and the dApp done; reference tokens deployed on BSC testnet on 2026-10-15. and run end to end on chain. Not yet: a gateway on chain, the gateway's pages, Cicerone's question on issuance
-- [ ] ADR-0014 (proposed 2026-10-15): decimals chosen at deployment (18 by default), every amount `< 2¹²⁸`, from A.1 0.8.0 and B.1 0.4.0. 128-bit circuits measured: +8.0% (A.1 transfer), +12.5% (unshield), +0.7% (B.1). Open: gas on chain
+- [ ] ADR-0014 (accepted 2026-10-15): decimals chosen at deployment (18 by default), every amount `< 2¹²⁸`, from A.1 0.8.0 and B.1 0.4.0. 128-bit circuits measured: +8.0% (A.1 transfer), +12.5% (unshield), +0.7% (B.1). Documents done (07 §11, A.1 01-design and 04-modules §9.3, B.1 01-design, 14 §3). Not yet: circuits, contracts, dApp, gas on chain
 - [ ] Threat model review
 - [ ] `Review` versions of the family conventions and the A.1 design
 

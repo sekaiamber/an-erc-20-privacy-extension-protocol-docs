@@ -2,9 +2,11 @@ English | [中文](01-design.zh-cn.md)
 
 # A.1 Detailed Design: the core
 
-Version: `0.7.0`. Status: `Draft`. Date: 2026-10-15
+Version: `0.8.0`. Status: `Draft`. Date: 2026-10-15
 
-> 0.7.0 (**designed, not implemented**; 0.6.0 is what runs on BSC testnet): follows [ADR-0013](../../../adr/0013-mintable.md) and [A1-0007](../../../adr/a1-0007-exit-kind-binding.md). The core gains the initial issuance, made once in the constructor by the rule of `mint` (04-modules §3), and the `0x81` burn, which moves out of the former role-issuance module; that module is renamed Mintable and keeps only `mint` and `0x82`. The unshield proof binds `r = uint160(keccak256("Casata A.1 exit", kind, to))` instead of `to` for the exits to a non-zero recipient: `kind = 1` for `0x04`, `kind = 2` for `wrapperBurn`; the burn keeps 0 (§5.2). All eight subsets of the modules are tokens. No circuit changes, so the proving keys and verifiers stay the same; a 0.6.0 exit proof does not verify on a 0.7.0 token. `casata()` = `A:1:0.7.0`. The list of changes is 04-modules §9.2.
+> 0.8.0 (**designed, not implemented**; 0.7.0 is what runs on BSC testnet): follows [ADR-0014](../../../adr/0014-eighteen-decimals.md). Every amount is below `2¹²⁸`: a single amount, a balance, a public amount; the cap is `2¹²⁸ − 1` (§1, I2). The token's decimals are chosen at deployment, from 0 to 18, 18 by default. The transfer and unshield circuits widen their range checks to 128 bits (§5.1, §5.2), so they get new proving keys and verifiers; the fold circuit does not change. Unshield takes 8 public inputs instead of 7. The window table for `x·G` grows to 32 segments in two data contracts (§4.1). There is no discrete-logarithm fallback for reading amounts (§8). `casata()` = `A:1:0.8.0`. The list of changes is 04-modules §9.3.
+
+> 0.7.0 (**implemented and deployed on BSC testnet 2026-10-15**; on-chain runs in 03-deployments): follows [ADR-0013](../../../adr/0013-mintable.md) and [A1-0007](../../../adr/a1-0007-exit-kind-binding.md). The core gains the initial issuance, made once in the constructor by the rule of `mint` (04-modules §3), and the `0x81` burn, which moves out of the former role-issuance module; that module is renamed Mintable and keeps only `mint` and `0x82`. The unshield proof binds `r = uint160(keccak256("Casata A.1 exit", kind, to))` instead of `to` for the exits to a non-zero recipient: `kind = 1` for `0x04`, `kind = 2` for `wrapperBurn`; the burn keeps 0 (§5.2). All eight subsets of the modules are tokens. No circuit changes, so the proving keys and verifiers stay the same; a 0.6.0 exit proof does not verify on a 0.7.0 token. `casata()` = `A:1:0.7.0`. The list of changes is 04-modules §9.2.
 
 > 0.6.0 (**implemented and deployed on BSC testnet 2026-10-13**; on-chain runs of both tokens in 03-deployments): follows [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.md) and [ADR-0011](../../../adr/0011-project-name-casata.md). The fold becomes a function of its own, `fold(id, payload)` (§4.6). `prepare` / `cancel` are removed (§3.4). Issuance is `mint(to, amount)` with the payload rule, type `0x82` for a confidential id, replacing `mintConfidential` (04-modules §4.2). `approve` reverts on a token without the public ledger. `pep()` becomes `casata()` and the key-derivation domain becomes `"Casata"`, so keys differ from the ones of 0.5.0. No circuit changes and no change to the payload layouts of `0x01`, `0x04`, `0x80` and `0x81`. `casata()` = `A:1:0.6.0`.
 
@@ -59,9 +61,9 @@ The core alone is a privacy-only ledger: without the public-ledger module `balan
 | Proof system | Groth16 (circom + snarkjs) for the prototype; PLONK-family to be evaluated for production | |
 | Hash / memo | Poseidon; memos encrypted with a Poseidon keystream derived from `r·pk_X` (no ECDH point since 0.4) | |
 | Public-input packing | Scalars packed into 3 words (`from|nonce`, `to|chainId`, `contract|regKeyId|signBits`); points expose only x, with y as a private input bound by "on curve + parity bit" | Public inputs 25 → 15 (14 since 0.4), verification gas 386k → 316k. The SHA-256 compression scheme was rejected: ~400k constraints in circuit |
-| Amount width | Per transfer `v < 2⁴⁸` | |
-| Balance width | `b < 2⁶⁴` | Guaranteed by the `totalSupply` cap |
-| decimals | 6 | Chosen at deployment (18 by default) with amounts `< 2¹²⁸` from 0.8.0 is proposed in [ADR-0014](../../../adr/0014-eighteen-decimals.md) |
+| Amount width | Every amount `v < 2¹²⁸`: per transfer and public amounts | [ADR-0014](../../../adr/0014-eighteen-decimals.md). Up to 0.7.0, `v < 2⁴⁸` ([A1-0005](../../../adr/a1-0005-numeric-parameters.md)) |
+| Balance width | `b < 2¹²⁸` | Guaranteed by the `totalSupply` cap. Up to 0.7.0, `b < 2⁶⁴` |
+| decimals | Chosen at deployment, 0 to 18, 18 by default | No circuit depends on it (ADR-0014). Up to 0.7.0, 6 |
 
 ## 2. Accounts and State
 
@@ -105,7 +107,7 @@ Public-ledger module: OpenZeppelin `ERC20` as is, keyed by Ethereum address. The
 | No. | Statement |
 | --- | --- |
 | I1 | (Public-ledger module) Shielded tokens are escrowed at the contract's own address: `balanceOf(address(this)) == shieldedSupply`, hence `totalSupply() == Σ public balances` (including the contract address) holds naturally for any indexer |
-| I2 | `issuedSupply() ≤ 2⁶⁴ − 1` (in the smallest unit; `issuedSupply()` equals `totalSupply()` unless the Wrapper port is present, 04-modules §3). Guarantees every confidential balance is `< 2⁶⁴`, so range proofs cannot be broken by accumulation overflow |
+| I2 | `issuedSupply() ≤ 2¹²⁸ − 1` (in the smallest unit; `issuedSupply()` equals `totalSupply()` unless the Wrapper port is present, 04-modules §3). Guarantees every confidential balance is `< 2¹²⁸`, so range proofs cannot be broken by accumulation overflow. Up to 0.7.0 the bound was `2⁶⁴ − 1` |
 | I3 | For every `id`: `available + pending` decrypts to the true confidential balance |
 | I4 | `nonce` is strictly increasing |
 | I5 | `pending` only increases, and only by range-proven non-negative amounts or public amounts |
@@ -209,7 +211,7 @@ Up to 0.5.0 a caller that could not assemble calldata could register an operatio
 ```
 _update(from, address(this), x)      // standard ERC-20 checks; escrow at the contract address, emits Transfer(from, this, x)
 shieldedSupply  += x
-C = x·G                               // fixed-base window table: 4 bits × 12 segments, 192 precomputed points in bytecode, about 12 point additions
+C = x·G                               // fixed-base window table: 4 bits × 32 segments in two data contracts of 16 segments each, 512 precomputed points, at most 32 point additions (0.7.0: 12 segments in one contract)
 _accounts[to].pending += (C, 0)       // degenerate ciphertext with r = 0: the amount is public anyway
 emit Transfer(from, to, x)
 emit LedgerCrossing(from, to, 0x03, x)
@@ -303,20 +305,22 @@ Cost: one transaction of about 250k gas (the first fold costs about 450k due to 
 | 2 | `Poseidon(pk_sender) → from` | Payer account id is correct, `pk_sender` stays off chain |
 | 3 | `Poseidon(pk_recv) → to` | Payee account id is correct, `pk_recv` stays off chain |
 | 4 | `pre.C − s·pre.D == b·G` | The balance ciphertext encrypts `b` |
-| 5 | `0 ≤ b < 2⁶⁴` | |
-| 6 | `0 ≤ v < 2⁴⁸` | |
-| 7 | `0 ≤ b − v < 2⁶⁴` | Sufficient balance |
+| 5 | `0 ≤ b < 2¹²⁸` | Up to 0.7.0, `2⁶⁴` |
+| 6 | `0 ≤ v < 2¹²⁸` | Up to 0.7.0, `2⁴⁸` |
+| 7 | `0 ≤ b − v < 2¹²⁸` | Sufficient balance. Up to 0.7.0, `2⁶⁴` |
 | 8 | `D == r·H` | Shared by the three parties |
 | 9 | `C_sender == v·G + r·pk_sender`, `C_recv == v·G + r·pk_recv`, `C_reg == v·G + r·pk_reg` | Same value for all three parties |
 | 10 | `memo_recv == Enc(Poseidon(r·pk_recv); v ‖ r)`, `memo_reg == Enc(Poseidon(r·pk_reg); v ‖ r)` | The pads reuse the `r·pk_X` already computed in 9: no extra scalar multiplication |
 | 11 | (removed in 0.4: formerly `E == e·H`) | |
 | 12 | Packing: after range-checking each scalar, the `w0, w1, w2` equations hold; every point `(xs[i], ys[i])` is on the curve and `ys[i] mod 2 == signBits[i]` | y is uniquely determined by x and the parity bit |
 
-Measured constraint count: **29,719 non-linear constraints** (35,137 in 0.3.x; 30,356 for the unpacked version). Proving takes about 1.3~1.5 s in a Node environment.
+Measured constraint count: **29,719 non-linear constraints** up to 0.7.0 (35,137 in 0.3.x; 30,356 for the unpacked version); with the 128-bit range checks of 0.8.0, 32,087 (ADR-0014). The public inputs do not change: no amount is public. Proving takes about 1.3~1.5 s in a Node environment (0.7.0).
 
 ### 5.2 Unshield circuit: `0x04`, `0x81`, `wrapperBurn`
 
-This circuit is the public-amount exit behind `_debitPublic` (04-modules §2); `0x04`, the `0x81` burn and `wrapperBurn` all use it, with `to` as the public recipient, the zero address or the recipient of the wrapped token. Drops 3, the last two items of 9, 10 and 11; 7 public inputs: `w0 = from | nonce<<160`, `w1 = contract | chainId<<160`, `w2 = amount | signBits<<48 | to<<64` (`to` = public recipient, bound since 0.3.1, see security review F14), `xs[4]`. Measured 17,358 constraints.
+This circuit is the public-amount exit behind `_debitPublic` (04-modules §2); `0x04`, the `0x81` burn and `wrapperBurn` all use it, with `to` as the public recipient, the zero address or the recipient of the wrapped token. Drops 3, the last two items of 9, 10 and 11; 7 public inputs: `w0 = from | nonce<<160`, `w1 = contract | chainId<<160`, `w2 = amount | signBits<<48 | to<<64` (`to` = public recipient, bound since 0.3.1, see security review F14), `xs[4]`. Measured 17,358 constraints at 0.3.1, 18,895 at 0.7.0.
+
+From 0.8.0 the amount is up to 128 bits, and `amount | signBits<<48 | to<<64` would need 292 bits, more than a field element. The recipient value moves to a word of its own: 8 public inputs, `w0 = from | nonce<<160`, `w1 = contract | chainId<<160`, `w2 = amount | signBits<<128`, `w3 = r` (160 bits), `xs[4]`. The range check of `b`, `v` and `b − v` is 128 bits. Measured with the widened range checks before the repacking: 21,263 constraints (ADR-0014).
 
 From 0.7.0 the value in the place of `to` is `r` ([A1-0007](../../../adr/a1-0007-exit-kind-binding.md)), assembled by the contract: `r = 0` for the `0x81` burn, and `r = uint160(uint256(keccak256(abi.encodePacked("Casata A.1 exit", kind, to))))` for `0x04` (`kind = 1`) and `wrapperBurn` (`kind = 2`). The circuit range-checks it to 160 bits as before and gives it no meaning, so the circuit, the keys and the verifiers are unchanged. The client computes the same `r` when it proves. Events and call arguments keep the plain `to`.
 
@@ -358,7 +362,7 @@ function casataModules() external view returns (Module[] memory);       // modul
 
 **Regulator**: iterates over `ConfidentialTransfer`, decrypts `memo_reg` by `regKeyId`, verifies the commitment; combined with the public-amount events (`LedgerCrossing`, `Minted`, `Burned`, `WrapperMinted`, `WrapperBurned`), reconstructs the balance of any id at any point in time. No discrete logarithms, no cooperation from anyone, read-only. The mapping between ids and wallets can only be inferred from the `0x03` / `0x04` edges.
 
-**Memo fallback**: enforced by the circuit, so in theory it cannot be wrong; if the implementation has a bug, the payee can still solve a 48-bit discrete logarithm on `C_amt − s·D_recv = v·G` (a 2²⁴ table).
+**Memo fallback**: up to 0.7.0, if the implementation had a bug, the payee could still solve a 48-bit discrete logarithm on `C_amt − s·D_recv = v·G` (a 2²⁴ table). From 0.8.0 amounts are up to 128 bits, beyond any discrete logarithm, so there is no fallback: the memo is the only way to read an amount, and the circuit enforces it (ADR-0014).
 
 ## 9. Gas (prototype measurements, 2026-09-24)
 

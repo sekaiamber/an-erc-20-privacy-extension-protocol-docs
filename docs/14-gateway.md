@@ -58,24 +58,26 @@ contract CasataGateway {
 
   | Variant | `deposit` recipient | Mint call | `withdraw` |
   | --- | --- | --- | --- |
-  | A.1 0.7.0 | The 20-byte id | `mint(id, amount)` with the payload `0x82 00` | `wrapperBurn(id, to, amount, payload)`; the proof binds `to` through `r` ([A1-0007](adr/a1-0007-exit-kind-binding.md)) |
-  | B.1 0.3.0 | A join-split payload with `v_pub_in = amount` | `mint(token, amount)` with that payload | `wrapperBurn(0x0, to, amount, payload)` with `v_pub_out = amount` |
+  | A.1 0.7.0, 0.8.0 | The 20-byte id | `mint(id, amount)` with the payload `0x82 00` | `wrapperBurn(id, to, amount, payload)`; the proof binds `to` through `r` ([A1-0007](adr/a1-0007-exit-kind-binding.md)) |
+  | B.1 0.3.0, 0.4.0 | A join-split payload with `v_pub_in = amount` | `mint(token, amount)` with that payload | `wrapperBurn(0x0, to, amount, payload)` with `v_pub_out = amount` |
 
   `wrapperMint` takes the recipient as it is in both Variants. A Variant opened later needs a gateway version that knows its mint encoding.
 - **Events.** `Deposited(sender, amount)` and `Withdrawn(from, to, amount)`, beside the token's own `Transfer`, `Minted`, `WrapperMinted` and `WrapperBurned`.
 
 ## 3. Decimals and limits
 
-Both Variants have 6 decimals ([A1-0005](adr/a1-0005-numeric-parameters.md); B.1 01-design §2). So `scale = 10^(d − 6)` for an underlying with `d` decimals. [ADR-0014](adr/0014-eighteen-decimals.md) (proposed) would let a token choose its decimals at deployment (18 by default) from the next versions of both Variants; a gateway token would then take its underlying's, with a scale of 1, and the open point on fewer decimals would go.
+`scale = 10^(d − t)`, where `d` is the underlying's decimals and `t` the token's. From A.1 0.8.0 and B.1 0.4.0 a token chooses its decimals when it is deployed ([ADR-0014](adr/0014-eighteen-decimals.md)), so a gateway token is deployed with its underlying's: `t = d`, `scale = 1`, and nothing is lost. A.1 up to 0.7.0 and B.1 up to 0.3.0 have 6 decimals ([A1-0005](adr/a1-0005-numeric-parameters.md); B.1 01-design §2), so `scale = 10^(d − 6)`.
 
-| Underlying | `d` | `scale` | Smallest deposit | Largest single deposit, A.1 (`< 2⁴⁸` units) | Largest single deposit, B.1 (`< 2⁶⁴` units) | Most locked at once (cap `2⁶⁴ − 1` units) |
+| Underlying | `d` | Token | `scale` | Smallest deposit | Largest single deposit | Most locked at once |
 | --- | --- | --- | --- | --- | --- | --- |
-| USDT on BSC | 18 | 10¹² | 0.000001 USDT | about 281 million USDT | the cap | about 18.4 trillion USDT |
-| USDT, USDC on Ethereum | 6 | 1 | 1 unit | about 281 million | the cap | about 18.4 trillion |
+| USDT on BSC | 18 | A.1 0.8.0 or B.1 0.4.0, `t = 18` | 1 | 10⁻¹⁸ USDT | the cap | about 3.4 × 10²⁰ USDT (cap `2¹²⁸ − 1` units) |
+| USDT, USDC on Ethereum | 6 | A.1 0.8.0 or B.1 0.4.0, `t = 6` | 1 | 1 unit | the cap | about 3.4 × 10³² |
+| USDT on BSC | 18 | A.1 0.7.0 or B.1 0.3.0, `t = 6` | 10¹² | 0.000001 USDT | A.1 about 281 million (`< 2⁴⁸` units); B.1 the cap | about 18.4 trillion USDT (cap `2⁶⁴ − 1` units) |
+| USDT, USDC on Ethereum | 6 | A.1 0.7.0 or B.1 0.3.0 | 1 | 1 unit | A.1 about 281 million; B.1 the cap | about 18.4 trillion |
 
-- **Precision.** With `d = 18`, amounts below 10⁻⁶ of a token cannot be deposited. A wallet rounds down and leaves the rest in the user's account; it never sends it to the gateway.
-- **Fewer than 6 decimals.** The constructor reverts. A token with 6 decimals cannot represent a unit smaller than the underlying's without a scale below 1, and such underlyings are rare (GUSD has 2). Supporting them is an open point (§9).
-- **The A.1 per-operation bound** (`< 2⁴⁸`) applies to `deposit` and `withdraw` as to any public amount (04-modules §2). A larger amount is split by the wallet.
+- **Precision.** With `scale > 1`, amounts below `10^(−t)` of a token cannot be deposited. A wallet rounds down and leaves the rest in the user's account; it never sends it to the gateway.
+- **A token with more decimals than the underlying.** The constructor reverts: the scale would be below 1. From 0.8.0 the deployer avoids it by choosing `t = d`. An underlying with more than 18 decimals is served with `t = 18` and a scale above 1. Up to 0.7.0 / 0.3.0 this was the case of underlyings with fewer than 6 decimals, which are rare (GUSD has 2).
+- **The A.1 per-operation bound** applies to `deposit` and `withdraw` as to any public amount (04-modules §2): `< 2⁴⁸` up to 0.7.0, where a larger amount is split by the wallet; `< 2¹²⁸` from 0.8.0, which is the cap.
 
 ## 4. Backing and trust
 
@@ -147,12 +149,12 @@ Both are plugged into the same port, and a token has one `wrapper()`, set once. 
 
 Two places, both added on 2026-10-15.
 
-- **The workshop tool** (`/tools/gateway`). Setting up: the reader names a Casata token and an existing ERC-20; the page checks that the token is A.1 0.7.0 or B.1 0.3.0 with Mintable and the Wrapper port and an empty port, deploys a gateway for the pair, and then offers the steps of §4 one by one, each shown done or not from the chain: plug the gateway into the port, grant it `MINTER_ROLE`, revoke the role from everyone else, renounce the admin role. Checking: for any gateway address the page shows the pair, the scale, the conditions G1 to G4 and the invariant, and calls the token backed only when all of them hold.
+- **The workshop tool** (`/tools/gateway`). Setting up: the reader names a Casata token and an existing ERC-20; the page checks that the token is A.1 0.7.0 or B.1 0.3.0 (0.8.0 and 0.4.0 once implemented) with Mintable and the Wrapper port and an empty port, deploys a gateway for the pair, and then offers the steps of §4 one by one, each shown done or not from the chain: plug the gateway into the port, grant it `MINTER_ROLE`, revoke the role from everyone else, renounce the admin role. Checking: for any gateway address the page shows the pair, the scale, the conditions G1 to G4 and the invariant, and calls the token backed only when all of them hold.
 - **The token page.** When the module in a token's Wrapper port is a gateway (its `token()` is the token), the wrap and unwrap tabs become withdraw and deposit of the underlying. A withdrawal is the wrap's proof, sent to `withdraw`; a deposit approves the underlying and calls `deposit` with the reader's id (A.1) or a join-split for the reader's key (B.1). The A.1 page with the public ledger has no wrap tabs, so a gateway token with the public ledger cannot yet be deposited into or withdrawn from on its page.
 
 ## 9. Open points
 
 - **Listing role members.** Decided on 2026-10-15: A.1 0.7.0 and B.1 0.3.0 use OpenZeppelin `AccessControlEnumerable` (A.1 04-modules M12, B.1 01-design D10), so G2 and G3 are view calls there (`getRoleMemberCount`, `getRoleMember`). Tokens of earlier versions still need the log scan.
-- **Underlyings with fewer than 6 decimals** (§3).
+- **Underlyings with fewer than 6 decimals.** Resolved by ADR-0014 from A.1 0.8.0 and B.1 0.4.0: the token takes the underlying's decimals (§3).
 - **The mint encoding per Variant.** The gateway has to know how each Variant mints (§2). A family rule that `mint` with a payload accepts the same recipient bytes as `wrapperMint` would make the gateway independent of the Variant.
 - **One-step setup.** A factory could deploy the gateway and wire the roles in one transaction. Until then a front end checks the end state (§4), not the steps. The factory cannot deploy a B.1 token in the same call: B.1's initial issuance carries a proof bound to the token's address, which a `CREATE2` deployment cannot know before its own init code is fixed (B.1 01-design D9).

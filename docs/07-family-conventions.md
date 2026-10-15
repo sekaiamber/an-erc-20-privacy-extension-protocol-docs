@@ -124,7 +124,9 @@ interface ICasata {
 
 ## 11. Numeric constraints
 
-Each Variant sets its own amount bit width, balance bit width, decimals and supply cap, but must state them explicitly in its specification and guarantee that every account balance lies within the range covered by its proof system (A.1: `totalSupply ≤ 2⁶⁴ − 1`).
+Each Variant sets its own amount bit width, balance bit width and supply cap, states them explicitly in its specification, and guarantees that every account balance lies within the range covered by its proof system (A.1 from 0.8.0 and B.1 from 0.4.0: every amount `< 2¹²⁸`, `totalSupply ≤ 2¹²⁸ − 1`).
+
+A token's `decimals` is chosen when it is deployed, from 0 to 18, and `decimals()` returns it. No circuit depends on it: it only says where the point is shown ([ADR-0014](adr/0014-eighteen-decimals.md)). A.1 up to 0.7.0 and B.1 up to 0.3.0 fix 6 decimals and narrower widths ([A1-0005](adr/a1-0005-numeric-parameters.md)).
 
 ## 12. Privacy goal evaluation table
 

@@ -2,11 +2,11 @@
 
 # A.1 的模块与组合
 
-版本：`0.7.0`　状态：`Draft`　日期：2026-10-15
+版本：`0.8.0`　状态：`Draft`　日期：2026-10-15
 
-本文是 A.1 按 [ADR-0008](../../../adr/0008-modules.zh-cn.md) 调整后的结构：一个内核加三个模块。从 0.7.0 起，它遵循 [ADR-0013](../../../adr/0013-mintable.zh-cn.md)（可增发；初始发行和销毁属于内核）和 [A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md)（通过收款人的值绑定出口类型）。
+本文是 A.1 按 [ADR-0008](../../../adr/0008-modules.zh-cn.md) 调整后的结构：一个内核加三个模块。从 0.7.0 起，它遵循 [ADR-0013](../../../adr/0013-mintable.zh-cn.md)（可增发；初始发行和销毁属于内核）和 [A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md)（通过收款人的值绑定出口类型）。从 0.8.0 起，它遵循 [ADR-0014](../../../adr/0014-eighteen-decimals.zh-cn.md)（金额 `< 2¹²⁸`，小数位在部署时选）。
 
-**实现状态（2026-10-15）。** 本文描述的是 0.7.0，它已在合约和 dApp 中实现，两个参考代币已部署到 BSC testnet（2026-10-15，[03-deployments](03-deployments.zh-cn.md)），当天在链上完整跑过一遍所有操作。它改了什么见 §9.2。0.6.0 已在合约仓库（`a2c0ae0`，全部测试通过）和 dApp（`e06424a`）里实现，两种组合都已部署到 BSC testnet（[03-deployments](03-deployments.zh-cn.md)），2026-10-13 在链上完整跑过一遍。对 0.6.0 而言，本文说「可增发」的地方读作「角色铸造」，§1 到 §8 按 §9.2 列出的差别来读。0.6.0 还没做的：带公开账本的代币上发给机密 id 的 `mint` 和 `0x81` 销毁只在本地跑过，dApp 的页面也还没有在浏览器里实际点过。
+**实现状态（2026-10-15）。** 0.8.0 已设计、尚未实现，改了什么见 §9.3。本段其余部分说的是 BSC testnet 上运行的 0.7.0。本文描述的是 0.7.0，它已在合约和 dApp 中实现，两个参考代币已部署到 BSC testnet（2026-10-15，[03-deployments](03-deployments.zh-cn.md)），当天在链上完整跑过一遍所有操作。它改了什么见 §9.2。0.6.0 已在合约仓库（`a2c0ae0`，全部测试通过）和 dApp（`e06424a`）里实现，两种组合都已部署到 BSC testnet（[03-deployments](03-deployments.zh-cn.md)），2026-10-13 在链上完整跑过一遍。对 0.6.0 而言，本文说「可增发」的地方读作「角色铸造」，§1 到 §8 按 §9.2 列出的差别来读。0.6.0 还没做的：带公开账本的代币上发给机密 id 的 `mint` 和 `0x81` 销毁只在本地跑过，dApp 的页面也还没有在浏览器里实际点过。
 
 内核的规格在 [01-design](01-design.zh-cn.md)。电路不变。
 
@@ -45,7 +45,7 @@ A.1 内核                 加密账户的纯隐私账本
 | `_creditPublic(id, amount)` | 把退化密文 `(amount·G, 0)` 加到 `id` 的 `pending` 上；记录 `lastReceivedAtBlock`；增加机密供应量 | 不需要：金额是公开的 |
 | `_debitPublic(from, kind, to, amount, payload)` | 验证针对 `(from, nonce, amount, r)` 的 unshield 证明，`r` 是出口 `kind` 对应的收款人值；按 01-design §4.3 的惰性折叠执行花费；减少机密供应量 | unshield 电路（01-design §5.2） |
 
-- 两者都要求 `amount < 2⁴⁸`（A1-0005）。
+- 两者都要求 `amount < 2¹²⁸`（自 0.8.0 起，ADR-0014）；到 0.7.0 为止为 `< 2⁴⁸`（A1-0005）。
 - `_debitPublic` 里的 `to` 是公开收款人：`0x04` 是公开收款地址，销毁是零地址，`wrapperBurn` 是包装代币（或被放出的 ERC-20）的接收地址。到 0.6.0 为止，证明绑定的就是 `to` 本身。从 0.7.0 起绑定的是 `r`：销毁时 `r = 0`；两个收款人非零的出口用 `r = uint160(uint256(keccak256(abi.encodePacked("Casata A.1 exit", kind, to))))`，`0x04` 的 `kind = 1`，`wrapperBurn` 的 `kind = 2`（A1-0007）。电路不关心这个值的含义（安全评审 F14）。调用方不传 `r`，由内核根据 `kind` 和 `to` 算出。
 - 两个原语都不发 `Transfer` 事件。事件由调用方发，因为每种操作的事件形状不同。
 - 模块可以增加自己的存储。除了通过这两个原语，它不得读写 `_accounts`。
@@ -63,12 +63,12 @@ A.1 内核                 加密账户的纯隐私账本
 | `wrappedOut` | 经 Wrapper 端口出去、尚未回来的数量 | Wrapper 端口 |
 | `issuedSupply()` | `totalSupply() + wrappedOut` | 内核；没有 Wrapper 端口时等于 `totalSupply()` |
 
-**上限。** `issuedSupply() ≤ 2⁶⁴ − 1`，每次发行都检查，包括初始发行。它限定了每个机密余额的大小，范围证明依赖这一点（01-design 的 I2；评审 B1-F1）。
+**上限。** 自 0.8.0 起 `issuedSupply() ≤ 2¹²⁸ − 1`（到 0.7.0 为止为 `2⁶⁴ − 1`），每次发行都检查，包括初始发行。它限定了每个机密余额的大小，范围证明依赖这一点（01-design 的 I2；评审 B1-F1）。
 
 **初始发行。** 构造函数接收 `initialTo`、`initialAmount` 和 `initialPayload`，按 `mint` 的规则（§4.2、07 §3）发行一次：
 
 - `initialPayload` 为空：向地址 `initialTo` 公开发行。只在带公开账本时可用；没有公开账本时部署回退 `NoPublicLedger()`。
-- `initialPayload` 为 `0x82`、flags 为 0：调用 `_creditPublic(initialTo, initialAmount)`，即 id `initialTo` 的机密余额。id 是钱包针对某一个代币地址派生的密钥（07 §8），所以部署者想把初始发行放进自己的 id，就要针对部署将要得到的地址（由账户和 nonce 算出）来派生。dApp 的部署表单就是这样做的；如果别的交易先动了 nonce，这笔供应会落进一个没人持有的 id。和任何记入 id 的金额一样，它小于 2⁴⁸（§2）。
+- `initialPayload` 为 `0x82`、flags 为 0：调用 `_creditPublic(initialTo, initialAmount)`，即 id `initialTo` 的机密余额。id 是钱包针对某一个代币地址派生的密钥（07 §8），所以部署者想把初始发行放进自己的 id，就要针对部署将要得到的地址（由账户和 nonce 算出）来派生。dApp 的部署表单就是这样做的；如果别的交易先动了 nonce，这笔供应会落进一个没人持有的 id。和任何记入 id 的金额一样，它小于 `2¹²⁸`（§2；到 0.7.0 为止为 `2⁴⁸`）。
 - 只有带可增发的代币，`initialAmount` 才可以是零。不带可增发、又什么都没发行的代币永远不可能有余额，所以部署回退 `NoSupply()`。
 - 它发出的事件和铸造相同：`Transfer(0x0, initialTo, initialAmount)`，发给 id 时还有 `Minted`（公开发行只有 ERC-20 的 `Transfer`）。金额为零时什么都不发。payload 既不是空也不是 `0x82 00` 时回滚 `BadInitialPayload()`。
 
@@ -86,6 +86,8 @@ A.1 内核                 加密账户的纯隐私账本
 | unwrap（`wrapperMint`） | Wrapper 端口 | `+x` | 0 | `−x` | `+x` | 0 |
 
 **模块之间唯一的交汇点。** 带公开账本时，机密价值以公开代币的形式托管在代币自身的地址上，所以 `balanceOf(token) == shieldedSupply()`。内核、可增发或 Wrapper 端口创建、销毁机密价值时，托管量必须跟着变。因此内核声明了一对内部钩子：`_onConfidentialCreated(id, amount)` 与 `_onConfidentialDestroyed(id, amount)`，由 ERC-20 表面实现：公开账本用它们铸造或销毁托管的代币；没有公开账本的代币则发出来自或去往零地址的 `Transfer`。这就是公开账本在继承顺序里排第一的原因。
+
+**小数位（自 0.8.0 起）。** 构造函数还接收 `decimals_`，0 到 18，由 `decimals()` 返回；更大的值回滚 `BadDecimals()`（ADR-0014）。dApp 的部署表单默认 18，网关代币则用底层代币的小数位（[14](../../../14-gateway.zh-cn.md) §3）。到 0.7.0 为止为 6。
 
 ## 4. 内核的发行与销毁，以及各模块
 
@@ -246,6 +248,21 @@ A.1 内核                 加密账户的纯隐私账本
 | 8 | `casata()` = `A:1:0.7.0`。声明的清单是公开账本、可增发、Wrapper 端口 | 合约、dApp、07 §13.1 |
 | 9 | 新的测试网代币。链上的验证合约、窗口表和 Wrapper 可以复用。0.6.0 的代币保留 | 部署 |
 | 10 | 角色可枚举：`AccessControlEnumerable` 取代 `AccessControl`（M12） | 合约、dApp |
+
+### 9.3 0.8.0 的改动
+
+相对 0.7.0。决策记录：[ADR-0014](../../../adr/0014-eighteen-decimals.zh-cn.md)。已设计，尚未实现。
+
+| # | 改动 | 影响 |
+| --- | --- | --- |
+| 1 | 所有金额都 `< 2¹²⁸`：单笔金额、余额、公开金额。上限为 `issuedSupply() ≤ 2¹²⁸ − 1`（§3，01-design I2） | 电路、合约、dApp |
+| 2 | 小数位是构造函数参数，0 到 18；超过回滚 `BadDecimals()`（§3） | 合约、部署脚本、dApp 部署表单、所有格式化金额的页面 |
+| 3 | 转账和 unshield 电路对 `b`、`v`、`b − v` 做 128 位检查（01-design §5.1、§5.2）：新的证明密钥和验证合约。折叠电路不变，验证合约复用 | 电路、合约、部署、dApp（电路文件） |
+| 4 | unshield 的公开输入为 8 个：`w2 = amount \| signBits<<128`，`w3 = r`（01-design §5.2）。转账仍为 14 个 | 电路、合约、客户端库 |
+| 5 | `x·G` 的窗口表为 32 段、每段 4 位，分放在两个各 16 段的数据合约里（单个合约上限 24,576 字节）；构造函数接收两个地址。一笔公开入账最多加 32 个点，原来是 12 个 | 合约、部署脚本 |
+| 6 | 没有离散对数兜底：金额只从 memo 读出（01-design §8） | 客户端库、dApp |
+| 7 | `casata()` = `A:1:0.8.0`。模块和载荷类型不变 | 合约、dApp |
+| 8 | 新的测试网代币，带新的验证合约和窗口表。链上的折叠验证合约和 Wrapper 可以复用。网关接受 `A:1:0.8.0`（[14](../../../14-gateway.zh-cn.md) §2）。0.7.0 的代币保留 | 部署、网关 |
 
 ## 10. 评审与测试
 

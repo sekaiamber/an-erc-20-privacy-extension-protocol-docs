@@ -2,11 +2,11 @@ English | [中文](04-modules.zh-cn.md)
 
 # A.1 modules and compositions
 
-Version: `0.7.0`. Status: `Draft`. Date: 2026-10-15
+Version: `0.8.0`. Status: `Draft`. Date: 2026-10-15
 
-This document is the structure of A.1 under [ADR-0008](../../../adr/0008-modules.md): one core and three modules. From 0.7.0 it follows [ADR-0013](../../../adr/0013-mintable.md) (Mintable; the initial supply and the burn in the core) and [A1-0007](../../../adr/a1-0007-exit-kind-binding.md) (the exit kind bound through the recipient value).
+This document is the structure of A.1 under [ADR-0008](../../../adr/0008-modules.md): one core and three modules. From 0.7.0 it follows [ADR-0013](../../../adr/0013-mintable.md) (Mintable; the initial supply and the burn in the core) and [A1-0007](../../../adr/a1-0007-exit-kind-binding.md) (the exit kind bound through the recipient value). From 0.8.0 it follows [ADR-0014](../../../adr/0014-eighteen-decimals.md) (amounts below `2¹²⁸`, decimals chosen at deployment).
 
-**Status of the implementation (2026-10-15).** This document describes 0.7.0, which is implemented in the contracts and the dApp, and whose two reference tokens are deployed on BSC testnet (2026-10-15, [03-deployments](03-deployments.md)), where every operation ran end to end on chain the same day. §9.2 lists what it changes. 0.6.0 is implemented in the contracts repository (`a2c0ae0`, all tests pass) and in the dApp (`e06424a`), and both of its compositions are deployed on BSC testnet ([03-deployments](03-deployments.md)) and were run end to end on chain on 2026-10-13. For 0.6.0, read "role issuance" wherever this document says Mintable, and read §1 to §8 with the differences listed in §9.2. Not done for 0.6.0: a `mint` to a confidential id and the `0x81` burn on the token with the public ledger have only been run locally, and the dApp pages have not been exercised in a browser.
+**Status of the implementation (2026-10-15).** 0.8.0 is designed and not implemented; §9.3 lists what it changes. The rest of this paragraph is about 0.7.0, which runs on BSC testnet. This document describes 0.7.0, which is implemented in the contracts and the dApp, and whose two reference tokens are deployed on BSC testnet (2026-10-15, [03-deployments](03-deployments.md)), where every operation ran end to end on chain the same day. §9.2 lists what it changes. 0.6.0 is implemented in the contracts repository (`a2c0ae0`, all tests pass) and in the dApp (`e06424a`), and both of its compositions are deployed on BSC testnet ([03-deployments](03-deployments.md)) and were run end to end on chain on 2026-10-13. For 0.6.0, read "role issuance" wherever this document says Mintable, and read §1 to §8 with the differences listed in §9.2. Not done for 0.6.0: a `mint` to a confidential id and the `0x81` burn on the token with the public ledger have only been run locally, and the dApp pages have not been exercised in a browser.
 
 The core is specified in [01-design](01-design.md). No circuit changes.
 
@@ -45,7 +45,7 @@ A module never writes an account's ciphertexts. It calls one of two internal pri
 | `_creditPublic(id, amount)` | Adds the degenerate ciphertext `(amount·G, 0)` to `pending` of `id`; records `lastReceivedAtBlock`; increases the confidential supply | None: the amount is public |
 | `_debitPublic(from, kind, to, amount, payload)` | Verifies the unshield proof for `(from, nonce, amount, r)`, where `r` is the recipient value of the exit `kind`; applies the spend with the lazy fold of 01-design §4.3; decreases the confidential supply | Unshield circuit (01-design §5.2) |
 
-- `amount < 2⁴⁸` in both (A1-0005).
+- `amount < 2¹²⁸` in both from 0.8.0 (ADR-0014); `< 2⁴⁸` up to 0.7.0 (A1-0005).
 - `to` in `_debitPublic` is the public recipient: the public recipient for `0x04`, the zero address for a burn, the recipient of the wrapped token (or of the released ERC-20) for `wrapperBurn`. Up to 0.6.0 the proof bound `to` itself. From 0.7.0 it binds `r`: `r = 0` for the burn, and for the two exits to a non-zero recipient `r = uint160(uint256(keccak256(abi.encodePacked("Casata A.1 exit", kind, to))))`, with `kind = 1` for `0x04` and `kind = 2` for `wrapperBurn` (A1-0007). The circuit does not care what the value means (security review F14). The caller does not pass `r`; the core computes it from `kind` and `to`.
 - Neither primitive emits `Transfer`. The caller emits it, because the shape differs per operation.
 - A module may add its own storage. It may not read or write `_accounts` except through the primitives.
@@ -63,12 +63,12 @@ The core keeps one counter, the **confidential supply**: the sum of all confiden
 | `wrappedOut` | What has left through the Wrapper port and not come back | Wrapper port |
 | `issuedSupply()` | `totalSupply() + wrappedOut` | Core; without the Wrapper port it equals `totalSupply()` |
 
-**Cap.** `issuedSupply() ≤ 2⁶⁴ − 1`, checked on every issuance, the initial one included. It bounds every confidential balance, which the range proofs rely on (01-design, I2; review B1-F1).
+**Cap.** `issuedSupply() ≤ 2¹²⁸ − 1` from 0.8.0 (`2⁶⁴ − 1` up to 0.7.0), checked on every issuance, the initial one included. It bounds every confidential balance, which the range proofs rely on (01-design, I2; review B1-F1).
 
 **Initial supply.** The constructor takes `initialTo`, `initialAmount` and `initialPayload` and issues once, by the rule of `mint` (§4.2, 07 §3):
 
 - `initialPayload` empty: a public issuance to the address `initialTo`. Only with the public ledger; without it the deployment reverts `NoPublicLedger()`.
-- `initialPayload` = `0x82` with flags 0: `_creditPublic(initialTo, initialAmount)`, a confidential balance for the id `initialTo`. An id is the key a wallet derives for one token's address (07 §8), so a deployer who wants the initial supply in its own id derives it for the address the deployment will get, from its account and nonce. The dApp's deploy form does this; if another transaction moves the nonce first, the supply lands in an id nobody holds. Like any credit to an id, the amount is below 2⁴⁸ (§2).
+- `initialPayload` = `0x82` with flags 0: `_creditPublic(initialTo, initialAmount)`, a confidential balance for the id `initialTo`. An id is the key a wallet derives for one token's address (07 §8), so a deployer who wants the initial supply in its own id derives it for the address the deployment will get, from its account and nonce. The dApp's deploy form does this; if another transaction moves the nonce first, the supply lands in an id nobody holds. Like any credit to an id, the amount is below `2¹²⁸` (§2; `2⁴⁸` up to 0.7.0).
 - `initialAmount` may be zero only on a token with Mintable. A token without Mintable and with nothing issued could never hold anything, so the deployment reverts `NoSupply()`.
 - It emits what a mint emits: `Transfer(0x0, initialTo, initialAmount)`, and `Minted` when it goes to an id (a public issuance has only the ERC-20 `Transfer`). Nothing when the amount is zero. A payload other than empty or `0x82 00` reverts `BadInitialPayload()`.
 
@@ -86,6 +86,8 @@ The core keeps one counter, the **confidential supply**: the sum of all confiden
 | unwrap (`wrapperMint`) | Wrapper port | `+x` | 0 | `−x` | `+x` | 0 |
 
 **The one place where modules meet.** With the public ledger, confidential value is escrowed as public tokens at the token's own address, so `balanceOf(token) == shieldedSupply()`. When the core, Mintable or the Wrapper port creates or destroys confidential value, the escrow has to follow. The core therefore declares a pair of internal hooks, `_onConfidentialCreated(id, amount)` and `_onConfidentialDestroyed(id, amount)`. The ERC-20 surface implements them: the public ledger mints or burns escrow, and a token without it emits `Transfer` from or to the zero address. This is why the public ledger comes first in the inheritance order.
+
+**Decimals (from 0.8.0).** The constructor also takes `decimals_`, from 0 to 18, and `decimals()` returns it; a larger value reverts `BadDecimals()` (ADR-0014). The dApp's deploy form offers 18, or the underlying's decimals for a gateway token ([14](../../../14-gateway.md) §3). Up to 0.7.0 it is 6.
 
 ## 4. The core's issuance and burn, and the modules
 
@@ -246,6 +248,21 @@ Relative to 0.6.0. Decision records: [ADR-0013](../../../adr/0013-mintable.md) a
 | 8 | `casata()` = `A:1:0.7.0`. The declared list is public ledger, Mintable, Wrapper port | Contracts, dApp, 07 §13.1 |
 | 9 | New testnet tokens. The verifiers, the window table and the Wrapper on chain can be reused. The 0.6.0 tokens stay | Deployments |
 | 10 | Roles are enumerable: `AccessControlEnumerable` replaces `AccessControl` (M12) | Contracts, dApp |
+
+### 9.3 What changes at 0.8.0
+
+Relative to 0.7.0. Decision record: [ADR-0014](../../../adr/0014-eighteen-decimals.md). Designed, not implemented.
+
+| # | Change | Affects |
+| --- | --- | --- |
+| 1 | Every amount is below `2¹²⁸`: a single amount, a balance, a public amount. The cap is `issuedSupply() ≤ 2¹²⁸ − 1` (§3, 01-design I2) | Circuits, contracts, dApp |
+| 2 | Decimals are a constructor argument, from 0 to 18; `BadDecimals()` above (§3) | Contracts, deploy scripts, dApp deploy forms, every page that formats amounts |
+| 3 | The transfer and unshield circuits check `b`, `v` and `b − v` against 128 bits (01-design §5.1, §5.2): new proving keys and verifier contracts. The fold circuit does not change; its verifier is reused | Circuits, contracts, deployments, dApp (circuit files) |
+| 4 | Unshield takes 8 public inputs: `w2 = amount \| signBits<<128`, `w3 = r` (01-design §5.2). Transfer keeps its 14 | Circuit, contracts, client library |
+| 5 | The window table for `x·G` has 32 segments of 4 bits in two data contracts of 16 segments each (24,576 bytes is the limit for one); the constructor takes both addresses. A public credit adds at most 32 points instead of 12 | Contracts, deploy scripts |
+| 6 | No discrete-logarithm fallback: amounts are read from the memos only (01-design §8) | Client library, dApp |
+| 7 | `casata()` = `A:1:0.8.0`. The modules and the payload types do not change | Contracts, dApp |
+| 8 | New testnet tokens with new verifiers and tables. The fold verifier and the Wrapper on chain can be reused. The gateway accepts `A:1:0.8.0` ([14](../../../14-gateway.md) §2). The 0.7.0 tokens stay | Deployments, gateway |
 
 ## 10. Review and tests
 

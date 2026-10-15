@@ -26,7 +26,7 @@ ADR-0001 to ADR-0010 were written before the project was named Casata ([0011](00
 | [0011](0011-project-name-casata.md) | The project is named Casata; the acronym PEP is retired | Accepted (implemented 2026-10-13; repository rename pending) |
 | [0012](0012-visual-identity.md) | Visual identity: the secret ledger, and a wax seal as the mark | Accepted (style only; the dApp follows later) |
 | [0013](0013-mintable.md) | Mintable: issuance after deployment is a module; the initial supply and the burn belong to the core | Accepted (to be implemented in A.1 0.7.0, B.1 0.3.0) |
-| [0014](0014-eighteen-decimals.md) | Eighteen decimals: amounts 128 bits wide from A.1 0.8.0 and B.1 0.4.0, decimals chosen at deployment | Proposed |
+| [0014](0014-eighteen-decimals.md) | Eighteen decimals: amounts 128 bits wide from A.1 0.8.0 and B.1 0.4.0, decimals chosen at deployment | Accepted (to be implemented in A.1 0.8.0, B.1 0.4.0) |
 
 ## A.1
 
@@ -36,7 +36,7 @@ ADR-0001 to ADR-0010 were written before the project was named Casata ([0011](00
 | [A1-0002](a1-0002-crypto-core.md) | Crypto core: twisted ElGamal on Baby Jubjub + Groth16 | Accepted |
 | [A1-0003](a1-0003-proof-as-authorization.md) | Proof-as-authorization; `transferFrom` is the confidential payment entry point | Accepted |
 | [A1-0004](a1-0004-pending-lazy-fold.md) | available / pending split and lazy fold | Accepted |
-| [A1-0005](a1-0005-numeric-parameters.md) | Numeric parameters: bit widths, decimals, supply cap | Accepted (0014 proposes to replace it from 0.8.0) |
+| [A1-0005](a1-0005-numeric-parameters.md) | Numeric parameters: bit widths, decimals, supply cap | Accepted (widths and decimals superseded by 0014 from 0.8.0) |
 | [A1-0006](a1-0006-fold-and-received-block.md) | Pure fold `0x80` and `lastReceivedAtBlock` (A.1 only) | Accepted |
 | [A1-0007](a1-0007-exit-kind-binding.md) | The unshield proof binds which exit it is for, through the recipient value | Accepted (to be implemented in 0.7.0) |
 

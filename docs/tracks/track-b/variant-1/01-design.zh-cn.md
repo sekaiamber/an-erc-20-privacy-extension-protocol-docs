@@ -1,10 +1,12 @@
 [English](01-design.md) | 中文
 
-# B.1 设计（0.3.0-draft）
+# B.1 设计（0.4.0-draft）
 
-状态：`Draft`。本文描述的是 0.3.0，它已在合约中实现并在本地测试（2026-10-15：四种组合由 `contracts/scripts/track-b/variant-1/gen-compositions.mjs` 生成，91 项合约测试通过），dApp 已跟进，并已不带初始供应部署到 BSC testnet（2026-10-15，[02-deployments](02-deployments.zh-cn.md)）；0.3.0 与 0.2.0 不同的地方，正文会注明。下面的链上测量都指 0.2.0。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`），dApp 的页面（`/tracks/b/1`）也已跟进。0.2.0 已部署到 BSC testnet，五种操作都在链上跑过（[02-deployments](02-deployments.zh-cn.md)，2026-10-13）。这个页面还没有在浏览器里对着链上的代币实际用过。gas、约束数和证明时间都是本地实测（§12）。
+状态：`Draft`。0.4.0 已设计、尚未实现（见下面的说明）；它和 0.3.0 不同的地方，正文会注明。本段其余部分说的是 0.3.0。本文描述的是 0.3.0，它已在合约中实现并在本地测试（2026-10-15：四种组合由 `contracts/scripts/track-b/variant-1/gen-compositions.mjs` 生成，91 项合约测试通过），dApp 已跟进，并已不带初始供应部署到 BSC testnet（2026-10-15，[02-deployments](02-deployments.zh-cn.md)）；0.3.0 与 0.2.0 不同的地方，正文会注明。下面的链上测量都指 0.2.0。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`），dApp 的页面（`/tracks/b/1`）也已跟进。0.2.0 已部署到 BSC testnet，五种操作都在链上跑过（[02-deployments](02-deployments.zh-cn.md)，2026-10-13）。这个页面还没有在浏览器里对着链上的代币实际用过。gas、约束数和证明时间都是本地实测（§12）。
 
-> 0.3.0（草案，2026-10-15）依据 [ADR-0013](../../../adr/0013-mintable.zh-cn.md)。角色铸造模块改名为**可增发**（`ICasataMintable`；接口 id `0x40c10f19` 不变）。`0x81` 销毁移进核心，所以每个 B.1 代币都能销毁。核心在代币部署时发行初始供应（§7.1），所以不带可增发的代币就是固定供应的代币。声明的模块是可增发和 Wrapper 端口（§5.1）。电路、payload 布局、证明密钥和验证器都不变。`casata()` = `B:1:0.3.0`。[A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md) 的出口绑定不适用于 B.1（§5）。
+> 0.4.0（草案，2026-10-15）依据 [ADR-0014](../../../adr/0014-eighteen-decimals.zh-cn.md)。所有金额都 `< 2¹²⁸`：note、`v_pub_in` 和 `v_pub_out`；上限为 `2¹²⁸ − 1`（§2、§5.2）。代币的小数位在部署时选，0 到 18，默认 18。join-split 的范围检查加宽到 128 位（§4），因此要新的证明密钥和验证合约。`v_pub_in` 和 `v_pub_out` 各占一个公开输入：从 21 个变成 22 个（§4.1）。监管 memo 的符号位挪到 `2¹²⁸`（§6.2）。树、哈希和载荷格式不变。`casata()` = `B:1:0.4.0`。
+
+> 0.3.0（2026-10-15；已实现，已部署到 BSC testnet）依据 [ADR-0013](../../../adr/0013-mintable.zh-cn.md)。角色铸造模块改名为**可增发**（`ICasataMintable`；接口 id `0x40c10f19` 不变）。`0x81` 销毁移进核心，所以每个 B.1 代币都能销毁。核心在代币部署时发行初始供应（§7.1），所以不带可增发的代币就是固定供应的代币。声明的模块是可增发和 Wrapper 端口（§5.1）。电路、payload 布局、证明密钥和验证器都不变。`casata()` = `B:1:0.3.0`。[A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md) 的出口绑定不适用于 B.1（§5）。
 
 > 0.2.0（2026-10-13）只改表面，依据是 [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.zh-cn.md) 和 [ADR-0011](../../../adr/0011-project-name-casata.zh-cn.md)。发行改为 `mint(token, amount)`，join-split 作为尾部 payload，取代 `mintConfidential`。`approve` 回退 `NoPublicLedger()`。`pep()` 改为 `casata()`，密钥派生的域名改为 `"Casata"`，所以密钥与 0.1.0 的不同。电路、payload 和事件都不变。这个版本回答的是 `casata()` = `B:1:0.2.0`；它不是 2026-10-12 之前回答 `pep()` = `B:1:0.2.0` 的那个代币，那个是 A.1 的纯隐私组合。
 
@@ -50,8 +52,8 @@ B.1 是 note 模型的第一个 Variant。价值存放在 **note** 里。创建�
 | 作废符 | `nf = Poseidon(s, ρ, leafIndex)` | 只有所有者算得出；每个树位置一个 |
 | 树 | 增量二叉 Merkle 树，Poseidon，深度 24 | 只增不减。共 2²⁴ 个叶子；一笔交易追加两个，所以这棵树能容纳约 800 万笔交易（§14 D1） |
 | 树根 | 这棵树出现过的每一个树根都被接受 | §3.3 |
-| 金额位宽 | note 和公开金额都满足 `v < 2⁶⁴` | 由供应上限 `2⁶⁴ − 1` 保证 |
-| decimals | 6 | 与 A.1 相同。[ADR-0014](../../../adr/0014-eighteen-decimals.zh-cn.md) 提议从 0.4.0 起改为部署时选（默认 18），金额 `< 2¹²⁸` |
+| 金额位宽 | note 和公开金额都满足 `v < 2¹²⁸` | 由供应上限 `2¹²⁸ − 1` 保证（[ADR-0014](../../../adr/0014-eighteen-decimals.zh-cn.md)）。到 0.3.0 为止为 `2⁶⁴` 和 `2⁶⁴ − 1` |
+| decimals | 部署时选，0 到 18，默认 18 | 构造函数参数；超过 18 回滚 `BadDecimals()`。没有电路依赖它。到 0.3.0 为止为 6 |
 
 ## 3. note
 
@@ -81,7 +83,7 @@ B.1 是 note 模型的第一个 Variant。价值存放在 **note** 里。创建�
 v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 ```
 
-**公开输入**（逻辑列表；与 A.1 一样，标量打包成字，点只公开 `x` 和一个符号位）：`root, nf[2], cm[2], v_pub_in, v_pub_out, to, chainId, contract, regKeyId, pk_reg, D, memo_recv[2][3], memo_reg[5]`。打包后是 21 个域元素（§4.1）。
+**公开输入**（逻辑列表；与 A.1 一样，标量打包成字，点只公开 `x` 和一个符号位）：`root, nf[2], cm[2], v_pub_in, v_pub_out, to, chainId, contract, regKeyId, pk_reg, D, memo_recv[2][3], memo_reg[5]`。打包后从 0.4.0 起是 22 个域元素，到 0.3.0 为止是 21 个（§4.1）。
 
 **私有输入**：`s`；每个输入的 `(v, ρ, leafIndex, path)`；每个输出的 `(v, pk, ρ, ref)`；`r`。
 
@@ -91,18 +93,18 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 | 2 | 对每个输入：`cm_in = Poseidon(v, pk_in, ρ)` 位于 `root` 下的 `leafIndex`，**或者** `v == 0` | `v == 0` 的输入是占位输入，跳过成员检查 |
 | 3 | 对每个输入：`nf == Poseidon(s, ρ, leafIndex)` | 占位输入用随机的 `ρ`，它的作废符看起来和别的没有区别 |
 | 4 | 对每个输出：`cm == Poseidon(v, pk, ρ)`，且 `pk` 在曲线上 | 公钥不在素数阶子群里时，这张 note 谁也花不了；这是付款人的损失，和填错收款码一样 |
-| 5 | 每个 `v`、`v_pub_in`、`v_pub_out` 都小于 `2⁶⁴` | |
+| 5 | 每个 `v`、`v_pub_in`、`v_pub_out` 都小于 `2¹²⁸` | 到 0.3.0 为止为 `2⁶⁴` |
 | 6 | 上面的平衡等式 | |
 | 7 | `D == r·H` | 两个收款方和监管方共用 |
 | 8 | 对每个输出 `j`：`memo_recv[j] == Enc(r·pk_j; v_j ‖ ρ_j ‖ ref_j)` | `ref` 是付款人自由填写的字段，见 §6.1 |
 | 9 | `memo_reg == Enc(r·pk_reg; 输入 ‖ 输出)` | §6.2。真实输入在 memo 里的叶子位置等于第 2 条里用的位置；占位输入则是「无」标记 |
 | 10 | `to`、`chainId`、`contract`、`regKeyId` 与符号位的打包 | 把证明绑定到这个代币、这条链，以及出金时的公开收款地址 |
 
-深度 24 时的实测规模：55,343 个约束，其中 35,429 个是非线性约束；A.1 的 transfer 是 29,719 个。最初的估计是深度 32 时 45,000 到 55,000 个。
+深度 24 时的实测规模：55,343 个约束，其中 35,429 个是非线性约束；A.1 的 transfer 是 29,719 个。最初的估计是深度 32 时 45,000 到 55,000 个。0.4.0 的 128 位范围检查下为 55,727 个（ADR-0014），是在 §4.1 重新打包之前量的。
 
 ### 4.1 公开输入与哈希的用途
 
-验证器接收 21 个域元素，顺序如下：
+从 0.4.0 起验证器接收 22 个域元素，顺序如下（到 0.3.0 为止是 21 个：`w2` 装着 `v_pub_in` 和 `v_pub_out << 64`，其后的输入都往前一位）：
 
 | # | 输入 | 内容 |
 | --- | --- | --- |
@@ -111,10 +113,11 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 | 3–4 | `cm[2]` | |
 | 5 | `w0` | `to`（160 位），然后是 `chainId`（64 位） |
 | 6 | `w1` | `contract`（160 位）、`regKeyId`（32 位），然后是 `pk_reg` 和 `D` 的符号位 |
-| 7 | `w2` | `v_pub_in`（64 位），然后是 `v_pub_out`（64 位） |
-| 8–9 | `xs[2]` | `pk_reg` 和 `D` 的 `x` |
-| 10–15 | `memo_recv[2][3]` | §6.1 |
-| 16–20 | `memo_reg[5]` | §6.2 |
+| 7 | `w2` | `v_pub_in`（128 位） |
+| 8 | `w3` | `v_pub_out`（128 位） |
+| 9–10 | `xs[2]` | `pk_reg` 和 `D` 的 `x` |
+| 11–16 | `memo_recv[2][3]` | §6.1 |
+| 17–21 | `memo_reg[5]` | §6.2 |
 
 哈希的用途：
 
@@ -172,7 +175,7 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 
 ### 5.2 供应量
 
-`totalSupply()` 是池子里持有的数量：部署时发行的与铸造的，减已销毁，减当前经 Wrapper 出去的数量。`issuedSupply() = totalSupply() + wrappedOut`，上限 `2⁶⁴ − 1` 针对的是它，初始供应也计算在内。这与 A.1 纯隐私组合的记账方式相同。
+`totalSupply()` 是池子里持有的数量：部署时发行的与铸造的，减已销毁，减当前经 Wrapper 出去的数量。`issuedSupply() = totalSupply() + wrappedOut`，上限 `2¹²⁸ − 1`（到 0.3.0 为止为 `2⁶⁴ − 1`）针对的是它，初始供应也计算在内。这与 A.1 纯隐私组合的记账方式相同。
 
 ## 6. memo
 
@@ -193,7 +196,7 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 | --- | --- |
 | 0 | `in₀ + in₁·2³²`；真实输入的 `inᵢ` 是 `leafIndex + 1`，占位输入是 0 |
 | 1、3 | 输出 0 和输出 1 的 `pk.x` |
-| 2、4 | 输出 0 和输出 1 的 `v + sign(pk.y)·2⁶⁴` |
+| 2、4 | 输出 0 和输出 1 的 `v + sign(pk.y)·2¹²⁸`（到 0.3.0 为止为 `·2⁶⁴`） |
 
 监管方据此重建全部 note 的表：所有者、金额、创建它的交易、花掉它的交易。某把公钥在任意时刻的余额，就是它名下未花 note 的总和。不需要任何人配合（ADR-0004 第 5 条）。
 
@@ -240,7 +243,7 @@ Wrapper 合约原样使用，不需要改动。
 
 - **存入。** 存入者的钱包像铸造那样构造 join-split：两个占位输入，`v_pub_in = amount`，输出给它选的收款码。它把 payload 和 ERC-20 一起交给网关。网关把 payload 作为 `mint(token, amount)` 的尾部 payload 转交；放回经它出去的量时，则交给 `wrapperMint`。两条路径给证明的公开输入相同（`v_pub_in = amount`，`to = 0`），所以一份证明两条路都能用。证明绑定金额，网关没法记入别的金额。别人复制这份 payload，只能带着同样的存入提交，产生的也是同样的 note。
 - **取回。** 持有人证明一个 `0x81` join-split，`v_pub_out = amount`，`to` = 收取 ERC-20 的地址。网关调用 `wrapperBurn(0x0, to, amount, payload)`，把 ERC-20 放给 `to`。
-- **精度。** note 是 6 位小数，`v < 2⁶⁴`。小数位更多的 ERC-20 由网关换算（14）。
+- **精度。** 从 0.4.0 起，网关代币按底层代币的小数位部署，`v < 2¹²⁸`，不换算也不丢零头（14 §3）。到 0.3.0 为止 note 是 6 位小数，`v < 2⁶⁴`，小数位更多的 ERC-20 由网关换算。
 
 ### 7.5 A.1 里会出的问题，这里不会出
 

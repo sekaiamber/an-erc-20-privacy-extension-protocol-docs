@@ -2,7 +2,7 @@ English | [中文](0014-eighteen-decimals.zh-cn.md)
 
 # 0014 Eighteen decimals: amounts 128 bits wide from the next versions of A.1 and B.1, decimals chosen at deployment
 
-- Status: Proposed (owner asked for the draft, 2026-10-15)
+- Status: Accepted (owner, 2026-10-15; to be implemented in A.1 0.8.0 and B.1 0.4.0)
 - Date: 2026-10-15
 - Scope: Family. Targets A.1 0.8.0 and B.1 0.4.0. Would replace the widths and decimals of [A1-0005](a1-0005-numeric-parameters.md) and of B.1 01-design §2, and amend [14](../14-gateway.md) §3
 
@@ -51,4 +51,4 @@ The cost is small because the bulk of A.1 is six 251-bit scalar multiplications 
 
 - Positive: tokens with the usual 18 decimals, or any other up to 18; a gateway token matches its underlying and loses no dust; one width for every amount.
 - Negative: new circuits and keys for A.1 transfer and unshield and for B.1; one more public input on A.1 unshield and on B.1; a second data contract for the A.1 window table and more gas for public credits; the 48-bit fallback for reading A.1 amounts is gone.
-- To be done if accepted: [07](../07-family-conventions.md) §11 says that a Variant fixes the widths and the cap and the token its decimals; the measurements above on chain; A.1 0.8.0 and B.1 0.4.0 in the documents first, then the circuits, the contracts, the dApp (amounts parsed at the token's decimals, a decimals field on the deploy pages) and a redeployment.
+- To be done: [07](../07-family-conventions.md) §11 says that a Variant fixes the widths and the cap and the token its decimals; the measurements above on chain; A.1 0.8.0 and B.1 0.4.0 in the documents first, then the circuits, the contracts, the dApp (amounts parsed at the token's decimals, a decimals field on the deploy pages) and a redeployment.

@@ -2,7 +2,7 @@ English | [中文](README.zh-cn.md)
 
 # A.1: ElGamal encrypted accounts + Groth16
 
-Version: `0.7.0` (implemented and deployed on BSC testnet on 2026-10-15; [ADR-0013](../../../adr/0013-mintable.md), [A1-0007](../../../adr/a1-0007-exit-kind-binding.md)). `0.6.0` stays deployed since 2026-10-13 (core plus modules, [ADR-0008](../../../adr/0008-modules.md)). Status: `Draft`.
+Version: `0.8.0` (designed, not implemented: amounts below `2¹²⁸` and decimals chosen at deployment, [ADR-0014](../../../adr/0014-eighteen-decimals.md); 04-modules §9.3). `0.7.0` (implemented and deployed on BSC testnet on 2026-10-15; [ADR-0013](../../../adr/0013-mintable.md), [A1-0007](../../../adr/a1-0007-exit-kind-binding.md)). `0.6.0` stays deployed since 2026-10-13 (core plus modules, [ADR-0008](../../../adr/0008-modules.md)). Status: `Draft`.
 
 0.7.0 is implemented as eight generated contracts, one per subset of the modules; its two reference tokens, `A1LedgerToken` and `A1PrivateToken`, were deployed on BSC testnet on 2026-10-15, beside the 0.6.0 ones of 2026-10-13 ([03-deployments](03-deployments.md)). The two standalone contracts that predate the module structure, `ConfidentialERC20A1` 0.4.0 and `ConfidentialERC20B1` 0.2.0, remain on chain and are no longer opened by the dApp.
 
@@ -48,7 +48,7 @@ Shipped in 0.6.0. 0.7.0 makes all eight subsets of the modules tokens; it ships 
 | Document | Contents |
 | --- | --- |
 | [01-design.md](01-design.md) | The core in detail: parameters, accounts and state, payload, flows, circuits, events, client flows, gas |
-| [04-modules.md](04-modules.md) | Modules and compositions: primitives, supply accounting, each module, ERC-20 surface per composition, probe, what changes at 0.5.0, 0.6.0 and 0.7.0 |
+| [04-modules.md](04-modules.md) | Modules and compositions: primitives, supply accounting, each module, ERC-20 surface per composition, probe, what changes at 0.5.0, 0.6.0, 0.7.0 and 0.8.0 |
 | [02-security-review.md](02-security-review.md) | Round-one security self-review of the composition with the public ledger |
 | [03-deployments.md](03-deployments.md) | Deployment record (BSC testnet): both compositions from 0.5.0, the composition with the public ledger before it |
 | [variant-1-privacy-only](../variant-1-privacy-only/README.md) | Records of the privacy-only composition under its former name B.1 |

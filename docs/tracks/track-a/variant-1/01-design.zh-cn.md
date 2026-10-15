@@ -2,9 +2,11 @@
 
 # A.1 细节设计：内核
 
-版本：`0.7.0`　状态：`Draft`　日期：2026-10-15
+版本：`0.8.0`　状态：`Draft`　日期：2026-10-15
 
-> 0.7.0（**已设计，尚未实现**；BSC testnet 上运行的是 0.6.0）：按 [ADR-0013](../../../adr/0013-mintable.zh-cn.md) 和 [A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md) 修订。内核增加初始发行（在构造函数里按 `mint` 的规则发行一次，04-modules §3）和 `0x81` 销毁；销毁从原来的角色铸造模块移出，该模块改名为可增发，只保留 `mint` 和 `0x82`。收款人非零的出口，unshield 证明绑定 `r = uint160(keccak256("Casata A.1 exit", kind, to))` 而不是 `to`：`0x04` 的 `kind = 1`，`wrapperBurn` 的 `kind = 2`；销毁仍是 0（§5.2）。模块的八个子集都是代币。电路不变，所以证明密钥和验证器不变；0.6.0 的出口证明在 0.7.0 代币上验不过。`casata()` = `A:1:0.7.0`。改动清单见 04-modules §9.2。
+> 0.8.0（**已设计，尚未实现**；BSC testnet 上运行的是 0.7.0）：按 [ADR-0014](../../../adr/0014-eighteen-decimals.zh-cn.md)。所有金额都 `< 2¹²⁸`：单笔金额、余额、公开金额；上限为 `2¹²⁸ − 1`（§1、I2）。代币的小数位在部署时选，0 到 18，默认 18。转账和 unshield 电路的范围检查加宽到 128 位（§5.1、§5.2），因此要新的证明密钥和验证合约；折叠电路不变。unshield 的公开输入从 7 个变成 8 个。`x·G` 的窗口表扩到 32 段，分放在两个数据合约里（§4.1）。读金额不再有离散对数兜底（§8）。`casata()` = `A:1:0.8.0`。改动清单见 04-modules §9.3。
+
+> 0.7.0（**已实现，2026-10-15 部署到 BSC testnet**；链上运行见 03-deployments）：按 [ADR-0013](../../../adr/0013-mintable.zh-cn.md) 和 [A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md) 修订。内核增加初始发行（在构造函数里按 `mint` 的规则发行一次，04-modules §3）和 `0x81` 销毁；销毁从原来的角色铸造模块移出，该模块改名为可增发，只保留 `mint` 和 `0x82`。收款人非零的出口，unshield 证明绑定 `r = uint160(keccak256("Casata A.1 exit", kind, to))` 而不是 `to`：`0x04` 的 `kind = 1`，`wrapperBurn` 的 `kind = 2`；销毁仍是 0（§5.2）。模块的八个子集都是代币。电路不变，所以证明密钥和验证器不变；0.6.0 的出口证明在 0.7.0 代币上验不过。`casata()` = `A:1:0.7.0`。改动清单见 04-modules §9.2。
 
 > 0.6.0（**已实现，2026-10-13 部署到 BSC testnet**；两个代币的链上实测见 03-deployments）：按 [ADR-0010](../../../adr/0010-erc20-surface-tradeoffs.zh-cn.md) 和 [ADR-0011](../../../adr/0011-project-name-casata.zh-cn.md) 修订。折叠改为独立函数 `fold(id, payload)`（§4.6）。删除 `prepare` / `cancel`（§3.4）。发行改为带 payload 规则的 `mint(to, amount)`，发给机密 id 时用类型 `0x82`，取代 `mintConfidential`（04-modules §4.2）。没有公开账本的代币上 `approve` 回退。`pep()` 改为 `casata()`，密钥派生的域名改为 `"Casata"`，所以密钥与 0.5.0 的不同。电路不变，`0x01`、`0x04`、`0x80`、`0x81` 的 payload 布局不变。`casata()` = `A:1:0.6.0`。
 
@@ -59,9 +61,9 @@
 | 证明系统 | Groth16（circom + snarkjs）原型；正式版评估 PLONK 类 | |
 | 哈希 / memo | Poseidon；memo 用 Poseidon 密钥流加密，密钥流由 `r·pk_X` 派生（0.4 起无 ECDH 点） | |
 | 公开输入打包 | 标量打包进 3 个字（`from|nonce`、`to|chainId`、`contract|regKeyId|signBits`），点只公开 x，y 为私有输入并由"在曲线上 + 奇偶位"绑定 | 公开输入 25 → 15（0.4 起 14），验证 gas 386k → 316k。SHA-256 压缩方案已否决：电路内需 ~40 万约束 |
-| 金额位宽 | 单笔 `v < 2⁴⁸` | |
-| 余额位宽 | `b < 2⁶⁴` | 由 `totalSupply` 上限保证 |
-| decimals | 6 | [ADR-0014](../../../adr/0014-eighteen-decimals.zh-cn.md) 提议从 0.8.0 起改为部署时选（默认 18），金额 `< 2¹²⁸` |
+| 金额位宽 | 所有金额 `v < 2¹²⁸`：单笔转账和公开金额 | [ADR-0014](../../../adr/0014-eighteen-decimals.zh-cn.md)。到 0.7.0 为止，`v < 2⁴⁸`（[A1-0005](../../../adr/a1-0005-numeric-parameters.zh-cn.md)） |
+| 余额位宽 | `b < 2¹²⁸` | 由 `totalSupply` 上限保证。到 0.7.0 为止，`b < 2⁶⁴` |
+| decimals | 部署时选，0 到 18，默认 18 | 没有电路依赖它（ADR-0014）。到 0.7.0 为止为 6 |
 
 ## 2. 账户与状态
 
@@ -105,7 +107,7 @@ uint32 public activeRegulatorKeyId;
 | 编号 | 内容 |
 | --- | --- |
 | I1 | （公开账本模块）屏蔽中的代币托管在合约自身地址：`balanceOf(address(this)) == shieldedSupply`，因此 `totalSupply() == Σ 公开余额`（含合约地址）对任何索引器天然成立 |
-| I2 | `issuedSupply() ≤ 2⁶⁴ − 1`（最小单位；没有 Wrapper 端口时 `issuedSupply()` 等于 `totalSupply()`，见 04-modules §3）。保证任何机密余额 `< 2⁶⁴`，范围证明不会因累加溢出失效 |
+| I2 | `issuedSupply() ≤ 2¹²⁸ − 1`（最小单位；没有 Wrapper 端口时 `issuedSupply()` 等于 `totalSupply()`，见 04-modules §3）。保证任何机密余额 `< 2¹²⁸`，范围证明不会因累加溢出失效。到 0.7.0 为止上限为 `2⁶⁴ − 1` |
 | I3 | 每个 `id`：`available + pending` 解密后等于真实机密余额 |
 | I4 | `nonce` 严格递增 |
 | I5 | `pending` 只增加，且只加入范围证明过的非负金额或公开金额 |
@@ -209,7 +211,7 @@ byte 2..    sections（按 type 与 flags 决定，顺序固定）
 ```
 _update(from, address(this), x)      // 标准 ERC-20 检查；托管到合约地址，发出 Transfer(from, this, x)
 shieldedSupply  += x
-C = x·G                               // 固定基窗口表：4 位 × 12 段，192 个预计算点入字节码，约 12 次点加
+C = x·G                               // 固定基窗口表：4 位 × 32 段，分放在两个各 16 段的数据合约里，512 个预计算点，最多 32 次点加（0.7.0：12 段，一个合约）
 _accounts[to].pending += (C, 0)       // r = 0 的退化密文：金额本来就是公开的
 emit Transfer(from, to, x)
 emit LedgerCrossing(from, to, 0x03, x)
@@ -303,20 +305,22 @@ emit Folded(id, acc.nonce)
 | 2 | `Poseidon(pk_sender) → from` | 付款账户 id 正确，`pk_sender` 不上链 |
 | 3 | `Poseidon(pk_recv) → to` | 收款账户 id 正确，`pk_recv` 不上链 |
 | 4 | `pre.C − s·pre.D == b·G` | 余额密文加密的是 `b` |
-| 5 | `0 ≤ b < 2⁶⁴` | |
-| 6 | `0 ≤ v < 2⁴⁸` | |
-| 7 | `0 ≤ b − v < 2⁶⁴` | 余额充足 |
+| 5 | `0 ≤ b < 2¹²⁸` | 到 0.7.0 为止为 `2⁶⁴` |
+| 6 | `0 ≤ v < 2¹²⁸` | 到 0.7.0 为止为 `2⁴⁸` |
+| 7 | `0 ≤ b − v < 2¹²⁸` | 余额充足。到 0.7.0 为止为 `2⁶⁴` |
 | 8 | `D == r·H` | 三方共享 |
 | 9 | `C_sender == v·G + r·pk_sender`，`C_recv == v·G + r·pk_recv`，`C_reg == v·G + r·pk_reg` | 三方同值 |
 | 10 | `memo_recv == Enc(Poseidon(r·pk_recv); v ‖ r)`，`memo_reg == Enc(Poseidon(r·pk_reg); v ‖ r)` | 密钥流复用第 9 条已算出的 `r·pk_X`，无额外标量乘 |
 | 11 | （0.4 起删除：原 `E == e·H`） | |
 | 12 | 打包：各标量范围检查后 `w0, w1, w2` 等式成立；每个点 `(xs[i], ys[i])` 在曲线上且 `ys[i] mod 2 == signBits[i]` | y 由 x 与奇偶位唯一确定 |
 
-约束量实测：**29,719 个非线性约束**（0.3.x 为 35,137；未打包版本 30,356）。Node 环境证明约 1.3~1.5 s。
+约束量实测：到 0.7.0 为止 **29,719 个非线性约束**（0.3.x 为 35,137；未打包版本 30,356）；0.8.0 的 128 位范围检查下为 32,087（ADR-0014）。公开输入不变：没有金额是公开的。Node 环境证明约 1.3~1.5 s（0.7.0）。
 
 ### 5.2 unshield 电路：`0x04`、`0x81`、`wrapperBurn`
 
-这个电路是 `_debitPublic`（04-modules §2）背后的「按公开金额扣出」；`0x04`、`0x81` 销毁和 `wrapperBurn` 都用它，`to` 分别是公开收款地址、零地址、包装代币的接收地址。去掉 3、9 的后两项、10、11；公开输入 7 个：`w0 = from | nonce<<160`，`w1 = contract | chainId<<160`，`w2 = amount | signBits<<48 | to<<64`（`to` 为公开收款地址，0.3.1 起绑定，见安全自审 F14），`xs[4]`。实测 17,358 个约束。
+这个电路是 `_debitPublic`（04-modules §2）背后的「按公开金额扣出」；`0x04`、`0x81` 销毁和 `wrapperBurn` 都用它，`to` 分别是公开收款地址、零地址、包装代币的接收地址。去掉 3、9 的后两项、10、11；公开输入 7 个：`w0 = from | nonce<<160`，`w1 = contract | chainId<<160`，`w2 = amount | signBits<<48 | to<<64`（`to` 为公开收款地址，0.3.1 起绑定，见安全自审 F14），`xs[4]`。实测约束：0.3.1 为 17,358，0.7.0 为 18,895。
+
+从 0.8.0 起金额最多 128 位，`amount | signBits<<48 | to<<64` 要 292 位，一个域元素装不下。收款值单独占一个字：公开输入 8 个，`w0 = from | nonce<<160`，`w1 = contract | chainId<<160`，`w2 = amount | signBits<<128`，`w3 = r`（160 位），`xs[4]`。`b`、`v`、`b − v` 的范围检查为 128 位。加宽范围检查、尚未重新打包时实测 21,263 个约束（ADR-0014）。
 
 从 0.7.0 起，`to` 位置上的值是 `r`（[A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md)），由合约组装：`0x81` 销毁时 `r = 0`；`0x04`（`kind = 1`）和 `wrapperBurn`（`kind = 2`）时 `r = uint160(uint256(keccak256(abi.encodePacked("Casata A.1 exit", kind, to))))`。电路照旧把它范围检查到 160 位、不赋予含义，所以电路、密钥和验证器都不变。客户端证明时算出同样的 `r`。事件和调用参数里仍是原来的 `to`。
 
@@ -358,7 +362,7 @@ function casataModules() external view returns (Module[] memory);       // 模�
 
 **监管方**：遍历 `ConfidentialTransfer`，按 `regKeyId` 解 `memo_reg`，校验承诺；结合按公开金额变动的事件（`LedgerCrossing`、`Minted`、`Burned`、`WrapperMinted`、`WrapperBurned`）重建任意 id 任意时刻的余额。不解离散对数，不需要任何人配合，只读。id 与钱包的对应关系仅能从 `0x03` / `0x04` 的边推断。
 
-**memo 兜底**：由电路强制，理论上不会错；若实现有 bug，收款方仍可对 `C_amt − s·D_recv = v·G` 做 48 位离散对数（2²⁴ 表）。
+**memo 兜底**：到 0.7.0 为止，若实现有 bug，收款方仍可对 `C_amt − s·D_recv = v·G` 做 48 位离散对数（2²⁴ 表）。从 0.8.0 起金额最多 128 位，任何离散对数都算不动，所以没有兜底：memo 是读金额的唯一途径，由电路强制（ADR-0014）。
 
 ## 9. Gas（原型实测，2026-09-24）
 

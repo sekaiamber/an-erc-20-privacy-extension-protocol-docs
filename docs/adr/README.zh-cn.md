@@ -26,7 +26,7 @@ ADR-0001 到 ADR-0010 写于项目定名 Casata（[0011](0011-project-name-casat
 | [0011](0011-project-name-casata.zh-cn.md) | 项目定名 Casata；缩写 PEP 停用 | Accepted（2026-10-13 已实现；仓库尚未改名） |
 | [0012](0012-visual-identity.zh-cn.md) | 视觉形象：秘密账簿，以一枚火漆印为标志 | Accepted（只接受风格；dApp 之后再做） |
 | [0013](0013-mintable.zh-cn.md) | 可增发：部署后的发行是模块，初始发行和销毁属于核心 | Accepted（待在 A.1 0.7.0、B.1 0.3.0 中实现） |
-| [0014](0014-eighteen-decimals.zh-cn.md) | 18 位小数：A.1 0.8.0 和 B.1 0.4.0 起金额宽 128 位，小数位在部署时选 | Proposed |
+| [0014](0014-eighteen-decimals.zh-cn.md) | 18 位小数：A.1 0.8.0 和 B.1 0.4.0 起金额宽 128 位，小数位在部署时选 | Accepted（待在 A.1 0.8.0、B.1 0.4.0 中实现） |
 
 ## A.1
 
@@ -36,7 +36,7 @@ ADR-0001 到 ADR-0010 写于项目定名 Casata（[0011](0011-project-name-casat
 | [A1-0002](a1-0002-crypto-core.zh-cn.md) | 密码内核：twisted ElGamal on Baby Jubjub + Groth16 | Accepted |
 | [A1-0003](a1-0003-proof-as-authorization.zh-cn.md) | 证明即授权，`transferFrom` 为机密付款入口 | Accepted |
 | [A1-0004](a1-0004-pending-lazy-fold.zh-cn.md) | available / pending 拆分与惰性折叠 | Accepted |
-| [A1-0005](a1-0005-numeric-parameters.zh-cn.md) | 数值参数：位宽、decimals、供应上限 | Accepted（0014 提议从 0.8.0 起取代） |
+| [A1-0005](a1-0005-numeric-parameters.zh-cn.md) | 数值参数：位宽、decimals、供应上限 | Accepted（位宽和小数位自 0.8.0 起被 0014 取代） |
 | [A1-0006](a1-0006-fold-and-received-block.zh-cn.md) | 纯折叠 `0x80` 与 `lastReceivedAtBlock`（仅 A.1） | Accepted |
 | [A1-0007](a1-0007-exit-kind-binding.zh-cn.md) | unshield 证明通过收款人的值绑定它是给哪个出口的 | Accepted（待在 0.7.0 中实现） |
 
