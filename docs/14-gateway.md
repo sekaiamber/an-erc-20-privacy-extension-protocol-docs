@@ -2,7 +2,7 @@ English | [中文](14-gateway.zh-cn.md)
 
 # 14 Family tool: the gateway
 
-Status: `Draft` (2026-10-15). Decision record: [ADR-0013](adr/0013-mintable.md), item 5. Not implemented. It needs the Mintable module and the Wrapper port, so it targets A.1 0.7.0 and B.1 0.3.0.
+Status: `Prototype` (2026-10-15). Decision record: [ADR-0013](adr/0013-mintable.md), item 5. Implementation: `contracts/contracts/family/CasataGateway.sol`, tested locally against A.1 0.7.0 (`test/family/CasataGateway.ts`: the setup of §4 checked by views, a mint and a `wrapperMint` deposit, a withdrawal to the bound recipient at 584,500 gas, and an unshield proof refused at the gateway). Not deployed. It needs the Mintable module and the Wrapper port, so it serves A.1 0.7.0 and B.1 0.3.0; the B.1 path is written but waits for B.1 0.3.0 to be tested.
 
 ## 1. What it is
 

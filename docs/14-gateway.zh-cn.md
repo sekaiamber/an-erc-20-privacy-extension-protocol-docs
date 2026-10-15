@@ -2,7 +2,7 @@
 
 # 14 家族工具：网关
 
-状态：`Draft`（2026-10-15）。决策记录：[ADR-0013](adr/0013-mintable.zh-cn.md) 第 5 条。尚未实现。它需要可增发模块和 Wrapper 端口，所以面向 A.1 0.7.0 和 B.1 0.3.0。
+状态：`Prototype`（2026-10-15）。决策记录：[ADR-0013](adr/0013-mintable.zh-cn.md) 第 5 条。实现：`contracts/contracts/family/CasataGateway.sol`，已在本地针对 A.1 0.7.0 测试（`test/family/CasataGateway.ts`：用 view 核对 §4 的设置，一次铸造路径和一次 `wrapperMint` 路径的存入，一次取回到证明绑定的收款人，gas 584,500，以及 unshield 证明在网关被拒）。尚未部署。它需要可增发模块和 Wrapper 端口，所以服务 A.1 0.7.0 和 B.1 0.3.0；B.1 的路径已写好，等 B.1 0.3.0 实现后再测。
 
 ## 1. 它是什么
 
