@@ -251,7 +251,7 @@ Relative to 0.6.0. Decision records: [ADR-0013](../../../adr/0013-mintable.md) a
 
 ### 9.3 What changes at 0.8.0
 
-Relative to 0.7.0. Decision record: [ADR-0014](../../../adr/0014-eighteen-decimals.md). Designed, not implemented.
+Relative to 0.7.0. Decision record: [ADR-0014](../../../adr/0014-eighteen-decimals.md). Implemented in the contracts and tested locally on 2026-10-15 (94 tests pass); not yet in the dApp or on chain. The window table is the 0.7.0 `G8Table` for bits 0..47, unchanged and reusable on chain, plus `G8TableHigh` for bits 48..127 (20,480 bytes), rather than two new halves.
 
 | # | Change | Affects |
 | --- | --- | --- |
@@ -259,7 +259,7 @@ Relative to 0.7.0. Decision record: [ADR-0014](../../../adr/0014-eighteen-decima
 | 2 | Decimals are a constructor argument, from 0 to 18; `BadDecimals()` above (§3) | Contracts, deploy scripts, dApp deploy forms, every page that formats amounts |
 | 3 | The transfer and unshield circuits check `b`, `v` and `b − v` against 128 bits (01-design §5.1, §5.2): new proving keys and verifier contracts. The fold circuit does not change; its verifier is reused | Circuits, contracts, deployments, dApp (circuit files) |
 | 4 | Unshield takes 8 public inputs: `w2 = amount \| signBits<<128`, `w3 = r` (01-design §5.2). Transfer keeps its 14 | Circuit, contracts, client library |
-| 5 | The window table for `x·G` has 32 segments of 4 bits in two data contracts of 16 segments each (24,576 bytes is the limit for one); the constructor takes both addresses. A public credit adds at most 32 points instead of 12 | Contracts, deploy scripts |
+| 5 | The window table for `x·G` has 32 segments of 4 bits in two data contracts (24,576 bytes is the limit for one): `G8Table` for segments 0..11, as before, and `G8TableHigh` for 12..31; the constructor takes both addresses. A public credit adds at most 32 points instead of 12. Measured locally: `2⁴⁸ − 1` 80,796 gas, `2¹²⁸ − 1` 203,997, `1000·10¹⁸` 89,610 (zero nibbles are skipped) | Contracts, deploy scripts |
 | 6 | No discrete-logarithm fallback: amounts are read from the memos only (01-design §8) | Client library, dApp |
 | 7 | `casata()` = `A:1:0.8.0`. The modules and the payload types do not change | Contracts, dApp |
 | 8 | New testnet tokens with new verifiers and tables. The fold verifier and the Wrapper on chain can be reused. The gateway accepts `A:1:0.8.0` ([14](../../../14-gateway.md) §2). The 0.7.0 tokens stay | Deployments, gateway |
@@ -270,6 +270,7 @@ Relative to 0.7.0. Decision record: [ADR-0014](../../../adr/0014-eighteen-decima
 - 0.7.0 adds to the review: the initial issuance (once, cap, the escrow hook with the public ledger, `NoSupply()`), the burn in the core on every composition, the assembly of `r` in each exit, the composition with both the public ledger and the Wrapper port, and the script that generates the compositions (M10).
 - Tests run per module and per shipped composition. Supply conservation (the table of §3) is asserted after every operation.
 - Bytecode at 0.5.0: `A1LedgerToken` 18,339 bytes, `A1PrivateToken` 17,345 bytes; the limit is 24,576. The standalone contracts were 17,060 and 17,195. At 0.6.0: 13,808 and 14,293; the difference is the removed fallback path. At 0.7.0, the eight compositions: `A1Token` 12,305, `A1TokenM` 13,122, `A1TokenL` 14,237, `A1TokenW` 14,593, `A1LedgerToken` 14,683, `A1PrivateToken` 15,195, `A1TokenLW` 16,205, `A1TokenLMW` 16,765. The two shipped compositions grew by about 900 bytes, for the enumerable roles and the initial issuance.
+- Bytecode at 0.8.0: `A1Token` 12,449, `A1TokenM` 13,337, `A1TokenL` 14,544, `A1TokenW` 14,824, `A1LedgerToken` 14,889, `A1PrivateToken` 15,421, `A1TokenLW` 16,412, `A1TokenLMW` 16,972; about 150 to 230 bytes more than 0.7.0, for the decimals and the second table.
 - Gas, measured locally against the standalone contracts with the same tests: every operation is within 300 gas. New: `0x81` burn with the public ledger, 528k on an account's first spend.
 
 ## 11. Decisions

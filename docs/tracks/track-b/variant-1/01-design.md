@@ -100,7 +100,7 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 | 9 | `memo_reg == Enc(r·pk_reg; inputs ‖ outputs)` | §6.2. For a real input the leaf index in the memo equals the one used in 2; for a dummy it is the "none" marker |
 | 10 | Packing of `to`, `chainId`, `contract`, `regKeyId` and the sign bits | Binds the proof to this token, this chain and, for an exit, the public recipient |
 
-Measured size at depth 24: 55,343 constraints, of which 35,429 are non-linear, against 29,719 for A.1's transfer. With the 128-bit range checks of 0.4.0: 55,727 (ADR-0014), measured before the repacking of §4.1. The first estimate was 45,000 to 55,000 at depth 32.
+Measured size at depth 24: 55,343 constraints, of which 35,429 are non-linear, against 29,719 for A.1's transfer. With the 128-bit range checks and the repacking of 0.4.0: 55,726 as built (ADR-0014 measured 55,727 before the repacking). The first estimate was 45,000 to 55,000 at depth 32.
 
 ### 4.1 Public inputs and hash uses
 
