@@ -2,7 +2,7 @@
 
 # B.1 设计（0.3.0-draft）
 
-状态：`Draft`。本文描述的是 0.3.0，它已起草、尚未实现；0.3.0 与 0.2.0 不同的地方，正文会注明。下面关于实现、部署和测量的内容都指 0.2.0。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`），dApp 的页面（`/tracks/b/1`）也已跟进。0.2.0 已部署到 BSC testnet，五种操作都在链上跑过（[02-deployments](02-deployments.zh-cn.md)，2026-10-13）。这个页面还没有在浏览器里对着链上的代币实际用过。gas、约束数和证明时间都是本地实测（§12）。
+状态：`Draft`。本文描述的是 0.3.0，它已在合约中实现并在本地测试（2026-10-15：四种组合由 `contracts/scripts/track-b/variant-1/gen-compositions.mjs` 生成，91 项合约测试通过），尚未部署；0.3.0 与 0.2.0 不同的地方，正文会注明。下面关于部署和链上测量的内容都指 0.2.0。合约和电路已经实现并在本地通过测试（`contracts/contracts/track-b/variant-1/`、`contracts/circuits/track-b/variant-1/join_split.circom`），dApp 的页面（`/tracks/b/1`）也已跟进。0.2.0 已部署到 BSC testnet，五种操作都在链上跑过（[02-deployments](02-deployments.zh-cn.md)，2026-10-13）。这个页面还没有在浏览器里对着链上的代币实际用过。gas、约束数和证明时间都是本地实测（§12）。
 
 > 0.3.0（草案，2026-10-15）依据 [ADR-0013](../../../adr/0013-mintable.zh-cn.md)。角色铸造模块改名为**可增发**（`ICasataMintable`；接口 id `0x40c10f19` 不变）。`0x81` 销毁移进核心，所以每个 B.1 代币都能销毁。核心在代币部署时发行初始供应（§7.1），所以不带可增发的代币就是固定供应的代币。声明的模块是可增发和 Wrapper 端口（§5.1）。电路、payload 布局、证明密钥和验证器都不变。`casata()` = `B:1:0.3.0`。[A1-0007](../../../adr/a1-0007-exit-kind-binding.zh-cn.md) 的出口绑定不适用于 B.1（§5）。
 
@@ -218,8 +218,8 @@ v_in1 + v_in2 + v_pub_in  ==  v_out1 + v_out2 + v_pub_out
 - **地址算错只损失 gas，不损失价值。** 如果账户先发了别的交易，nonce 变了，地址就不同，证明验不过，部署回滚。
 - **不用 `CREATE2`。** 它的地址取决于 init code，init code 里会有证明，而证明又绑定地址。工厂合约可以在构造期间通过一次调用把 payload 交过去，打破这个循环；0.3.0 不需要它。
 - **零。** `initialSupply = 0` 加空 payload 只在带可增发的组合上允许。不带可增发时部署回滚，因为这个代币永远不可能有余额（ADR-0013 第 2 条）。
-- **实现说明。** 验证器和哈希合约是 immutable，Solidity 不允许构造期间被调用的函数读取 immutable。构造路径把它们作为参数传入。
-- **成本。** 部署多出约一次新树上首次铸造的 gas，183 万（02-deployments）；部署者的钱包生成一次证明，约 3 秒。还没有作为部署的一部分实测过。
+- **实现说明。** Solidity（0.8.21 起）允许构造函数在 immutable 赋值后读取它，所以初始发行就在组合的构造函数末尾走普通的 join-split。构造参数不是 calldata，所以 payload 解析改为从内存读取；普通调用的 payload 先复制到内存，相对一次证明验证，这点 gas 可以忽略。
+- **成本。** 本地实测：部署 `B1Token` 并把初始发行分给两个持有人，共 8,142,825 gas，包括合约创建和新树上的首次铸造；部署者的钱包生成一次证明，约 3 秒。合约大小：`B1Token` 11,244 字节，`B1TokenM` 14,236，`B1TokenW` 14,873，`B1NoteToken` 15,510。
 
 ### 7.2 转账
 
