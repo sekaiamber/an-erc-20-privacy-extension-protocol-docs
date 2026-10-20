@@ -70,7 +70,7 @@ A.1 内核                 加密账户的纯隐私账本
 - `initialPayload` 为空：向地址 `initialTo` 公开发行。只在带公开账本时可用；没有公开账本时部署回退 `NoPublicLedger()`。
 - `initialPayload` 为 `0x82`、flags 为 0：调用 `_creditPublic(initialTo, initialAmount)`，即 id `initialTo` 的机密余额。id 是钱包针对某一个代币地址派生的密钥（07 §8），所以部署者想把初始发行放进自己的 id，就要针对部署将要得到的地址（由账户和 nonce 算出）来派生。dApp 的部署表单就是这样做的；如果别的交易先动了 nonce，这笔供应会落进一个没人持有的 id。和任何记入 id 的金额一样，它小于 `2¹²⁸`（§2；到 0.7.0 为止为 `2⁴⁸`）。
 - 只有带可增发的代币，`initialAmount` 才可以是零。不带可增发、又什么都没发行的代币永远不可能有余额，所以部署回退 `NoSupply()`。
-- 它发出的事件和铸造相同：`Transfer(0x0, initialTo, initialAmount)`，发给 id 时还有 `Minted`（公开发行只有 ERC-20 的 `Transfer`）。金额为零时什么都不发。payload 既不是空也不是 `0x82 00` 时回滚 `BadInitialPayload()`。
+- 它发出的事件和铸造相同：ERC-20 的 `Transfer`，发给 id 时还有 `Minted(initialTo, initialAmount)`。`Transfer` 的接收方是 `initialTo`；唯一的例外是带公开账本的代币发给 id：这时 `Transfer` 发到代币合约自己的地址，因为机密价值以公开代币的形式托管在那里（`balanceOf(token) == shieldedSupply()`，§4.1）。公开发行只有 `Transfer`。金额为零时什么都不发。payload 既不是空也不是 `0x82 00` 时回滚 `BadInitialPayload()`。
 
 | 操作 | 部分 | 机密供应量 | 公开余额 | `wrappedOut` | `totalSupply` | `issuedSupply` |
 | --- | --- | --- | --- | --- | --- | --- |
